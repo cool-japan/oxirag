@@ -1,0 +1,103 @@
+[package]
+name = "oxirag"
+version = "0.1.0"
+edition = "2024"
+description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
+license = "MIT OR Apache-2.0"
+categories = ["wasm", "asynchronous", "text-processing"]
+keywords = ["rag", "semantic-search", "smt", "wasm", "verification"]
+documentation = "https://docs.rs/oxirag"
+homepage = "https://github.com/cool-japan/oxirag"
+repository = "https://github.com/cool-japan/oxirag"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Core
+thiserror = "2.0"
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+uuid = { version = "1.19", features = ["v4", "js"] }
+chrono = { version = "0.4", features = ["serde", "wasmbind"] }
+
+# Async runtime (native)
+tokio = { version = "1.49", features = ["rt-multi-thread", "macros", "sync", "time", "fs"], optional = true }
+tokio-stream = { version = "0.1", optional = true }
+futures = { version = "0.3", optional = true }
+
+# WASM support
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["console"] }
+getrandom = { version = "0.3", features = ["wasm_js"], optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+
+# Layer 1: Echo (currently using pure Rust for similarity)
+# numrs2 = { version = "0.1", optional = true }
+
+# Layer 2: Speculator (native only - not WASM compatible)
+# Base candle dependencies (CPU only)
+candle-core = { version = "0.9", optional = true }
+candle-nn = { version = "0.9", optional = true }
+candle-transformers = { version = "0.9", optional = true }
+hf-hub = { version = "0.4", optional = true }
+tokenizers = { version = "0.22", optional = true }
+
+# Layer 3: Judge
+oxiz = { version = "0.1", optional = true }
+
+# CUDA support - only available on x86_64 Linux and Windows (where CUDA toolkit exists)
+# cudarc is the underlying CUDA runtime - target-gated to prevent build failures on unsupported platforms
+[target.'cfg(all(target_arch = "x86_64", any(target_os = "linux", target_os = "windows")))'.dependencies]
+cudarc = { version = "0.19", optional = true, features = ["cuda-12000"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+criterion = { version = "0.8", features = ["async_tokio"] }
+tempfile = "3.24"
+wasm-bindgen-test = "0.3"
+
+[features]
+default = ["native", "echo"]
+# Native target with full async runtime
+native = ["tokio", "tokio-stream", "futures"]
+# WASM target for browser/edge deployment
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys", "web-sys", "getrandom", "console_error_panic_hook", "serde-wasm-bindgen"]
+# Layer features
+echo = []
+speculator = ["candle-core", "candle-nn", "candle-transformers", "hf-hub", "tokenizers"]
+judge = ["oxiz"]
+graphrag = []
+distillation = []
+prefix-cache = []
+# Hidden states for speculative decoding
+hidden-states = []
+# Quantization for vector embeddings
+quantization = []
+# All layers (native only due to speculator)
+full = ["native", "echo", "speculator", "judge", "graphrag", "prefix-cache", "distillation", "hidden-states", "quantization"]
+# Hardware acceleration features (marker features - platform-conditional)
+# CUDA: Only works on x86_64 Linux/Windows where CUDA toolkit is installed
+# The cudarc dependency is target-gated, so --all-features works on all platforms
+# To actually use CUDA, the user must have CUDA toolkit installed and use candle-core with cuda feature
+cuda = ["speculator", "dep:cudarc"]
+# Metal: Available on macOS (Apple Silicon/AMD GPU)
+# This is a marker feature - actual Metal support requires macOS and appropriate GPU
+metal = ["speculator"]
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+
+[profile.release.package."*"]
+opt-level = "z"
+
+[[bench]]
+name = "benchmarks"
+harness = false

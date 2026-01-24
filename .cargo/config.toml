@@ -1,0 +1,14 @@
+# Cargo configuration for oxirag
+
+[alias]
+# Standard test with all features (CUDA/Metal are no-ops on unsupported platforms)
+nt = "nextest run --all-features"
+t = "test --all-features"
+
+# Default features only
+ntd = "nextest run"
+td = "test"
+
+[build]
+# Incremental builds for faster development
+incremental = true
