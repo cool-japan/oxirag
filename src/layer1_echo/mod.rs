@@ -11,6 +11,7 @@ pub mod embedding;
 pub mod filter;
 pub mod multi_vector;
 pub mod similarity;
+pub mod similarity_simd;
 pub mod storage;
 pub mod traits;
 

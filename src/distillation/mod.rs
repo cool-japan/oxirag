@@ -79,6 +79,7 @@
 //! - **Priority Ranking**: Candidates are ranked by frequency, confidence, and data quality
 //! - **Deduplication**: Duplicate Q&A pairs are automatically rejected
 
+pub mod candle_lora;
 pub mod collector;
 pub mod detector;
 pub mod feature;
@@ -95,6 +96,7 @@ pub mod trigger;
 pub mod types;
 
 // Re-export main types
+pub use candle_lora::{CandleLoraConfig, CandleLoraTrainer, TrainingMetrics};
 pub use collector::{CollectorStatistics, QAPairCollector, TrainingExample};
 pub use detector::{CandidateDetector, CandidateEvaluation, NearReadyReason};
 pub use feature::{
