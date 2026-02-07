@@ -1,9 +1,9 @@
 [package]
 name = "oxirag"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 categories = ["wasm", "asynchronous", "text-processing"]
 keywords = ["rag", "semantic-search", "smt", "wasm", "verification"]
 documentation = "https://docs.rs/oxirag"
@@ -20,7 +20,7 @@ async-trait = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tracing = "0.1"
-uuid = { version = "1.19", features = ["v4", "js"] }
+uuid = { version = "1.20", features = ["v4", "js"] }
 chrono = { version = "0.4", features = ["serde", "wasmbind"] }
 
 # Async runtime (native)
@@ -61,6 +61,7 @@ tokio-test = "0.4"
 criterion = { version = "0.8", features = ["async_tokio"] }
 tempfile = "3.24"
 wasm-bindgen-test = "0.3"
+proptest = "1.10"
 
 [features]
 default = ["native", "echo"]

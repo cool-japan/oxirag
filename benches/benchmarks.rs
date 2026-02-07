@@ -364,9 +364,214 @@ fn bench_smtlib_encoding(c: &mut Criterion) {
 }
 
 // ============================================================================
+// OxiZ SMT Solver Benchmarks
+// ============================================================================
+
+#[cfg(feature = "judge")]
+fn bench_oxiz_solver_verification(c: &mut Criterion) {
+    use oxirag::layer3_judge::{JudgeConfig, OxizVerifier, SmtVerifier};
+    use oxirag::types::{CausalStrength, Modality, TimeRelation};
+
+    let rt = tokio::runtime::Runtime::new().expect("failed to create runtime");
+
+    let mut group = c.benchmark_group("oxiz_solver");
+
+    let verifier = OxizVerifier::new(JudgeConfig::default());
+
+    // Benchmark predicate claims
+    let predicate_claim = LogicalClaim::new(
+        "temperature is high",
+        ClaimStructure::Predicate {
+            subject: "temperature".to_string(),
+            predicate: "is_high".to_string(),
+            object: Some("true".to_string()),
+        },
+    );
+
+    group.bench_function("predicate_claim", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&predicate_claim)).await;
+        });
+    });
+
+    // Benchmark numeric comparison
+    let numeric_comparison = LogicalClaim::new(
+        "10 > 5",
+        ClaimStructure::Comparison {
+            left: "10".to_string(),
+            operator: oxirag::types::ComparisonOp::GreaterThan,
+            right: "5".to_string(),
+        },
+    );
+
+    group.bench_function("numeric_comparison", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&numeric_comparison)).await;
+        });
+    });
+
+    // Benchmark symbolic comparison
+    let symbolic_comparison = LogicalClaim::new(
+        "x > y",
+        ClaimStructure::Comparison {
+            left: "x".to_string(),
+            operator: oxirag::types::ComparisonOp::GreaterThan,
+            right: "y".to_string(),
+        },
+    );
+
+    group.bench_function("symbolic_comparison", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&symbolic_comparison)).await;
+        });
+    });
+
+    // Benchmark temporal claims
+    let temporal_claim = LogicalClaim::new(
+        "event1 before event2",
+        ClaimStructure::Temporal {
+            event: "event1".to_string(),
+            time_relation: TimeRelation::Before,
+            reference: "event2".to_string(),
+        },
+    );
+
+    group.bench_function("temporal_claim", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&temporal_claim)).await;
+        });
+    });
+
+    // Benchmark causal claims
+    let causal_claim = LogicalClaim::new(
+        "rain causes wetness",
+        ClaimStructure::Causal {
+            cause: Box::new(ClaimStructure::Raw("rain".to_string())),
+            effect: Box::new(ClaimStructure::Raw("wetness".to_string())),
+            strength: CausalStrength::Direct,
+        },
+    );
+
+    group.bench_function("causal_claim", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&causal_claim)).await;
+        });
+    });
+
+    // Benchmark modal claims
+    let modal_claim = LogicalClaim::new(
+        "necessarily p",
+        ClaimStructure::Modal {
+            claim: Box::new(ClaimStructure::Raw("p".to_string())),
+            modality: Modality::Necessary,
+        },
+    );
+
+    group.bench_function("modal_claim", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&modal_claim)).await;
+        });
+    });
+
+    // Benchmark conjunctions
+    let conjunction_claim = LogicalClaim::new(
+        "p and q and r",
+        ClaimStructure::And(vec![
+            ClaimStructure::Raw("p".to_string()),
+            ClaimStructure::Raw("q".to_string()),
+            ClaimStructure::Raw("r".to_string()),
+        ]),
+    );
+
+    group.bench_function("conjunction", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claim(black_box(&conjunction_claim)).await;
+        });
+    });
+
+    // Benchmark multiple claims verification
+    let claims = vec![
+        LogicalClaim::new(
+            "10 > 5",
+            ClaimStructure::Comparison {
+                left: "10".to_string(),
+                operator: oxirag::types::ComparisonOp::GreaterThan,
+                right: "5".to_string(),
+            },
+        ),
+        LogicalClaim::new(
+            "20 = 20",
+            ClaimStructure::Comparison {
+                left: "20".to_string(),
+                operator: oxirag::types::ComparisonOp::Equal,
+                right: "20".to_string(),
+            },
+        ),
+        LogicalClaim::new(
+            "temp is high",
+            ClaimStructure::Predicate {
+                subject: "temp".to_string(),
+                predicate: "is_high".to_string(),
+                object: None,
+            },
+        ),
+    ];
+
+    group.bench_function("verify_multiple_claims", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier.verify_claims(black_box(&claims)).await;
+        });
+    });
+
+    // Benchmark consistency checking
+    let consistency_claims = vec![
+        LogicalClaim::new(
+            "x > 5",
+            ClaimStructure::Comparison {
+                left: "x".to_string(),
+                operator: oxirag::types::ComparisonOp::GreaterThan,
+                right: "5".to_string(),
+            },
+        ),
+        LogicalClaim::new(
+            "x < 10",
+            ClaimStructure::Comparison {
+                left: "x".to_string(),
+                operator: oxirag::types::ComparisonOp::LessThan,
+                right: "10".to_string(),
+            },
+        ),
+    ];
+
+    group.bench_function("consistency_check", |bench| {
+        bench.to_async(&rt).iter(|| async {
+            let _ = verifier
+                .check_consistency(black_box(&consistency_claims))
+                .await;
+        });
+    });
+
+    group.finish();
+}
+
+// ============================================================================
 // Criterion Configuration
 // ============================================================================
 
+#[cfg(feature = "judge")]
+criterion_group!(
+    benches,
+    bench_similarity_functions,
+    bench_vector_store_insert,
+    bench_vector_store_search,
+    bench_embedding_cache,
+    bench_claim_extraction,
+    bench_explanation_generation,
+    bench_smtlib_encoding,
+    bench_oxiz_solver_verification,
+);
+
+#[cfg(not(feature = "judge"))]
 criterion_group!(
     benches,
     bench_similarity_functions,

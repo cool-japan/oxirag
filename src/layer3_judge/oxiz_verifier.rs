@@ -13,7 +13,10 @@ use crate::types::{
 };
 
 #[cfg(feature = "judge")]
-use oxiz::{Solver, SolverResult, TermManager};
+use oxiz::{
+    TermManager,
+    solver::{Solver, SolverConfig, SolverResult},
+};
 
 /// `OxiZ`-based SMT verifier.
 #[cfg(feature = "judge")]
@@ -159,8 +162,16 @@ impl OxizVerifier {
     }
 
     /// Verify a claim structure using the SMT solver.
-    fn verify_claim_structure(structure: &ClaimStructure) -> (VerificationStatus, Option<String>) {
-        let mut solver = Solver::new();
+    fn verify_claim_structure(
+        structure: &ClaimStructure,
+        timeout_ms: u64,
+    ) -> (VerificationStatus, Option<String>) {
+        let config = if timeout_ms > 0 {
+            SolverConfig::default().with_timeout(timeout_ms)
+        } else {
+            SolverConfig::default()
+        };
+        let mut solver = Solver::with_config(config);
         let mut tm = TermManager::new();
 
         match structure {
@@ -263,7 +274,8 @@ impl SmtVerifier for OxizVerifier {
     ) -> Result<ClaimVerificationResult, JudgeError> {
         let start = Instant::now();
 
-        let (status, explanation) = Self::verify_claim_structure(&claim.structure);
+        let (status, explanation) =
+            Self::verify_claim_structure(&claim.structure, self.config.timeout_ms);
 
         let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
@@ -296,7 +308,12 @@ impl SmtVerifier for OxizVerifier {
             return Ok(true);
         }
 
-        let mut solver = Solver::new();
+        let config = if self.config.timeout_ms > 0 {
+            SolverConfig::default().with_timeout(self.config.timeout_ms)
+        } else {
+            SolverConfig::default()
+        };
+        let mut solver = Solver::with_config(config);
         let mut tm = TermManager::new();
 
         // Add all claims as assertions
@@ -625,5 +642,483 @@ mod tests {
 
         assert_eq!(judge.config().max_claims, 5);
         assert_eq!(judge.config().timeout_ms, 1000);
+    }
+
+    // OxiZ-specific tests
+    #[cfg(feature = "judge")]
+    mod oxiz_tests {
+        use super::*;
+        use crate::types::{CausalStrength, Modality, Quantifier, TimeRelation};
+
+        fn create_oxiz_verifier() -> OxizVerifier {
+            OxizVerifier::new(JudgeConfig::default())
+        }
+
+        fn create_oxiz_verifier_with_timeout(timeout_ms: u64) -> OxizVerifier {
+            OxizVerifier::new(JudgeConfig {
+                timeout_ms,
+                ..Default::default()
+            })
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_predicate_claim() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "Temperature is high",
+                ClaimStructure::Predicate {
+                    subject: "temperature".to_string(),
+                    predicate: "is_high".to_string(),
+                    object: Some("true".to_string()),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_numeric_comparison_true() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "10 > 5",
+                ClaimStructure::Comparison {
+                    left: "10".to_string(),
+                    operator: ComparisonOp::GreaterThan,
+                    right: "5".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_numeric_comparison_false() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "5 > 10",
+                ClaimStructure::Comparison {
+                    left: "5".to_string(),
+                    operator: ComparisonOp::GreaterThan,
+                    right: "10".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Falsified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_numeric_equality() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "42 = 42",
+                ClaimStructure::Comparison {
+                    left: "42".to_string(),
+                    operator: ComparisonOp::Equal,
+                    right: "42".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_symbolic_comparison() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "x > y",
+                ClaimStructure::Comparison {
+                    left: "x".to_string(),
+                    operator: ComparisonOp::GreaterThan,
+                    right: "y".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            // Symbolic comparison should be SAT (there exists x, y where x > y)
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_temporal_claim_before() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "event1 happens before event2",
+                ClaimStructure::Temporal {
+                    event: "event1".to_string(),
+                    time_relation: TimeRelation::Before,
+                    reference: "event2".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_temporal_claim_after() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "event1 happens after event2",
+                ClaimStructure::Temporal {
+                    event: "event1".to_string(),
+                    time_relation: TimeRelation::After,
+                    reference: "event2".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_causal_claim() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "rain causes wetness",
+                ClaimStructure::Causal {
+                    cause: Box::new(ClaimStructure::Raw("rain".to_string())),
+                    effect: Box::new(ClaimStructure::Raw("wetness".to_string())),
+                    strength: CausalStrength::Direct,
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_modal_necessary() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "necessarily true",
+                ClaimStructure::Modal {
+                    claim: Box::new(ClaimStructure::Raw("p".to_string())),
+                    modality: Modality::Necessary,
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_modal_possible() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "possibly true",
+                ClaimStructure::Modal {
+                    claim: Box::new(ClaimStructure::Raw("p".to_string())),
+                    modality: Modality::Possible,
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_conjunction() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "p and q and r",
+                ClaimStructure::And(vec![
+                    ClaimStructure::Raw("p".to_string()),
+                    ClaimStructure::Raw("q".to_string()),
+                    ClaimStructure::Raw("r".to_string()),
+                ]),
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_disjunction() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "p or q or r",
+                ClaimStructure::Or(vec![
+                    ClaimStructure::Raw("p".to_string()),
+                    ClaimStructure::Raw("q".to_string()),
+                    ClaimStructure::Raw("r".to_string()),
+                ]),
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_negation() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "not p",
+                ClaimStructure::Not(Box::new(ClaimStructure::Raw("p".to_string()))),
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_implication() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "if p then q",
+                ClaimStructure::Implies {
+                    premise: Box::new(ClaimStructure::Raw("p".to_string())),
+                    conclusion: Box::new(ClaimStructure::Raw("q".to_string())),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_quantified_unsupported() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "forall x: x > 0",
+                ClaimStructure::Quantified {
+                    quantifier: Quantifier::ForAll,
+                    variable: "x".to_string(),
+                    domain: "Int".to_string(),
+                    body: Box::new(ClaimStructure::Raw("x > 0".to_string())),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            // Quantified claims should return Unknown for now
+            assert_eq!(result.status, VerificationStatus::Unknown);
+            assert!(result.explanation.is_some());
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_raw_claim_unsupported() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new("raw claim", ClaimStructure::Raw("p".to_string()));
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Unknown);
+            assert!(result.explanation.is_some());
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_verify_multiple_claims() {
+            let verifier = create_oxiz_verifier();
+            let claims = vec![
+                LogicalClaim::new(
+                    "10 > 5",
+                    ClaimStructure::Comparison {
+                        left: "10".to_string(),
+                        operator: ComparisonOp::GreaterThan,
+                        right: "5".to_string(),
+                    },
+                ),
+                LogicalClaim::new(
+                    "20 = 20",
+                    ClaimStructure::Comparison {
+                        left: "20".to_string(),
+                        operator: ComparisonOp::Equal,
+                        right: "20".to_string(),
+                    },
+                ),
+                LogicalClaim::new(
+                    "temperature is high",
+                    ClaimStructure::Predicate {
+                        subject: "temperature".to_string(),
+                        predicate: "is_high".to_string(),
+                        object: None,
+                    },
+                ),
+            ];
+
+            let results = verifier.verify_claims(&claims).await;
+            assert!(results.is_ok());
+            let results = results.expect("verification should succeed");
+            assert_eq!(results.len(), 3);
+            assert_eq!(results[0].status, VerificationStatus::Verified);
+            assert_eq!(results[1].status, VerificationStatus::Verified);
+            assert_eq!(results[2].status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_check_consistency_consistent() {
+            let verifier = create_oxiz_verifier();
+            let claims = vec![
+                LogicalClaim::new(
+                    "x > 5",
+                    ClaimStructure::Comparison {
+                        left: "x".to_string(),
+                        operator: ComparisonOp::GreaterThan,
+                        right: "5".to_string(),
+                    },
+                ),
+                LogicalClaim::new(
+                    "x < 10",
+                    ClaimStructure::Comparison {
+                        left: "x".to_string(),
+                        operator: ComparisonOp::LessThan,
+                        right: "10".to_string(),
+                    },
+                ),
+            ];
+
+            let result = verifier.check_consistency(&claims).await;
+            assert!(result.is_ok());
+            let is_consistent = result.expect("consistency check should succeed");
+            assert!(is_consistent);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_check_consistency_empty() {
+            let verifier = create_oxiz_verifier();
+            let claims = vec![];
+
+            let result = verifier.check_consistency(&claims).await;
+            assert!(result.is_ok());
+            let is_consistent = result.expect("consistency check should succeed");
+            assert!(is_consistent);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_timeout_configuration() {
+            let timeout_ms = 100;
+            let verifier = create_oxiz_verifier_with_timeout(timeout_ms);
+            let claim = LogicalClaim::new(
+                "simple claim",
+                ClaimStructure::Predicate {
+                    subject: "x".to_string(),
+                    predicate: "is_true".to_string(),
+                    object: None,
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            // Even with a short timeout, simple claims should complete
+            let result = result.expect("verification should succeed");
+            assert!(
+                result.status == VerificationStatus::Verified
+                    || result.status == VerificationStatus::Unknown
+            );
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_complex_arithmetic() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "100 >= 50",
+                ClaimStructure::Comparison {
+                    left: "100".to_string(),
+                    operator: ComparisonOp::GreaterOrEqual,
+                    right: "50".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+            assert!(result.duration_ms < 1000); // Should be fast
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_less_than_or_equal() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "5 <= 5",
+                ClaimStructure::Comparison {
+                    left: "5".to_string(),
+                    operator: ComparisonOp::LessOrEqual,
+                    right: "5".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_not_equal() {
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "5 != 10",
+                ClaimStructure::Comparison {
+                    left: "5".to_string(),
+                    operator: ComparisonOp::NotEqual,
+                    right: "10".to_string(),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            assert_eq!(result.status, VerificationStatus::Verified);
+        }
+
+        #[tokio::test]
+        async fn test_oxiz_sanitize_names() {
+            // Test that variable names with special characters are sanitized
+            let verifier = create_oxiz_verifier();
+            let claim = LogicalClaim::new(
+                "my-var with spaces",
+                ClaimStructure::Predicate {
+                    subject: "my-var with spaces".to_string(),
+                    predicate: "is-valid?".to_string(),
+                    object: Some("yes!".to_string()),
+                },
+            );
+
+            let result = verifier.verify_claim(&claim).await;
+            assert!(result.is_ok());
+            let result = result.expect("verification should succeed");
+            // Should not crash and return a valid status
+            assert!(matches!(
+                result.status,
+                VerificationStatus::Verified
+                    | VerificationStatus::Falsified
+                    | VerificationStatus::Unknown
+            ));
+        }
     }
 }

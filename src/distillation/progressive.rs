@@ -423,18 +423,16 @@ impl StageResult {
     ///
     /// Does not panic - only operates on entries with `Some(val_loss)`.
     #[must_use]
-    #[allow(clippy::missing_panics_doc)]
     pub fn best_epoch(&self) -> Option<usize> {
         self.training_history
             .iter()
-            .filter(|e| e.val_loss.is_some())
-            .min_by(|a, b| {
-                a.val_loss
-                    .unwrap()
-                    .partial_cmp(&b.val_loss.unwrap())
+            .filter_map(|e| e.val_loss.map(|loss| (e.epoch, loss)))
+            .min_by(|(_, a_loss), (_, b_loss)| {
+                a_loss
+                    .partial_cmp(b_loss)
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
-            .map(|e| e.epoch)
+            .map(|(epoch, _)| epoch)
     }
 }
 

@@ -26,6 +26,9 @@ pub use traits::{RuleBasedSpeculator, Speculator, SpeculatorConfig, prompts};
 // Re-export candle types
 pub use candle_slm::{CandleSlmConfig, CandleSlmDevice, MockSlmSpeculator};
 
+#[cfg(feature = "speculator")]
+pub use candle_slm::CandleSLM;
+
 // Re-export streaming types
 #[cfg(feature = "native")]
 pub use streaming::{

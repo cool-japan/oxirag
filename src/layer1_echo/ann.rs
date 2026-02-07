@@ -1427,7 +1427,7 @@ mod tests {
         for i in 0..500 {
             let id = DocumentId::from_string(format!("doc_{i}"));
             let vector = normalize_vector(&create_random_vector(64, i));
-            index.insert(id, vector).unwrap();
+            index.insert(id, vector).expect("Failed to insert vector");
         }
 
         let query = normalize_vector(&create_random_vector(64, 999));
@@ -1439,7 +1439,16 @@ mod tests {
         }
         let duration = start.elapsed();
 
-        // Should complete 100 searches in reasonable time (< 1 second)
-        assert!(duration.as_secs() < 1, "Search took too long: {duration:?}");
+        // Should complete 100 searches in reasonable time
+        // Use different thresholds for debug vs release builds
+        #[cfg(debug_assertions)]
+        let max_duration_secs = 5; // Debug builds are much slower
+        #[cfg(not(debug_assertions))]
+        let max_duration_secs = 1;
+
+        assert!(
+            duration.as_secs() < max_duration_secs,
+            "Search took too long: {duration:?} (max: {max_duration_secs}s)"
+        );
     }
 }
