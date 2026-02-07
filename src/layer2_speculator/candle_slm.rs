@@ -18,17 +18,19 @@
 //! Models are downloaded to the `HuggingFace` cache directory (~/.cache/huggingface).
 
 use async_trait::async_trait;
-use std::path::PathBuf;
 
 use crate::error::SpeculatorError;
-use crate::layer2_speculator::slm::{
-    FinishReason, GenerationOutput, SlmConfig, SmallLanguageModel,
-};
 use crate::layer2_speculator::traits::{Speculator, SpeculatorConfig};
 use crate::types::{Draft, SearchResult, SpeculationDecision, SpeculationResult};
 
 #[cfg(feature = "speculator")]
+use std::path::PathBuf;
+#[cfg(feature = "speculator")]
 use crate::layer2_speculator::traits::prompts;
+#[cfg(feature = "speculator")]
+use crate::layer2_speculator::slm::{
+    FinishReason, GenerationOutput, SlmConfig, SmallLanguageModel,
+};
 
 #[cfg(feature = "speculator")]
 use candle_core::{DType, Device, Tensor};
@@ -956,13 +958,13 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download (~2.7GB)
+        #[ignore = "Requires model download (~2.7GB)"]
         async fn test_candle_slm_phi2_load() {
             let config = CandleSlmConfig {
                 model_id: "microsoft/phi-2".to_string(),
                 revision: "main".to_string(),
                 device: CandleSlmDevice::Cpu,
-                speculator_config: Default::default(),
+                speculator_config: SpeculatorConfig::default(),
             };
 
             let result = CandleSLM::new(config);
@@ -977,13 +979,13 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download (~3.8GB)
+        #[ignore = "Requires model download (~3.8GB)"]
         async fn test_candle_slm_phi3_load() {
             let config = CandleSlmConfig {
                 model_id: "microsoft/phi-3-mini".to_string(),
                 revision: "main".to_string(),
                 device: CandleSlmDevice::Cpu,
-                speculator_config: Default::default(),
+                speculator_config: SpeculatorConfig::default(),
             };
 
             let result = CandleSLM::new(config);
@@ -995,7 +997,7 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download
+        #[ignore = "Requires model download"]
         async fn test_candle_slm_generate() {
             let config = CandleSlmConfig::default();
             let slm = CandleSLM::new(config).expect("Failed to load model");
@@ -1014,7 +1016,7 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download
+        #[ignore = "Requires model download"]
         async fn test_candle_slm_generate_max_tokens() {
             let config = CandleSlmConfig::default();
             let slm = CandleSLM::new(config).expect("Failed to load model");
@@ -1035,7 +1037,7 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download
+        #[ignore = "Requires model download"]
         async fn test_candle_slm_get_logprobs() {
             let config = CandleSlmConfig::default();
             let slm = CandleSLM::new(config).expect("Failed to load model");
@@ -1055,7 +1057,7 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download
+        #[ignore = "Requires model download"]
         async fn test_candle_slm_get_logprobs_empty() {
             let config = CandleSlmConfig::default();
             let slm = CandleSLM::new(config).expect("Failed to load model");
@@ -1066,7 +1068,7 @@ mod tests {
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download
+        #[ignore = "Requires model download"]
         async fn test_candle_slm_verify_text() {
             let config = CandleSlmConfig::default();
             let slm = CandleSLM::new(config).expect("Failed to load model");
@@ -1082,11 +1084,11 @@ mod tests {
             );
 
             let confidence = confidence.unwrap();
-            assert!(confidence >= 0.0 && confidence <= 1.0);
+            assert!((0.0..=1.0).contains(&confidence));
         }
 
         #[tokio::test]
-        #[ignore] // Requires model download
+        #[ignore = "Requires model download"]
         async fn test_candle_slm_model_info() {
             let config = CandleSlmConfig::default();
             let slm = CandleSLM::new(config).expect("Failed to load model");

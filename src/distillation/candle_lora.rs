@@ -695,8 +695,10 @@ mod tests {
 
     #[test]
     fn test_candle_config_validation() {
-        let mut config = CandleLoraConfig::default();
-        config.model_id = String::new();
+        let mut config = CandleLoraConfig {
+            model_id: String::new(),
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
 
         config.model_id = "valid-model".to_string();

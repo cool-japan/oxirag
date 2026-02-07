@@ -493,6 +493,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_precision_loss)] // Intentional for test data generation
     fn test_simd_matches_scalar() {
         let a: Vec<f32> = (0..128).map(|i| (i as f32 * 0.1).sin()).collect();
         let b: Vec<f32> = (0..128).map(|i| (i as f32 * 0.15).cos()).collect();
@@ -502,9 +503,7 @@ mod tests {
 
         assert!(
             (simd_cos - scalar_cos).abs() < 1e-5,
-            "SIMD: {}, Scalar: {}",
-            simd_cos,
-            scalar_cos
+            "SIMD: {simd_cos}, Scalar: {scalar_cos}"
         );
     }
 }
