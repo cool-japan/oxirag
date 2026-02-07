@@ -24,13 +24,13 @@ use crate::layer2_speculator::traits::{Speculator, SpeculatorConfig};
 use crate::types::{Draft, SearchResult, SpeculationDecision, SpeculationResult};
 
 #[cfg(feature = "speculator")]
-use std::path::PathBuf;
-#[cfg(feature = "speculator")]
-use crate::layer2_speculator::traits::prompts;
-#[cfg(feature = "speculator")]
 use crate::layer2_speculator::slm::{
     FinishReason, GenerationOutput, SlmConfig, SmallLanguageModel,
 };
+#[cfg(feature = "speculator")]
+use crate::layer2_speculator::traits::prompts;
+#[cfg(feature = "speculator")]
+use std::path::PathBuf;
 
 #[cfg(feature = "speculator")]
 use candle_core::{DType, Device, Tensor};

@@ -109,9 +109,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 4: Different prompts
     println!("--- Example 4: Multiple Prompts ---");
-    let prompts = ["Explain quantum computing in one sentence:",
+    let prompts = [
+        "Explain quantum computing in one sentence:",
         "What is the largest planet in our solar system?",
-        "Define machine learning:"];
+        "Define machine learning:",
+    ];
 
     for (i, prompt) in prompts.iter().enumerate() {
         println!("Prompt {}: {}", i + 1, prompt);
