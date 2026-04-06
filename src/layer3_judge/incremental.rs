@@ -525,21 +525,19 @@ impl IncrementalConsistencyChecker {
                 },
             ) => {
                 // Same subject with contradictory predicates
-                if Self::normalize_string(s1) == Self::normalize_string(s2) {
-                    // Check for opposite predicates
-                    if Self::are_opposite_predicates(p1, p2)
+                if Self::normalize_string(s1) == Self::normalize_string(s2)
+                    && (Self::are_opposite_predicates(p1, p2)
                         || (Self::normalize_string(p1) == Self::normalize_string(p2)
-                            && Self::are_contradictory_objects(o1.as_deref(), o2.as_deref()))
-                    {
-                        return Some(ClaimConflict::new(
-                            &claim1.id,
-                            &claim2.id,
-                            ConflictType::PredicateConflict,
-                            format!(
-                                "Subject '{s1}' has contradictory properties: '{p1}' vs '{p2}'"
-                            ),
-                        ));
-                    }
+                            && Self::are_contradictory_objects(o1.as_deref(), o2.as_deref())))
+                {
+                    return Some(ClaimConflict::new(
+                        &claim1.id,
+                        &claim2.id,
+                        ConflictType::PredicateConflict,
+                        format!(
+                            "Subject '{s1}' has contradictory properties: '{p1}' vs '{p2}'"
+                        ),
+                    ));
                 }
             }
             (ClaimStructure::Predicate { .. }, ClaimStructure::Not(inner))

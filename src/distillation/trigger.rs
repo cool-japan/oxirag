@@ -145,7 +145,7 @@ impl DistillationTrigger {
     pub fn new(conditions: Vec<TriggerCondition>) -> Self {
         Self {
             conditions,
-            cooldown: Duration::from_secs(3600), // 1 hour default
+            cooldown: Duration::from_secs(60 * 60), // 1 hour default
             last_triggered: HashMap::new(),
         }
     }

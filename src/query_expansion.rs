@@ -446,7 +446,7 @@ impl QueryExpander for SynonymExpander {
             .into_iter()
             .filter(|(_, count)| *count >= self.config.prf_min_frequency)
             .collect();
-        top_terms.sort_by(|a, b| b.1.cmp(&a.1));
+        top_terms.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         let expanded_terms: Vec<String> = top_terms
             .into_iter()

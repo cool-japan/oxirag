@@ -402,8 +402,7 @@ impl HiddenStateCache {
         let should_evict = self
             .entries
             .read()
-            .map(|e| e.len() >= self.config.max_entries)
-            .unwrap_or(false);
+            .map_or(false, |e| e.len() >= self.config.max_entries);
 
         if should_evict
             && self.config.use_lru
@@ -453,7 +452,7 @@ impl HiddenStateCache {
     #[cfg(feature = "native")]
     #[must_use]
     pub fn len(&self) -> usize {
-        self.entries.read().map(|e| e.len()).unwrap_or(0)
+        self.entries.read().map_or(0, |e| e.len())
     }
 
     /// Get the number of entries in the cache (non-native version).

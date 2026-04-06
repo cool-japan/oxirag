@@ -288,8 +288,7 @@ fn simple_random() -> f64 {
         static SEED: Cell<u64> = Cell::new(
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|d| d.as_nanos() as u64)
-                .unwrap_or(12345)
+                .map_or(12345, |d| d.as_nanos() as u64)
         );
     }
 

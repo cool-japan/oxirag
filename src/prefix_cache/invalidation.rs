@@ -78,7 +78,7 @@ impl InvalidationPolicy {
 
 impl Default for InvalidationPolicy {
     fn default() -> Self {
-        Self::Ttl(Duration::from_secs(3600)) // 1 hour default
+        Self::Ttl(Duration::from_hours(1)) // 1 hour default
     }
 }
 

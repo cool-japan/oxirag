@@ -48,6 +48,9 @@ TAGS
 *.sublime-project
 *.sublime-workspace
 
+# Claude AI config
+**/.claude/
+
 # =============================================================================
 # OS-specific
 # =============================================================================
@@ -147,3 +150,6 @@ yarn-error.log
 *.rej
 .direnv/
 result
+
+# Rustc ICE dumps
+rustc-ice-*.txt

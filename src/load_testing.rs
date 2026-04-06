@@ -58,7 +58,7 @@ impl Default for LoadTestConfig {
         Self {
             concurrent_users: 1,
             total_requests: 100,
-            duration: Duration::from_secs(60),
+            duration: Duration::from_mins(1),
             ramp_up_time: Duration::from_secs(5),
             ramp_down_time: Duration::from_secs(5),
             think_time_ms: 0,

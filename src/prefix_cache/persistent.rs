@@ -114,8 +114,7 @@ impl PersistedEntry {
     pub fn from_kv_entry(entry: &KVCacheEntry) -> Self {
         let created_at_unix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_secs());
 
         Self {
             key: entry.key.clone(),
@@ -159,8 +158,7 @@ impl PersistedEntry {
         if let Some(ttl_secs) = self.ttl_secs {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+                .map_or(0, |d| d.as_secs());
             now.saturating_sub(self.created_at_unix) >= ttl_secs
         } else {
             false
@@ -200,8 +198,7 @@ impl IndexEntry {
         if let Some(ttl_secs) = self.ttl_secs {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+                .map_or(0, |d| d.as_secs());
             now.saturating_sub(self.created_at_unix) >= ttl_secs
         } else {
             false
@@ -515,8 +512,7 @@ impl PersistentPrefixCache {
                 new_index.last_compaction = Some(
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0),
+                        .map_or(0, |d| d.as_secs()),
                 );
 
                 *self.index.write().expect("lock poisoned") = new_index;
@@ -1344,7 +1340,8 @@ mod tests {
     // Test 18: PersistentCacheConfig builder
     #[test]
     fn test_persistent_cache_config_builder() {
-        let config = PersistentCacheConfig::new("/tmp/test")
+        let tmp = tempfile::TempDir::new().unwrap();
+        let config = PersistentCacheConfig::new(tmp.path())
             .with_max_file_size(100 * 1024 * 1024)
             .with_sync_interval(30)
             .with_compression(true)

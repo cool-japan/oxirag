@@ -504,7 +504,7 @@ impl HierarchicalCache {
     /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn needs_rebalance(&self) -> bool {
-        self.time_since_rebalance() > Duration::from_secs(60)
+        self.time_since_rebalance() > Duration::from_mins(1)
     }
 }
 
