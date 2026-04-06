@@ -338,7 +338,7 @@ impl From<Query> for ExtendedQuery {
 /// let query = QueryBuilder::new()
 ///     .text("What is Rust?")
 ///     .build()
-///     .unwrap();
+///     .expect("test operation should succeed");
 ///
 /// // Complex query with all options
 /// let complex = QueryBuilder::new()
@@ -347,7 +347,7 @@ impl From<Query> for ExtendedQuery {
 ///     .with_min_score(0.5)
 ///     .with_metadata(MetadataFilter::eq("lang", "en"))
 ///     .build()
-///     .unwrap();
+///     .expect("test operation should succeed");
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct QueryBuilder {
@@ -394,7 +394,7 @@ impl QueryBuilder {
     /// let query = QueryBuilder::new()
     ///     .text("What is machine learning?")
     ///     .build()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(query.text, "What is machine learning?");
     /// ```
@@ -419,7 +419,7 @@ impl QueryBuilder {
     ///     .text("query")
     ///     .with_top_k(5)
     ///     .build()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(query.top_k, 5);
     /// ```
@@ -446,7 +446,7 @@ impl QueryBuilder {
     ///     .text("query")
     ///     .with_min_score(0.7)
     ///     .build()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(query.min_score, Some(0.7));
     /// ```
@@ -476,7 +476,7 @@ impl QueryBuilder {
     ///     .with_filter("category", "science")
     ///     .with_filter("status", "published")
     ///     .build()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(query.filters.get("category"), Some(&"science".to_string()));
     /// ```
@@ -511,7 +511,7 @@ impl QueryBuilder {
     ///         ]),
     ///     ]))
     ///     .build()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert!(query.metadata_filter.is_some());
     /// ```
@@ -539,7 +539,7 @@ impl QueryBuilder {
     ///     .text("query")
     ///     .with_timeout(Duration::from_secs(30))
     ///     .build_extended()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(extended.timeout, Some(Duration::from_secs(30)));
     /// ```
@@ -566,7 +566,7 @@ impl QueryBuilder {
     ///     .text("query")
     ///     .with_cache_key("my-custom-key-v1")
     ///     .build_extended()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(extended.cache_key, Some("my-custom-key-v1".to_string()));
     /// ```
@@ -593,9 +593,9 @@ impl QueryBuilder {
     ///     .text("query")
     ///     .with_layer_hints(LayerHints::echo_only())
     ///     .build_extended()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
-    /// let hints = extended.layer_hints.unwrap();
+    /// let hints = extended.layer_hints.expect("test operation should succeed");
     /// assert!(hints.use_echo);
     /// assert!(!hints.use_speculator);
     /// ```
@@ -626,7 +626,7 @@ impl QueryBuilder {
     ///             .with_max_hops(3)
     ///     )
     ///     .build_extended()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     /// ```
     #[cfg(feature = "graphrag")]
     #[must_use]
@@ -658,7 +658,7 @@ impl QueryBuilder {
     /// let query = QueryBuilder::new()
     ///     .text("What is Rust?")
     ///     .build()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// // Missing text - will error
     /// let result = QueryBuilder::new().build();
@@ -717,7 +717,7 @@ impl QueryBuilder {
     ///     .with_timeout(Duration::from_secs(30))
     ///     .with_layer_hints(LayerHints::all())
     ///     .build_extended()
-    ///     .unwrap();
+    ///     .expect("test operation should succeed");
     ///
     /// assert_eq!(extended.query.text, "What is Rust?");
     /// assert_eq!(extended.timeout, Some(Duration::from_secs(30)));
@@ -777,7 +777,9 @@ mod tests {
             .build()
             .expect("Failed to build query");
 
-        assert!((query.min_score.unwrap() - 0.7).abs() < f32::EPSILON);
+        assert!(
+            (query.min_score.expect("test operation should succeed") - 0.7).abs() < f32::EPSILON
+        );
     }
 
     #[test]
@@ -838,7 +840,7 @@ mod tests {
         assert_eq!(extended.timeout, Some(Duration::from_secs(30)));
         assert_eq!(extended.cache_key, Some("test-key".to_string()));
 
-        let hints = extended.layer_hints.unwrap();
+        let hints = extended.layer_hints.expect("test operation should succeed");
         assert!(hints.use_echo);
         assert!(!hints.use_speculator);
         assert!(!hints.use_judge);
@@ -859,7 +861,10 @@ mod tests {
 
         assert_eq!(extended.text(), "test query");
         assert_eq!(extended.top_k(), 20);
-        assert!((extended.min_score().unwrap() - 0.5).abs() < f32::EPSILON);
+        assert!(
+            (extended.min_score().expect("test operation should succeed") - 0.5).abs()
+                < f32::EPSILON
+        );
         assert!(extended.metadata_filter().is_some());
         assert_eq!(extended.timeout(), Some(Duration::from_secs(60)));
         assert_eq!(extended.cache_key(), Some("cache-key"));
@@ -988,7 +993,10 @@ mod tests {
 
             assert_eq!(ctx.start_entities.len(), 2);
             assert_eq!(ctx.max_hops, Some(3));
-            assert!((ctx.min_confidence.unwrap() - 0.5).abs() < f32::EPSILON);
+            assert!(
+                (ctx.min_confidence.expect("test operation should succeed") - 0.5).abs()
+                    < f32::EPSILON
+            );
             assert_eq!(ctx.direction, Some(Direction::Outgoing));
             assert!(ctx.relationship_types.is_some());
             assert!(ctx.entity_types.is_some());
@@ -1014,7 +1022,9 @@ mod tests {
                 .build_extended()
                 .expect("Failed to build");
 
-            let graph_ctx = extended.graph_context().unwrap();
+            let graph_ctx = extended
+                .graph_context()
+                .expect("test operation should succeed");
             assert_eq!(graph_ctx.start_entities, vec!["test"]);
             assert_eq!(graph_ctx.max_hops, Some(2));
         }
@@ -1046,7 +1056,9 @@ mod tests {
 
         assert_eq!(query.text, "Find documents about machine learning");
         assert_eq!(query.top_k, 20);
-        assert!((query.min_score.unwrap() - 0.6).abs() < f32::EPSILON);
+        assert!(
+            (query.min_score.expect("test operation should succeed") - 0.6).abs() < f32::EPSILON
+        );
         assert_eq!(query.filters.get("language"), Some(&"en".to_string()));
         assert_eq!(query.filters.get("year"), Some(&"2024".to_string()));
         assert!(query.metadata_filter.is_some());

@@ -256,12 +256,21 @@ mod tests {
 
         let entity = GraphEntity::new("Rust", EntityType::Technology).with_id("rust");
 
-        let id = store.add_entity(entity).await.unwrap();
+        let id = store
+            .add_entity(entity)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(id, "rust");
 
-        let retrieved = store.get_entity(&id).await.unwrap();
+        let retrieved = store
+            .get_entity(&id)
+            .await
+            .expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().name, "Rust");
+        assert_eq!(
+            retrieved.expect("test operation should succeed").name,
+            "Rust"
+        );
     }
 
     #[tokio::test]
@@ -271,8 +280,14 @@ mod tests {
         let rust = GraphEntity::new("Rust", EntityType::Technology).with_id("rust");
         let llvm = GraphEntity::new("LLVM", EntityType::Technology).with_id("llvm");
 
-        store.add_entity(rust).await.unwrap();
-        store.add_entity(llvm).await.unwrap();
+        store
+            .add_entity(rust)
+            .await
+            .expect("test operation should succeed");
+        store
+            .add_entity(llvm)
+            .await
+            .expect("test operation should succeed");
 
         let rel = GraphRelationship::new(
             "rust",
@@ -280,7 +295,10 @@ mod tests {
             crate::layer4_graph::types::RelationshipType::Uses,
         );
 
-        let rel_id = store.add_relationship(rel).await.unwrap();
+        let rel_id = store
+            .add_relationship(rel)
+            .await
+            .expect("test operation should succeed");
         assert!(!rel_id.is_empty());
     }
 
@@ -289,7 +307,10 @@ mod tests {
         let mut store = InMemoryGraphStore::new();
 
         let rust = GraphEntity::new("Rust", EntityType::Technology).with_id("rust");
-        store.add_entity(rust).await.unwrap();
+        store
+            .add_entity(rust)
+            .await
+            .expect("test operation should succeed");
 
         let rel = GraphRelationship::new(
             "rust",
@@ -309,9 +330,18 @@ mod tests {
         let llvm = GraphEntity::new("LLVM", EntityType::Technology).with_id("llvm");
         let cargo = GraphEntity::new("Cargo", EntityType::Technology).with_id("cargo");
 
-        store.add_entity(rust).await.unwrap();
-        store.add_entity(llvm).await.unwrap();
-        store.add_entity(cargo).await.unwrap();
+        store
+            .add_entity(rust)
+            .await
+            .expect("test operation should succeed");
+        store
+            .add_entity(llvm)
+            .await
+            .expect("test operation should succeed");
+        store
+            .add_entity(cargo)
+            .await
+            .expect("test operation should succeed");
 
         store
             .add_relationship(GraphRelationship::new(
@@ -320,7 +350,7 @@ mod tests {
                 crate::layer4_graph::types::RelationshipType::Uses,
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_relationship(GraphRelationship::new(
                 "rust",
@@ -328,24 +358,24 @@ mod tests {
                 crate::layer4_graph::types::RelationshipType::Uses,
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let neighbors = store
             .get_neighbors(&"rust".to_string(), Direction::Outgoing)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(neighbors.len(), 2);
 
         let incoming = store
             .get_neighbors(&"rust".to_string(), Direction::Incoming)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(incoming.is_empty());
 
         let llvm_incoming = store
             .get_neighbors(&"llvm".to_string(), Direction::Incoming)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(llvm_incoming.len(), 1);
     }
 
@@ -356,26 +386,26 @@ mod tests {
         store
             .add_entity(GraphEntity::new("Rust", EntityType::Technology))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("Python", EntityType::Technology))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("Mozilla", EntityType::Organization))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let tech = store
             .find_entities_by_type(&EntityType::Technology)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(tech.len(), 2);
 
         let orgs = store
             .find_entities_by_type(&EntityType::Organization)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(orgs.len(), 1);
     }
 
@@ -386,18 +416,24 @@ mod tests {
         store
             .add_entity(GraphEntity::new("Rust Language", EntityType::Technology))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("Rusty", EntityType::Person))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Exact match (case-insensitive)
-        let exact = store.find_entities_by_name("rust language").await.unwrap();
+        let exact = store
+            .find_entities_by_name("rust language")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(exact.len(), 1);
 
         // Partial match
-        let partial = store.find_entities_by_name("rust").await.unwrap();
+        let partial = store
+            .find_entities_by_name("rust")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(partial.len(), 2);
     }
 
@@ -411,11 +447,11 @@ mod tests {
         store
             .add_entity(GraphEntity::new("A", EntityType::Concept).with_id("a"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("B", EntityType::Concept).with_id("b"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_relationship(GraphRelationship::new(
                 "a",
@@ -423,7 +459,7 @@ mod tests {
                 crate::layer4_graph::types::RelationshipType::RelatedTo,
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(store.entity_count().await, 2);
         assert_eq!(store.relationship_count().await, 1);
@@ -436,13 +472,13 @@ mod tests {
         store
             .add_entity(GraphEntity::new("A", EntityType::Concept).with_id("a"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("B", EntityType::Concept).with_id("b"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
-        store.clear().await.unwrap();
+        store.clear().await.expect("test operation should succeed");
 
         assert_eq!(store.entity_count().await, 0);
         assert_eq!(store.relationship_count().await, 0);

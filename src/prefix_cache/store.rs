@@ -431,12 +431,21 @@ mod tests {
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        let key = cache.put(entry).await.unwrap();
+        let key = cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
         assert!(!key.is_empty());
 
         let retrieved = cache.get(&fingerprint).await;
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().fingerprint.hash, 12345);
+        assert_eq!(
+            retrieved
+                .expect("test operation should succeed")
+                .fingerprint
+                .hash,
+            12345
+        );
     }
 
     #[tokio::test]
@@ -459,7 +468,10 @@ mod tests {
 
         assert!(!cache.contains(&fingerprint).await);
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         assert!(cache.contains(&fingerprint).await);
     }
@@ -470,7 +482,10 @@ mod tests {
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        let key = cache.put(entry).await.unwrap();
+        let key = cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cache.len(), 1);
 
         let removed = cache.remove(&key).await;
@@ -485,7 +500,10 @@ mod tests {
 
         for i in 0..5 {
             let entry = create_test_entry(&format!("test{i}"), i as u64, 10);
-            cache.put(entry).await.unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(cache.len(), 5);
@@ -502,7 +520,10 @@ mod tests {
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         // Hit
         cache.get(&fingerprint).await;
@@ -532,9 +553,18 @@ mod tests {
         let fp2 = entry2.fingerprint.clone();
         let fp3 = entry3.fingerprint.clone();
 
-        cache.put(entry1).await.unwrap();
-        cache.put(entry2).await.unwrap();
-        cache.put(entry3).await.unwrap();
+        cache
+            .put(entry1)
+            .await
+            .expect("test operation should succeed");
+        cache
+            .put(entry2)
+            .await
+            .expect("test operation should succeed");
+        cache
+            .put(entry3)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(cache.len(), 3);
 
@@ -544,7 +574,10 @@ mod tests {
 
         // Add a 4th entry - should evict entry2 (LRU)
         let entry4 = create_test_entry("test4", 4, 10);
-        cache.put(entry4).await.unwrap();
+        cache
+            .put(entry4)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(cache.len(), 3);
         assert!(!cache.contains(&fp2).await); // entry2 should be evicted
@@ -564,7 +597,10 @@ mod tests {
         let entry = KVCacheEntry::new("test1", fp.clone(), vec![0.0; 10], 100)
             .with_ttl(Duration::from_secs(0)); // Immediate expiration
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         // Entry should be expired immediately
         std::thread::sleep(Duration::from_millis(1));
@@ -584,7 +620,10 @@ mod tests {
             let fp = ContextFingerprint::new(i as u64, 100, format!("test {i}"));
             let entry = KVCacheEntry::new(format!("test{i}"), fp, vec![0.0; 10], 100)
                 .with_ttl(Duration::from_secs(0)); // Immediate expiration
-            cache.put(entry).await.unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(cache.len(), 5);
@@ -601,7 +640,10 @@ mod tests {
         let mut cache = InMemoryPrefixCache::with_defaults();
 
         let entry = create_test_entry("test1", 12345, 100);
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         let memory = cache.memory_usage();
         assert!(memory > 0);
@@ -630,14 +672,23 @@ mod tests {
         // Add entry with prefix length 50
         let short_fp = ContextFingerprint::new(100, 50, "short");
         let short_entry = KVCacheEntry::new("short", short_fp.clone(), vec![1.0; 10], 50);
-        cache.put(short_entry).await.unwrap();
+        cache
+            .put(short_entry)
+            .await
+            .expect("test operation should succeed");
 
         // Look for prefix of longer content
         let long_fp = ContextFingerprint::new(200, 100, "long");
         let prefix_match = cache.find_prefix_match(&long_fp).await;
 
         assert!(prefix_match.is_some());
-        assert_eq!(prefix_match.unwrap().fingerprint.prefix_length, 50);
+        assert_eq!(
+            prefix_match
+                .expect("test operation should succeed")
+                .fingerprint
+                .prefix_length,
+            50
+        );
     }
 
     #[tokio::test]
@@ -647,7 +698,10 @@ mod tests {
         // Add entry with prefix length 50
         let fp = ContextFingerprint::new(100, 50, "test");
         let entry = KVCacheEntry::new("test", fp.clone(), vec![1.0; 10], 50);
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         // Exact match
         let result = cache.lookup(&fp);
@@ -668,13 +722,19 @@ mod tests {
         let entry1 = KVCacheEntry::new("test1", fp.clone(), vec![1.0; 10], 100);
         let entry2 = KVCacheEntry::new("test2", fp.clone(), vec![2.0; 10], 100);
 
-        cache.put(entry1).await.unwrap();
-        cache.put(entry2).await.unwrap();
+        cache
+            .put(entry1)
+            .await
+            .expect("test operation should succeed");
+        cache
+            .put(entry2)
+            .await
+            .expect("test operation should succeed");
 
         // Should only have one entry (updated)
         assert_eq!(cache.len(), 1);
 
-        let retrieved = cache.get(&fp).await.unwrap();
+        let retrieved = cache.get(&fp).await.expect("test operation should succeed");
         assert_eq!(retrieved.kv_data[0], 2.0);
     }
 
@@ -686,7 +746,10 @@ mod tests {
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        cache1.put(entry).await.unwrap();
+        cache1
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         // Both caches should see the entry
         assert!(cache2.contains(&fingerprint).await);
@@ -704,15 +767,24 @@ mod tests {
         let fp1 = entry1.fingerprint.clone();
         let fp2 = entry2.fingerprint.clone();
 
-        cache.put(entry1).await.unwrap();
-        cache.put(entry2).await.unwrap();
+        cache
+            .put(entry1)
+            .await
+            .expect("test operation should succeed");
+        cache
+            .put(entry2)
+            .await
+            .expect("test operation should succeed");
 
         // Access entry1 to make it more recent than entry2
         cache.get(&fp1).await;
 
         // Add entry3 - should evict entry2 (LRU)
         let entry3 = create_test_entry("test3", 3, 10);
-        cache.put(entry3).await.unwrap();
+        cache
+            .put(entry3)
+            .await
+            .expect("test operation should succeed");
 
         assert!(cache.contains(&fp1).await);
         assert!(!cache.contains(&fp2).await);

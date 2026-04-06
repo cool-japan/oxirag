@@ -334,7 +334,7 @@ mod tests {
         let result = extractor
             .extract_relationships("any text", &entities)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].relationship_type, RelationshipType::Uses);
     }
@@ -353,7 +353,7 @@ mod tests {
         let result = extractor
             .extract_relationships(text, &entities)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(!result.is_empty());
     }
 
@@ -370,7 +370,7 @@ mod tests {
         let result = extractor
             .extract_relationships(text, &entities)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(!result.is_empty());
 
         // Should find USES relationship
@@ -393,7 +393,7 @@ mod tests {
         let result = extractor
             .extract_relationships(text, &entities)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(!result.is_empty());
     }
 

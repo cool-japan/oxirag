@@ -148,12 +148,15 @@ mod tests {
 
         // Extract states
         let text1 = "The quick brown fox jumps over the lazy dog.";
-        let states1 = provider.extract_hidden_states(text1).await.unwrap();
+        let states1 = provider
+            .extract_hidden_states(text1)
+            .await
+            .expect("test operation should succeed");
         cache.put(text1.to_string(), states1.clone(), None);
 
         // Verify cached
         assert!(cache.contains(text1));
-        let cached = cache.get(text1).unwrap();
+        let cached = cache.get(text1).expect("test operation should succeed");
         assert_eq!(cached.states.model_id, "test-model");
 
         // Try prefix matching
@@ -187,7 +190,7 @@ mod tests {
         let (states1, kv1) = provider
             .extract_with_kv_cache("Hello, world!", None)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states1.model_id, "test-model");
         assert_eq!(kv1.layers.len(), 4);
@@ -196,7 +199,7 @@ mod tests {
         let (states2, kv2) = provider
             .extract_with_kv_cache("How are you?", Some(&kv1))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states2.model_id, "test-model");
         // KV cache should have accumulated states
@@ -208,14 +211,23 @@ mod tests {
         let provider = MockHiddenStateProvider::new("test-model", 4, 128);
 
         // Same input should produce identical states
-        let states1 = provider.extract_hidden_states("test input").await.unwrap();
-        let states2 = provider.extract_hidden_states("test input").await.unwrap();
+        let states1 = provider
+            .extract_hidden_states("test input")
+            .await
+            .expect("test operation should succeed");
+        let states2 = provider
+            .extract_hidden_states("test input")
+            .await
+            .expect("test operation should succeed");
 
         let avg_sim = StateSimilarity::average_similarity(&states1, &states2);
         assert!((avg_sim - 1.0).abs() < 0.001);
 
         // Different inputs should have different similarity
-        let states3 = provider.extract_hidden_states("different").await.unwrap();
+        let states3 = provider
+            .extract_hidden_states("different")
+            .await
+            .expect("test operation should succeed");
         let avg_sim2 = StateSimilarity::average_similarity(&states1, &states3);
         assert!(avg_sim2 < 1.0);
     }
@@ -245,7 +257,8 @@ mod tests {
     fn test_tensor_operations() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = TensorShape::new(vec![2, 3]);
-        let tensor = HiddenStateTensor::from_vec(data.clone(), shape.clone()).unwrap();
+        let tensor = HiddenStateTensor::from_vec(data.clone(), shape.clone())
+            .expect("test operation should succeed");
 
         // Test basic properties
         assert_eq!(tensor.numel(), 6);
@@ -253,14 +266,17 @@ mod tests {
         assert_eq!(tensor.size_bytes(), 24); // 6 * 4 bytes
 
         // Test slice
-        let sliced = tensor.slice(0, 0, 1).unwrap();
+        let sliced = tensor
+            .slice(0, 0, 1)
+            .expect("test operation should succeed");
         assert_eq!(sliced.shape.dims, vec![1, 3]);
         assert_eq!(sliced.data, vec![1.0, 2.0, 3.0]);
 
         // Test concat
         let t1 = HiddenStateTensor::from_vec_1d(vec![1.0, 2.0]);
         let t2 = HiddenStateTensor::from_vec_1d(vec![3.0, 4.0]);
-        let concat = HiddenStateTensor::concat(&[&t1, &t2], 0).unwrap();
+        let concat =
+            HiddenStateTensor::concat(&[&t1, &t2], 0).expect("test operation should succeed");
         assert_eq!(concat.data, vec![1.0, 2.0, 3.0, 4.0]);
     }
 
@@ -294,22 +310,23 @@ mod tests {
     fn test_state_pooling() {
         // [1, 2, 4] - batch=1, seq_len=2, hidden_dim=4
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4])).unwrap();
+        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4]))
+            .expect("test operation should succeed");
 
         // Mean pooling
-        let mean_pooled = StatePooling::mean_pool(&tensor).unwrap();
+        let mean_pooled = StatePooling::mean_pool(&tensor).expect("test operation should succeed");
         assert_eq!(mean_pooled.shape.dims, vec![4]);
         // Mean of [1,5], [2,6], [3,7], [4,8] = [3, 4, 5, 6]
         assert!((mean_pooled.data[0] - 3.0).abs() < 0.001);
 
         // Max pooling
-        let max_pooled = StatePooling::max_pool(&tensor).unwrap();
+        let max_pooled = StatePooling::max_pool(&tensor).expect("test operation should succeed");
         assert_eq!(max_pooled.shape.dims, vec![4]);
         // Max of each pair = [5, 6, 7, 8]
         assert!((max_pooled.data[0] - 5.0).abs() < 0.001);
 
         // CLS pooling
-        let cls_pooled = StatePooling::cls_pool(&tensor).unwrap();
+        let cls_pooled = StatePooling::cls_pool(&tensor).expect("test operation should succeed");
         assert_eq!(cls_pooled.shape.dims, vec![4]);
         // First token = [1, 2, 3, 4]
         assert!((cls_pooled.data[0] - 1.0).abs() < 0.001);
@@ -360,7 +377,7 @@ mod tests {
         let states = provider
             .extract_and_cache("test input", &mut cache)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(states.model_id, "test-model");
 
         // Should be cached now
@@ -370,7 +387,7 @@ mod tests {
         let states2 = provider
             .extract_and_cache("test input", &mut cache)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(states2.model_id, states.model_id);
     }
 
@@ -396,7 +413,9 @@ mod tests {
         assert!(states.last_hidden_state().is_some());
 
         // Test prefix_states
-        let prefix = states.prefix_states(5).unwrap();
+        let prefix = states
+            .prefix_states(5)
+            .expect("test operation should succeed");
         assert_eq!(prefix.sequence_length, 5);
 
         // Test total_size_bytes

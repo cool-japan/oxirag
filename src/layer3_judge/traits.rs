@@ -336,7 +336,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The sky is blue. Water flows downhill.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
     }
@@ -345,7 +345,10 @@ mod tests {
     async fn test_pattern_extractor_max_claims() {
         let extractor = PatternClaimExtractor::new();
         let text = "A is B. C is D. E is F. G is H.";
-        let claims = extractor.extract_claims(text, 2).await.unwrap();
+        let claims = extractor
+            .extract_claims(text, 2)
+            .await
+            .expect("test operation should succeed");
 
         assert!(claims.len() <= 2);
     }
@@ -353,7 +356,10 @@ mod tests {
     #[tokio::test]
     async fn test_pattern_extractor_empty() {
         let extractor = PatternClaimExtractor::new();
-        let claims = extractor.extract_claims("", 10).await.unwrap();
+        let claims = extractor
+            .extract_claims("", 10)
+            .await
+            .expect("test operation should succeed");
 
         assert!(claims.is_empty());
     }
@@ -370,7 +376,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("assert"));
         assert!(smt.contains("positive"));
     }
@@ -389,7 +397,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains(">"));
     }
 }

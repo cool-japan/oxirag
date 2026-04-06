@@ -1282,11 +1282,14 @@ mod tests {
         let id = DocumentId::from("doc1");
         let vector = SparseVector::new(vec![0, 2, 4], vec![1.0, 2.0, 3.0], 10);
 
-        store.insert(id.clone(), vector.clone()).await.unwrap();
+        store
+            .insert(id.clone(), vector.clone())
+            .await
+            .expect("test operation should succeed");
 
-        let retrieved = store.get(&id).await.unwrap();
+        let retrieved = store.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_some());
-        let retrieved = retrieved.unwrap();
+        let retrieved = retrieved.expect("test operation should succeed");
         assert_eq!(retrieved.indices, vector.indices);
         assert_eq!(retrieved.values, vector.values);
     }
@@ -1302,25 +1305,28 @@ mod tests {
                 SparseVector::new(vec![0, 1], vec![1.0, 0.5], 10),
             )
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(
                 DocumentId::from("doc2"),
                 SparseVector::new(vec![0, 2], vec![0.5, 1.0], 10),
             )
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(
                 DocumentId::from("doc3"),
                 SparseVector::new(vec![3, 4], vec![1.0, 1.0], 10),
             )
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search with query that matches doc1 and doc2
         let query = SparseVector::new(vec![0, 1], vec![1.0, 1.0], 10);
-        let results = store.search(&query, 10).await.unwrap();
+        let results = store
+            .search(&query, 10)
+            .await
+            .expect("test operation should succeed");
 
         // doc1 should have highest score: 1.0*1.0 + 0.5*1.0 = 1.5
         // doc2 should have lower score: 0.5*1.0 = 0.5
@@ -1336,14 +1342,23 @@ mod tests {
         let id = DocumentId::from("doc1");
         let vector = SparseVector::new(vec![0, 2], vec![1.0, 2.0], 10);
 
-        store.insert(id.clone(), vector).await.unwrap();
+        store
+            .insert(id.clone(), vector)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(store.count().await, 1);
 
-        let deleted = store.delete(&id).await.unwrap();
+        let deleted = store
+            .delete(&id)
+            .await
+            .expect("test operation should succeed");
         assert!(deleted);
         assert_eq!(store.count().await, 0);
 
-        let deleted = store.delete(&id).await.unwrap();
+        let deleted = store
+            .delete(&id)
+            .await
+            .expect("test operation should succeed");
         assert!(!deleted);
     }
 
@@ -1357,18 +1372,18 @@ mod tests {
                 SparseVector::new(vec![0], vec![1.0], 10),
             )
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(
                 DocumentId::from("doc2"),
                 SparseVector::new(vec![1], vec![1.0], 10),
             )
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(store.count().await, 2);
 
-        store.clear().await.unwrap();
+        store.clear().await.expect("test operation should succeed");
         assert_eq!(store.count().await, 0);
     }
 
@@ -1382,7 +1397,10 @@ mod tests {
         for (i, doc) in docs.iter().enumerate() {
             let id = DocumentId::from(format!("doc{}", i + 1));
             let vector = encoder.encode(doc);
-            store.insert(id, vector).await.unwrap();
+            store
+                .insert(id, vector)
+                .await
+                .expect("test operation should succeed");
         }
 
         let config = HybridConfig::weighted_sum(0.5, 0.5);
@@ -1398,7 +1416,7 @@ mod tests {
         let results = searcher
             .search("brown fox", &dense_results, 3)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!results.is_empty());
         // Results should be sorted by combined score
@@ -1417,7 +1435,10 @@ mod tests {
         for (i, doc) in docs.iter().enumerate() {
             let id = DocumentId::from(format!("doc{}", i + 1));
             let vector = encoder.encode(doc);
-            store.insert(id, vector).await.unwrap();
+            store
+                .insert(id, vector)
+                .await
+                .expect("test operation should succeed");
         }
 
         let config = HybridConfig::rrf(60);
@@ -1429,7 +1450,10 @@ mod tests {
             (DocumentId::from("doc2"), 0.5),
         ];
 
-        let results = searcher.search("brown", &dense_results, 3).await.unwrap();
+        let results = searcher
+            .search("brown", &dense_results, 3)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!results.is_empty());
         // Results should be sorted by RRF score
@@ -1448,7 +1472,10 @@ mod tests {
         for (i, doc) in docs.iter().enumerate() {
             let id = DocumentId::from(format!("doc{}", i + 1));
             let vector = encoder.encode(doc);
-            store.insert(id, vector).await.unwrap();
+            store
+                .insert(id, vector)
+                .await
+                .expect("test operation should succeed");
         }
 
         let config = HybridConfig {
@@ -1469,7 +1496,7 @@ mod tests {
         let results = searcher
             .search("brown fox", &dense_results, 3)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!results.is_empty());
     }
@@ -1484,7 +1511,10 @@ mod tests {
         for (i, doc) in docs.iter().enumerate() {
             let id = DocumentId::from(format!("doc{}", i + 1));
             let vector = encoder.encode(doc);
-            store.insert(id, vector).await.unwrap();
+            store
+                .insert(id, vector)
+                .await
+                .expect("test operation should succeed");
         }
 
         let config = HybridConfig::weighted_sum(0.5, 0.5).with_min_score(0.8);
@@ -1498,7 +1528,7 @@ mod tests {
         let results = searcher
             .search("quick fox", &dense_results, 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // All results should have combined_score >= 0.8
         for result in &results {
@@ -1568,7 +1598,10 @@ mod tests {
         let config = HybridConfig::default();
         let searcher = HybridSearcher::new(store, encoder, config);
 
-        let results = searcher.search("query", &[], 10).await.unwrap();
+        let results = searcher
+            .search("query", &[], 10)
+            .await
+            .expect("test operation should succeed");
         assert!(results.is_empty());
     }
 
@@ -1582,7 +1615,10 @@ mod tests {
         for (i, doc) in docs.iter().enumerate() {
             let id = DocumentId::from(format!("doc{}", i + 1));
             let vector = encoder.encode(doc);
-            store.insert(id, vector).await.unwrap();
+            store
+                .insert(id, vector)
+                .await
+                .expect("test operation should succeed");
         }
 
         let config = HybridConfig::default();
@@ -1597,7 +1633,7 @@ mod tests {
         let results = searcher
             .search_with_sparse(&sparse_query, &dense_results, 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(!results.is_empty());
     }
 }

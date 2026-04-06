@@ -454,7 +454,9 @@ mod tests {
         assert_eq!(monitor.current_usage(), 1500);
         assert_eq!(monitor.peak_usage(), 1500);
 
-        monitor.unregister_allocation(800).unwrap();
+        monitor
+            .unregister_allocation(800)
+            .expect("test operation should succeed");
         assert_eq!(monitor.current_usage(), 700);
         assert_eq!(monitor.peak_usage(), 1500);
     }
@@ -505,7 +507,9 @@ mod tests {
 
         monitor.register_allocation(1000);
         monitor.register_allocation(2000);
-        monitor.unregister_allocation(500).unwrap();
+        monitor
+            .unregister_allocation(500)
+            .expect("test operation should succeed");
 
         let stats = monitor.stats();
         assert_eq!(stats.current_bytes, 2500);
@@ -535,11 +539,11 @@ mod tests {
     fn test_memory_budget_allocation() {
         let budget = MemoryBudget::with_limit(1000);
 
-        let guard1 = budget.allocate(400).unwrap();
+        let guard1 = budget.allocate(400).expect("test operation should succeed");
         assert_eq!(guard1.size(), 400);
         assert_eq!(budget.monitor().current_usage(), 400);
 
-        let guard2 = budget.allocate(400).unwrap();
+        let guard2 = budget.allocate(400).expect("test operation should succeed");
         assert_eq!(budget.monitor().current_usage(), 800);
 
         // This should fail - would exceed limit
@@ -551,7 +555,7 @@ mod tests {
         assert_eq!(budget.monitor().current_usage(), 400);
 
         // Now we can allocate more
-        let _guard3 = budget.allocate(500).unwrap();
+        let _guard3 = budget.allocate(500).expect("test operation should succeed");
         assert_eq!(budget.monitor().current_usage(), 900);
 
         drop(guard2);
@@ -562,7 +566,7 @@ mod tests {
         let budget = MemoryBudget::with_limit(1000);
 
         {
-            let _guard = budget.allocate(500).unwrap();
+            let _guard = budget.allocate(500).expect("test operation should succeed");
             assert_eq!(budget.monitor().current_usage(), 500);
         }
 
@@ -573,17 +577,17 @@ mod tests {
     fn test_memory_guard_resize() {
         let budget = MemoryBudget::with_limit(1000);
 
-        let mut guard = budget.allocate(300).unwrap();
+        let mut guard = budget.allocate(300).expect("test operation should succeed");
         assert_eq!(guard.size(), 300);
         assert_eq!(budget.monitor().current_usage(), 300);
 
         // Increase size
-        guard.resize(500).unwrap();
+        guard.resize(500).expect("test operation should succeed");
         assert_eq!(guard.size(), 500);
         assert_eq!(budget.monitor().current_usage(), 500);
 
         // Decrease size
-        guard.resize(200).unwrap();
+        guard.resize(200).expect("test operation should succeed");
         assert_eq!(guard.size(), 200);
         assert_eq!(budget.monitor().current_usage(), 200);
 
@@ -598,7 +602,7 @@ mod tests {
     fn test_memory_guard_leak() {
         let budget = MemoryBudget::with_limit(1000);
 
-        let guard = budget.allocate(500).unwrap();
+        let guard = budget.allocate(500).expect("test operation should succeed");
         let size = guard.leak();
 
         assert_eq!(size, 500);
@@ -625,11 +629,17 @@ mod tests {
 
         assert_eq!(budget.available(), usize::MAX);
 
-        let _guard1 = budget.allocate(1_000_000).unwrap();
-        let _guard2 = budget.allocate(1_000_000_000).unwrap();
+        let _guard1 = budget
+            .allocate(1_000_000)
+            .expect("test operation should succeed");
+        let _guard2 = budget
+            .allocate(1_000_000_000)
+            .expect("test operation should succeed");
 
         // Should still be able to allocate more
-        let _guard3 = budget.allocate(1_000_000_000).unwrap();
+        let _guard3 = budget
+            .allocate(1_000_000_000)
+            .expect("test operation should succeed");
     }
 
     #[test]
@@ -670,7 +680,7 @@ mod tests {
         }
 
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("test operation should succeed");
         }
 
         // After all threads complete, memory should be back to 0
@@ -763,7 +773,9 @@ mod tests {
         monitor.register_allocation(2000);
         assert_eq!(monitor.peak_usage(), 3000);
 
-        monitor.unregister_allocation(2500).unwrap();
+        monitor
+            .unregister_allocation(2500)
+            .expect("test operation should succeed");
         assert_eq!(monitor.current_usage(), 500);
         assert_eq!(monitor.peak_usage(), 3000); // Peak should not decrease
 

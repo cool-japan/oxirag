@@ -484,7 +484,13 @@ mod tests {
 
         let retrieved = cache.get("hello world");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().states.model_id, "test-model");
+        assert_eq!(
+            retrieved
+                .expect("test operation should succeed")
+                .states
+                .model_id,
+            "test-model"
+        );
     }
 
     #[test]
@@ -572,7 +578,7 @@ mod tests {
         // Find prefix for "Hello, world! How are you?"
         let result = cache.find_prefix_match("Hello, world! How are you?");
         assert!(result.is_some());
-        let (key, _) = result.unwrap();
+        let (key, _) = result.expect("test operation should succeed");
         assert_eq!(key, "Hello, world");
     }
 

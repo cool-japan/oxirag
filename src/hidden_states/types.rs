@@ -900,7 +900,8 @@ mod tests {
     fn test_hidden_state_tensor_from_vec() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = TensorShape::new(vec![2, 3]);
-        let tensor = HiddenStateTensor::from_vec(data.clone(), shape).unwrap();
+        let tensor = HiddenStateTensor::from_vec(data.clone(), shape)
+            .expect("test operation should succeed");
         assert_eq!(tensor.data, data);
     }
 
@@ -916,21 +917,26 @@ mod tests {
     fn test_hidden_state_tensor_slice() {
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
         let shape = TensorShape::new(vec![3, 4]);
-        let tensor = HiddenStateTensor::from_vec(data, shape).unwrap();
+        let tensor =
+            HiddenStateTensor::from_vec(data, shape).expect("test operation should succeed");
 
         // Slice first 2 rows
-        let sliced = tensor.slice(0, 0, 2).unwrap();
+        let sliced = tensor
+            .slice(0, 0, 2)
+            .expect("test operation should succeed");
         assert_eq!(sliced.shape.dims, vec![2, 4]);
         assert_eq!(sliced.data.len(), 8);
     }
 
     #[test]
     fn test_hidden_state_tensor_concat() {
-        let t1 =
-            HiddenStateTensor::from_vec(vec![1.0, 2.0, 3.0], TensorShape::new(vec![3])).unwrap();
-        let t2 = HiddenStateTensor::from_vec(vec![4.0, 5.0], TensorShape::new(vec![2])).unwrap();
+        let t1 = HiddenStateTensor::from_vec(vec![1.0, 2.0, 3.0], TensorShape::new(vec![3]))
+            .expect("test operation should succeed");
+        let t2 = HiddenStateTensor::from_vec(vec![4.0, 5.0], TensorShape::new(vec![2]))
+            .expect("test operation should succeed");
 
-        let result = HiddenStateTensor::concat(&[&t1, &t2], 0).unwrap();
+        let result =
+            HiddenStateTensor::concat(&[&t1, &t2], 0).expect("test operation should succeed");
         assert_eq!(result.shape.dims, vec![5]);
         assert_eq!(result.data, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
     }

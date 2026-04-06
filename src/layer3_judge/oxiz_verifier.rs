@@ -575,7 +575,10 @@ mod tests {
             0,
         )];
 
-        let result = judge.judge(&draft, &context).await.unwrap();
+        let result = judge
+            .judge(&draft, &context)
+            .await
+            .expect("test operation should succeed");
         // Duration may be 0 on fast systems
         assert!(!result.summary.is_empty());
     }
@@ -585,7 +588,10 @@ mod tests {
         let judge = create_test_judge();
         let draft = Draft::new("The sky is blue.", "What color is the sky?");
 
-        let result = judge.judge(&draft, &[]).await.unwrap();
+        let result = judge
+            .judge(&draft, &[])
+            .await
+            .expect("test operation should succeed");
         assert!(!result.summary.is_empty());
     }
 
@@ -597,7 +603,10 @@ mod tests {
             "At what temperature does water boil?",
         );
 
-        let result = judge.quick_judge(&draft).await.unwrap();
+        let result = judge
+            .quick_judge(&draft)
+            .await
+            .expect("test operation should succeed");
         assert!(result.summary.contains("Quick judge"));
     }
 
@@ -610,7 +619,10 @@ mod tests {
         )
         .with_confidence(0.9);
 
-        let result = verifier.verify_claim(&claim).await.unwrap();
+        let result = verifier
+            .verify_claim(&claim)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(result.status, VerificationStatus::Verified);
     }
 
@@ -623,7 +635,10 @@ mod tests {
         )
         .with_confidence(0.2);
 
-        let result = verifier.verify_claim(&claim).await.unwrap();
+        let result = verifier
+            .verify_claim(&claim)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(result.status, VerificationStatus::Falsified);
     }
 

@@ -377,7 +377,10 @@ mod tests {
         ];
         let extractor = MockEntityExtractor::with_entities(entities);
 
-        let result = extractor.extract_entities("any text").await.unwrap();
+        let result = extractor
+            .extract_entities("any text")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name, "Rust");
     }
@@ -387,7 +390,10 @@ mod tests {
         let extractor = PatternEntityExtractor::new();
         let text = "Rust is a systems programming language. It uses LLVM for compilation.";
 
-        let entities = extractor.extract_entities(text).await.unwrap();
+        let entities = extractor
+            .extract_entities(text)
+            .await
+            .expect("test operation should succeed");
 
         let names: Vec<&str> = entities.iter().map(|e| e.name.as_str()).collect();
         assert!(names.contains(&"Rust"));
@@ -398,7 +404,10 @@ mod tests {
         let extractor = PatternEntityExtractor::new();
         let text = "The Mozilla Foundation created Firefox browser.";
 
-        let entities = extractor.extract_entities(text).await.unwrap();
+        let entities = extractor
+            .extract_entities(text)
+            .await
+            .expect("test operation should succeed");
 
         let names: Vec<&str> = entities.iter().map(|e| e.name.as_str()).collect();
         assert!(names.contains(&"Mozilla Foundation") || names.contains(&"Firefox"));
@@ -409,7 +418,10 @@ mod tests {
         let extractor = PatternEntityExtractor::new();
         let text = "Rust is great. Rust is fast. RUST is memory-safe.";
 
-        let entities = extractor.extract_entities(text).await.unwrap();
+        let entities = extractor
+            .extract_entities(text)
+            .await
+            .expect("test operation should succeed");
 
         let rust_count = entities
             .iter()

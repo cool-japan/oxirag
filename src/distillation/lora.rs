@@ -625,10 +625,24 @@ mod tests {
             epoch: 1,
             loss: 0.5,
         };
-        assert!((training.current_loss().unwrap() - 0.5).abs() < f32::EPSILON);
+        assert!(
+            (training
+                .current_loss()
+                .expect("test operation should succeed")
+                - 0.5)
+                .abs()
+                < f32::EPSILON
+        );
 
         let completed = TrainingStatus::Completed { final_loss: 0.1 };
-        assert!((completed.current_loss().unwrap() - 0.1).abs() < f32::EPSILON);
+        assert!(
+            (completed
+                .current_loss()
+                .expect("test operation should succeed")
+                - 0.1)
+                .abs()
+                < f32::EPSILON
+        );
 
         assert!(TrainingStatus::Pending.current_loss().is_none());
     }
@@ -703,7 +717,7 @@ mod tests {
         let result = trainer.create_job(&pattern, examples, config).await;
         assert!(result.is_ok());
 
-        let job_id = result.unwrap();
+        let job_id = result.expect("test operation should succeed");
         assert!(trainer.get_job(&job_id).is_some());
     }
 
@@ -717,7 +731,7 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         let status = trainer.get_status(&job_id).await;
 
         assert!(matches!(status, Some(TrainingStatus::Pending)));
@@ -733,7 +747,7 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         let result = trainer.cancel_job(&job_id).await;
 
         assert!(result.is_ok());
@@ -778,14 +792,20 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         trainer.simulate_progress(&job_id, 1, 0.5);
-        let status = trainer.get_status(&job_id).await.unwrap();
+        let status = trainer
+            .get_status(&job_id)
+            .await
+            .expect("test operation should succeed");
         assert!(matches!(status, TrainingStatus::Training { epoch: 1, .. }));
 
         trainer.simulate_completion(&job_id, 0.1);
-        let status = trainer.get_status(&job_id).await.unwrap();
+        let status = trainer
+            .get_status(&job_id)
+            .await
+            .expect("test operation should succeed");
         assert!(matches!(status, TrainingStatus::Completed { .. }));
     }
 
@@ -799,7 +819,7 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(trainer.active_job_count(), 0); // Pending is not active
 
@@ -821,7 +841,7 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         trainer.simulate_completion(&job_id, 0.1);
         assert_eq!(trainer.list_jobs().len(), 1);

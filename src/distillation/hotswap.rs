@@ -287,8 +287,14 @@ impl ModelSelector {
     /// Get the current selection statistics (non-async version for WASM).
     #[cfg(not(feature = "native"))]
     pub fn statistics(&self) -> SelectorStatistics {
-        let registry = self.registry.read().unwrap();
-        let history = self.usage_history.read().unwrap();
+        let registry = self
+            .registry
+            .read()
+            .expect("registry lock should not be poisoned");
+        let history = self
+            .usage_history
+            .read()
+            .expect("usage_history lock should not be poisoned");
 
         SelectorStatistics {
             strategy: self.selection_strategy,
@@ -310,7 +316,10 @@ impl ModelSelector {
     /// Clear the usage history (non-async version for WASM).
     #[cfg(not(feature = "native"))]
     pub fn clear_history(&self) {
-        let mut history = self.usage_history.write().unwrap();
+        let mut history = self
+            .usage_history
+            .write()
+            .expect("usage_history lock should not be poisoned");
         history.clear();
     }
 
@@ -329,7 +338,10 @@ impl ModelSelector {
     /// Get a list of recently used model IDs (non-async version for WASM).
     #[cfg(not(feature = "native"))]
     pub fn recent_models(&self, limit: usize) -> Vec<String> {
-        let history = self.usage_history.read().unwrap();
+        let history = self
+            .usage_history
+            .read()
+            .expect("usage_history lock should not be poisoned");
         history.iter().take(limit).cloned().collect()
     }
 }
@@ -486,7 +498,8 @@ mod tests {
         {
             let mut reg = registry.write().await;
             let metadata = create_test_metadata("model-1", "test query");
-            reg.register(metadata).unwrap();
+            reg.register(metadata)
+                .expect("test operation should succeed");
         }
 
         let selector =
@@ -509,8 +522,8 @@ mod tests {
             let mut slow = create_test_metadata("slow", "q2");
             slow.metrics.record_usage(100.0, true);
 
-            reg.register(fast).unwrap();
-            reg.register(slow).unwrap();
+            reg.register(fast).expect("test operation should succeed");
+            reg.register(slow).expect("test operation should succeed");
         }
 
         let selector = ModelSelector::new(registry, "fallback")
@@ -535,8 +548,10 @@ mod tests {
             inaccurate.metrics.accuracy = 0.5;
             inaccurate.metrics.usage_count = 1;
 
-            reg.register(accurate).unwrap();
-            reg.register(inaccurate).unwrap();
+            reg.register(accurate)
+                .expect("test operation should succeed");
+            reg.register(inaccurate)
+                .expect("test operation should succeed");
         }
 
         let selector = ModelSelector::new(registry, "fallback")
@@ -552,8 +567,10 @@ mod tests {
 
         {
             let mut reg = registry.write().await;
-            reg.register(create_test_metadata("m1", "q1")).unwrap();
-            reg.register(create_test_metadata("m2", "q2")).unwrap();
+            reg.register(create_test_metadata("m1", "q1"))
+                .expect("test operation should succeed");
+            reg.register(create_test_metadata("m2", "q2"))
+                .expect("test operation should succeed");
         }
 
         let selector =
@@ -574,7 +591,7 @@ mod tests {
         {
             let mut reg = registry.write().await;
             reg.register(create_test_metadata("model-1", "test"))
-                .unwrap();
+                .expect("test operation should succeed");
         }
 
         let selector = ModelSelector::new(registry.clone(), "fallback");
@@ -583,7 +600,7 @@ mod tests {
 
         {
             let reg = registry.read().await;
-            let model = reg.get("model-1").unwrap();
+            let model = reg.get("model-1").expect("test operation should succeed");
             assert!((model.metrics.avg_latency_ms - 50.0).abs() < f64::EPSILON);
             assert_eq!(model.metrics.usage_count, 1);
         }
@@ -596,7 +613,7 @@ mod tests {
         {
             let mut reg = registry.write().await;
             reg.register(create_test_metadata("model-1", "test"))
-                .unwrap();
+                .expect("test operation should succeed");
         }
 
         let selector = ModelSelector::new(registry, "fallback")
@@ -630,8 +647,10 @@ mod tests {
 
         {
             let mut reg = registry.write().await;
-            reg.register(create_test_metadata("m1", "q1")).unwrap();
-            reg.register(create_test_metadata("m2", "q2")).unwrap();
+            reg.register(create_test_metadata("m1", "q1"))
+                .expect("test operation should succeed");
+            reg.register(create_test_metadata("m2", "q2"))
+                .expect("test operation should succeed");
         }
 
         let selector =
@@ -706,8 +725,10 @@ mod tests {
             let mut unpopular = create_test_metadata("unpopular", "q2");
             unpopular.metrics.usage_count = 10;
 
-            reg.register(popular).unwrap();
-            reg.register(unpopular).unwrap();
+            reg.register(popular)
+                .expect("test operation should succeed");
+            reg.register(unpopular)
+                .expect("test operation should succeed");
         }
 
         let selector = ModelSelector::new(registry, "fallback")

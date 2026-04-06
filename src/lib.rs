@@ -399,9 +399,13 @@ mod tests {
 
         echo.index(Document::new("High relevance content"))
             .await
-            .unwrap();
-        echo.index(Document::new("Medium relevance")).await.unwrap();
-        echo.index(Document::new("Low relevance")).await.unwrap();
+            .expect("test operation should succeed");
+        echo.index(Document::new("Medium relevance"))
+            .await
+            .expect("test operation should succeed");
+        echo.index(Document::new("Low relevance"))
+            .await
+            .expect("test operation should succeed");
 
         // Search with min_score filter
         let results = echo

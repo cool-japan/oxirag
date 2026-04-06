@@ -386,8 +386,9 @@ mod tests {
     #[test]
     fn test_config_serialization() {
         let config = OxiRagConfig::default();
-        let json = serde_json::to_string(&config).unwrap();
-        let parsed: OxiRagConfig = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&config).expect("test operation should succeed");
+        let parsed: OxiRagConfig =
+            serde_json::from_str(&json).expect("test operation should succeed");
         assert_eq!(config.echo.dimension, parsed.echo.dimension);
     }
 }

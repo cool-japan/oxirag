@@ -904,7 +904,10 @@ mod tests {
         let draft = Draft::new("Test answer", "Test question").with_confidence(0.8);
         let context = create_context();
 
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
         assert!(result.confidence > 0.0);
     }
 
@@ -918,7 +921,7 @@ mod tests {
         let revised = speculator
             .revise_draft(&draft, &context, &speculation)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(revised.content.contains("Original answer"));
         assert!(revised.content.len() > draft.content.len());
@@ -974,7 +977,7 @@ mod tests {
                 result.err()
             );
 
-            let slm = result.unwrap();
+            let slm = result.expect("test operation should succeed");
             assert!(matches!(slm.device(), Device::Cpu));
         }
 
@@ -1009,7 +1012,7 @@ mod tests {
             let output = slm.generate("What is 2+2?", &gen_config).await;
             assert!(output.is_ok(), "Generation failed: {:?}", output.err());
 
-            let output = output.unwrap();
+            let output = output.expect("test operation should succeed");
             assert!(!output.text.is_empty());
             assert!(!output.tokens.is_empty());
             assert!(output.logprobs.is_some());
@@ -1028,7 +1031,7 @@ mod tests {
             let output = slm.generate("Hello world", &gen_config).await;
             assert!(output.is_ok());
 
-            let output = output.unwrap();
+            let output = output.expect("test operation should succeed");
             assert!(output.tokens.len() <= 5);
             assert!(matches!(
                 output.finish_reason,
@@ -1049,7 +1052,7 @@ mod tests {
                 result.err()
             );
 
-            let logprobs = result.unwrap();
+            let logprobs = result.expect("test operation should succeed");
             assert!(!logprobs.is_empty());
             for logprob in logprobs {
                 assert!(logprob.is_finite());
@@ -1064,7 +1067,7 @@ mod tests {
 
             let result = slm.get_logprobs("").await;
             assert!(result.is_ok());
-            assert!(result.unwrap().is_empty());
+            assert!(result.expect("test operation should succeed").is_empty());
         }
 
         #[tokio::test]
@@ -1083,7 +1086,7 @@ mod tests {
                 confidence.err()
             );
 
-            let confidence = confidence.unwrap();
+            let confidence = confidence.expect("test operation should succeed");
             assert!((0.0..=1.0).contains(&confidence));
         }
 

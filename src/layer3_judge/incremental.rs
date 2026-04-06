@@ -523,13 +523,13 @@ impl IncrementalConsistencyChecker {
                     predicate: p2,
                     object: o2,
                 },
-            ) => {
+            )
                 // Same subject with contradictory predicates
                 if Self::normalize_string(s1) == Self::normalize_string(s2)
                     && (Self::are_opposite_predicates(p1, p2)
                         || (Self::normalize_string(p1) == Self::normalize_string(p2)
                             && Self::are_contradictory_objects(o1.as_deref(), o2.as_deref())))
-                {
+                => {
                     return Some(ClaimConflict::new(
                         &claim1.id,
                         &claim2.id,
@@ -539,7 +539,6 @@ impl IncrementalConsistencyChecker {
                         ),
                     ));
                 }
-            }
             (ClaimStructure::Predicate { .. }, ClaimStructure::Not(inner))
             | (ClaimStructure::Not(inner), ClaimStructure::Predicate { .. }) => {
                 // Check if the Not wraps a contradictory predicate

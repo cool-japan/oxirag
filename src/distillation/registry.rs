@@ -517,7 +517,9 @@ mod tests {
         let metadata1 = create_test_metadata("model-1", "test query");
         let metadata2 = create_test_metadata("model-1", "another query");
 
-        registry.register(metadata1).unwrap();
+        registry
+            .register(metadata1)
+            .expect("test operation should succeed");
         let result = registry.register(metadata2);
 
         assert!(result.is_err());
@@ -528,7 +530,9 @@ mod tests {
         let mut registry = ModelRegistry::new();
         let metadata = create_test_metadata("model-1", "test query");
 
-        registry.register(metadata).unwrap();
+        registry
+            .register(metadata)
+            .expect("test operation should succeed");
         let removed = registry.unregister("model-1");
 
         assert!(removed.is_some());
@@ -540,7 +544,9 @@ mod tests {
         let mut registry = ModelRegistry::new();
         let metadata = create_test_metadata("model-1", "test query");
 
-        registry.register(metadata).unwrap();
+        registry
+            .register(metadata)
+            .expect("test operation should succeed");
 
         assert!(registry.get("model-1").is_some());
         assert!(registry.get("nonexistent").is_none());
@@ -552,11 +558,16 @@ mod tests {
         let pattern = QueryPattern::new("test query");
         let metadata = ModelMetadata::new("model-1", pattern.clone(), "base");
 
-        registry.register(metadata).unwrap();
+        registry
+            .register(metadata)
+            .expect("test operation should succeed");
 
         let found = registry.find_by_pattern(&pattern);
         assert!(found.is_some());
-        assert_eq!(found.unwrap().model_id, "model-1");
+        assert_eq!(
+            found.expect("test operation should succeed").model_id,
+            "model-1"
+        );
     }
 
     #[test]
@@ -564,11 +575,21 @@ mod tests {
         let mut registry = ModelRegistry::new();
         let metadata = create_test_metadata("model-1", "test");
 
-        registry.register(metadata).unwrap();
-        registry.set_active("model-1").unwrap();
+        registry
+            .register(metadata)
+            .expect("test operation should succeed");
+        registry
+            .set_active("model-1")
+            .expect("test operation should succeed");
 
         assert!(registry.get_active().is_some());
-        assert_eq!(registry.get_active().unwrap().model_id, "model-1");
+        assert_eq!(
+            registry
+                .get_active()
+                .expect("test operation should succeed")
+                .model_id,
+            "model-1"
+        );
     }
 
     #[test]
@@ -585,10 +606,10 @@ mod tests {
 
         registry
             .register(create_test_metadata("model-1", "query1"))
-            .unwrap();
+            .expect("test operation should succeed");
         registry
             .register(create_test_metadata("model-2", "query2"))
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(registry.list_all().len(), 2);
     }
@@ -600,10 +621,12 @@ mod tests {
         let mut inactive = create_test_metadata("model-1", "query1");
         inactive.is_active = false;
 
-        registry.register(inactive).unwrap();
+        registry
+            .register(inactive)
+            .expect("test operation should succeed");
         registry
             .register(create_test_metadata("model-2", "query2"))
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(registry.list_active().len(), 1);
     }
@@ -613,10 +636,14 @@ mod tests {
         let mut registry = ModelRegistry::new();
         let metadata = create_test_metadata("model-1", "test");
 
-        registry.register(metadata).unwrap();
+        registry
+            .register(metadata)
+            .expect("test operation should succeed");
         registry.update_metrics("model-1", 50.0, true);
 
-        let model = registry.get("model-1").unwrap();
+        let model = registry
+            .get("model-1")
+            .expect("test operation should succeed");
         assert!((model.metrics.avg_latency_ms - 50.0).abs() < f64::EPSILON);
         assert_eq!(model.metrics.usage_count, 1);
     }
@@ -631,12 +658,19 @@ mod tests {
         let mut slow = create_test_metadata("slow", "query2");
         slow.metrics.record_usage(100.0, true);
 
-        registry.register(fast).unwrap();
-        registry.register(slow).unwrap();
+        registry
+            .register(fast)
+            .expect("test operation should succeed");
+        registry
+            .register(slow)
+            .expect("test operation should succeed");
 
         let fastest = registry.find_fastest();
         assert!(fastest.is_some());
-        assert_eq!(fastest.unwrap().model_id, "fast");
+        assert_eq!(
+            fastest.expect("test operation should succeed").model_id,
+            "fast"
+        );
     }
 
     #[test]
@@ -651,12 +685,19 @@ mod tests {
         inaccurate.metrics.accuracy = 0.5;
         inaccurate.metrics.usage_count = 1;
 
-        registry.register(accurate).unwrap();
-        registry.register(inaccurate).unwrap();
+        registry
+            .register(accurate)
+            .expect("test operation should succeed");
+        registry
+            .register(inaccurate)
+            .expect("test operation should succeed");
 
         let best = registry.find_most_accurate();
         assert!(best.is_some());
-        assert_eq!(best.unwrap().model_id, "accurate");
+        assert_eq!(
+            best.expect("test operation should succeed").model_id,
+            "accurate"
+        );
     }
 
     #[test]
@@ -667,9 +708,15 @@ mod tests {
         let model2 = ModelMetadata::new("m2", QueryPattern::new("q2"), "gpt-4");
         let model3 = ModelMetadata::new("m3", QueryPattern::new("q3"), "llama-2");
 
-        registry.register(model1).unwrap();
-        registry.register(model2).unwrap();
-        registry.register(model3).unwrap();
+        registry
+            .register(model1)
+            .expect("test operation should succeed");
+        registry
+            .register(model2)
+            .expect("test operation should succeed");
+        registry
+            .register(model3)
+            .expect("test operation should succeed");
 
         let gpt4_models = registry.find_by_base_model("gpt-4");
         assert_eq!(gpt4_models.len(), 2);
@@ -682,10 +729,12 @@ mod tests {
         let mut inactive = create_test_metadata("inactive", "q1");
         inactive.is_active = false;
 
-        registry.register(inactive).unwrap();
+        registry
+            .register(inactive)
+            .expect("test operation should succeed");
         registry
             .register(create_test_metadata("active", "q2"))
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(registry.count(), 2);
 
@@ -701,11 +750,13 @@ mod tests {
 
         registry
             .register(create_test_metadata("model-1", "q1"))
-            .unwrap();
+            .expect("test operation should succeed");
         registry
             .register(create_test_metadata("model-2", "q2"))
-            .unwrap();
-        registry.set_active("model-1").unwrap();
+            .expect("test operation should succeed");
+        registry
+            .set_active("model-1")
+            .expect("test operation should succeed");
 
         registry.clear();
 
@@ -724,8 +775,12 @@ mod tests {
         model2.metrics.record_usage(200.0, true);
         model2.metrics.record_usage(200.0, false);
 
-        registry.register(model1).unwrap();
-        registry.register(model2).unwrap();
+        registry
+            .register(model1)
+            .expect("test operation should succeed");
+        registry
+            .register(model2)
+            .expect("test operation should succeed");
 
         let stats = registry.statistics();
         assert_eq!(stats.total_models, 2);
@@ -738,7 +793,7 @@ mod tests {
         let mut registry = ModelRegistry::new();
         registry
             .register(create_test_metadata("model-1", "test"))
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(registry.contains("model-1"));
         assert!(!registry.contains("model-2"));
@@ -751,10 +806,12 @@ mod tests {
         let mut inactive = create_test_metadata("inactive", "q1");
         inactive.is_active = false;
 
-        registry.register(inactive).unwrap();
+        registry
+            .register(inactive)
+            .expect("test operation should succeed");
         registry
             .register(create_test_metadata("active", "q2"))
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(registry.count(), 2);
         assert_eq!(registry.active_count(), 1);
@@ -770,13 +827,17 @@ mod tests {
         let mut model2 = create_test_metadata("m2", "q2");
         model2.metrics.usage_count = 50;
 
-        registry.register(model1).unwrap();
-        registry.register(model2).unwrap();
+        registry
+            .register(model1)
+            .expect("test operation should succeed");
+        registry
+            .register(model2)
+            .expect("test operation should succeed");
 
         // Find model with highest usage
         let best = registry.find_best(|m| m.metrics.usage_count as f64);
         assert!(best.is_some());
-        assert_eq!(best.unwrap().model_id, "m1");
+        assert_eq!(best.expect("test operation should succeed").model_id, "m1");
     }
 
     #[test]
@@ -795,8 +856,10 @@ mod tests {
         let mut registry = ModelRegistry::new();
         registry
             .register(create_test_metadata("model-1", "test"))
-            .unwrap();
-        registry.set_active("model-1").unwrap();
+            .expect("test operation should succeed");
+        registry
+            .set_active("model-1")
+            .expect("test operation should succeed");
 
         assert!(registry.get_active().is_some());
 

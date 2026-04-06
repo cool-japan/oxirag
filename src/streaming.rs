@@ -1070,7 +1070,10 @@ mod tests {
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let query = Query::new("What is the meaning of life?");
 
-        let mut result = wrapper.process_streaming(query).await.unwrap();
+        let mut result = wrapper
+            .process_streaming(query)
+            .await
+            .expect("test operation should succeed");
 
         let mut chunks = Vec::new();
         while let Some(chunk) = result.next().await {
@@ -1088,12 +1091,15 @@ mod tests {
         pipeline
             .index(Document::new("The capital of France is Paris."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let query = Query::new("What is the capital of France?");
 
-        let mut result = wrapper.process_streaming(query).await.unwrap();
+        let mut result = wrapper
+            .process_streaming(query)
+            .await
+            .expect("test operation should succeed");
 
         let mut has_search_result = false;
         let mut has_final_answer = false;
@@ -1117,12 +1123,15 @@ mod tests {
         pipeline
             .index(Document::new("Test document content."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let query = Query::new("test");
 
-        let mut result = wrapper.process_streaming(query).await.unwrap();
+        let mut result = wrapper
+            .process_streaming(query)
+            .await
+            .expect("test operation should succeed");
 
         let mut chunks = Vec::new();
         while let Some(chunk) = result.next().await {
@@ -1143,12 +1152,15 @@ mod tests {
         pipeline
             .index(Document::new("Stream test document."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let query = Query::new("stream");
 
-        let result = wrapper.process_streaming(query).await.unwrap();
+        let result = wrapper
+            .process_streaming(query)
+            .await
+            .expect("test operation should succeed");
         let mut stream = result.into_stream();
 
         let mut count = 0;
@@ -1166,11 +1178,11 @@ mod tests {
         pipeline
             .index(Document::new("Alpha document."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         pipeline
             .index(Document::new("Beta document."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let queries = vec![Query::new("alpha"), Query::new("beta")];
@@ -1186,7 +1198,10 @@ mod tests {
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let query = Query::new("test");
 
-        let mut result = wrapper.process_streaming(query).await.unwrap();
+        let mut result = wrapper
+            .process_streaming(query)
+            .await
+            .expect("test operation should succeed");
 
         // Consume some chunks
         let _ = result.next().await;
@@ -1202,7 +1217,10 @@ mod tests {
         let wrapper = StreamingPipelineWrapper::new(pipeline);
         let query = Query::new("test");
 
-        let result = wrapper.process_streaming(query).await.unwrap();
+        let result = wrapper
+            .process_streaming(query)
+            .await
+            .expect("test operation should succeed");
 
         let mut count = 0;
         result
@@ -1223,16 +1241,16 @@ mod tests {
         reporter.report_search_result(0, 0.9, "Test document").await;
         reporter.report_search_completed(1).await;
 
-        let chunk1 = rx.recv().await.unwrap();
+        let chunk1 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(chunk1.chunk_type, ChunkType::SearchStarted));
 
-        let chunk2 = rx.recv().await.unwrap();
+        let chunk2 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk2.chunk_type,
             ChunkType::SearchResult { rank: 0, .. }
         ));
 
-        let chunk3 = rx.recv().await.unwrap();
+        let chunk3 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk3.chunk_type,
             ChunkType::SearchCompleted { total: 1 }
@@ -1250,16 +1268,16 @@ mod tests {
             .report_speculation_decision(SpeculationDecision::Accept, 0.9)
             .await;
 
-        let chunk1 = rx.recv().await.unwrap();
+        let chunk1 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(chunk1.chunk_type, ChunkType::SpeculationStarted));
 
-        let chunk2 = rx.recv().await.unwrap();
+        let chunk2 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk2.chunk_type,
             ChunkType::SpeculationProgress { .. }
         ));
 
-        let chunk3 = rx.recv().await.unwrap();
+        let chunk3 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk3.chunk_type,
             ChunkType::SpeculationDecision(SpeculationDecision::Accept)
@@ -1280,22 +1298,22 @@ mod tests {
             .report_verification_completed("Summary", 0.85, 100)
             .await;
 
-        let chunk1 = rx.recv().await.unwrap();
+        let chunk1 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(chunk1.chunk_type, ChunkType::VerificationStarted));
 
-        let chunk2 = rx.recv().await.unwrap();
+        let chunk2 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk2.chunk_type,
             ChunkType::ClaimExtracted { claim_id: 0 }
         ));
 
-        let chunk3 = rx.recv().await.unwrap();
+        let chunk3 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk3.chunk_type,
             ChunkType::ClaimVerified { claim_id: 0, .. }
         ));
 
-        let chunk4 = rx.recv().await.unwrap();
+        let chunk4 = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(
             chunk4.chunk_type,
             ChunkType::VerificationCompleted
@@ -1309,7 +1327,7 @@ mod tests {
 
         reporter.report_error("Test error").await;
 
-        let chunk = rx.recv().await.unwrap();
+        let chunk = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(chunk.chunk_type, ChunkType::Error(_)));
     }
 
@@ -1320,7 +1338,7 @@ mod tests {
 
         reporter.report_final("The answer is 42", 0.95).await;
 
-        let chunk = rx.recv().await.unwrap();
+        let chunk = rx.recv().await.expect("test operation should succeed");
         assert!(matches!(chunk.chunk_type, ChunkType::FinalAnswer));
         assert_eq!(chunk.content, "The answer is 42");
         assert_eq!(chunk.metadata.confidence, Some(0.95));
@@ -1381,11 +1399,11 @@ mod tests {
         pipeline
             .index(Document::new("First document content."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         pipeline
             .index(Document::new("Second document content."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let wrapper = std::sync::Arc::new(StreamingPipelineWrapper::new(pipeline));
 
@@ -1394,7 +1412,10 @@ mod tests {
                 let wrapper = wrapper.clone();
                 tokio::spawn(async move {
                     let query = Query::new(format!("query {i}"));
-                    let mut result = wrapper.process_streaming(query).await.unwrap();
+                    let mut result = wrapper
+                        .process_streaming(query)
+                        .await
+                        .expect("test operation should succeed");
                     let mut count = 0;
                     while let Some(_chunk) = result.next().await {
                         count += 1;
@@ -1405,7 +1426,7 @@ mod tests {
             .collect();
 
         for handle in handles {
-            let count = handle.await.unwrap();
+            let count = handle.await.expect("test operation should succeed");
             assert!(count > 0);
         }
     }

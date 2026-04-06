@@ -606,7 +606,10 @@ mod tests {
 
         assert_eq!(config.similarity_threshold, 0.8);
         assert!(config.use_attention_patterns);
-        assert_eq!(config.layer_weights.unwrap(), vec![0.5, 0.3, 0.2]);
+        assert_eq!(
+            config.layer_weights.expect("test operation should succeed"),
+            vec![0.5, 0.3, 0.2]
+        );
     }
 
     #[test]
@@ -664,7 +667,10 @@ mod tests {
         .with_confidence(0.8);
         let context = create_context();
 
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         // With mock provider, similarity will be non-trivial
         assert!(result.confidence >= 0.0);
@@ -684,7 +690,7 @@ mod tests {
         let result = speculator
             .verify_with_hidden_states(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!result.explanation.is_empty());
     }
@@ -703,14 +709,14 @@ mod tests {
         let _ = speculator
             .verify_with_hidden_states(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(speculator.cache_size(), 2); // Two context documents
 
         // Second call - should use cache
         let _ = speculator
             .verify_with_hidden_states(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(speculator.cache_size(), 2); // Still two entries
 
         // Clear cache
@@ -727,7 +733,10 @@ mod tests {
 
         let draft = Draft::new("Some draft content", "Query").with_confidence(0.9);
 
-        let result = speculator.verify_draft(&draft, &[]).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &[])
+            .await
+            .expect("test operation should succeed");
 
         assert!(matches!(result.decision, SpeculationDecision::Accept));
         assert!(result.explanation.contains("No context"));
@@ -747,7 +756,7 @@ mod tests {
         let revised = speculator
             .revise_draft(&draft, &context, &speculation)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(revised.content.contains("Original draft"));
         assert!(revised.content.len() > draft.content.len());
@@ -760,7 +769,10 @@ mod tests {
         let draft = Draft::new("Test draft", "Query");
         let context = create_context();
 
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(matches!(result.decision, SpeculationDecision::Accept));
     }
@@ -773,7 +785,10 @@ mod tests {
         let draft = Draft::new("Test draft", "Query");
         let context = create_context();
 
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(matches!(result.decision, SpeculationDecision::Reject));
     }
@@ -789,7 +804,7 @@ mod tests {
         let revised = speculator
             .revise_draft(&draft, &context, &speculation)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(revised.content.contains("Original"));
         assert!(revised.content.contains("[Revised based on:"));
@@ -838,7 +853,7 @@ mod tests {
         let result = speculator
             .verify_with_hidden_states(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // The mock provider generates pseudo-random states, so divergence detection will work
         // based on the actual comparison logic
@@ -856,7 +871,10 @@ mod tests {
         let draft = Draft::new("Test content", "Query");
         let context = create_context();
 
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!result.explanation.is_empty());
     }
@@ -881,7 +899,10 @@ mod tests {
         let draft = Draft::new("Test", "Query");
         let context = create_context();
 
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
         assert!(result.confidence >= 0.0);
 
         let spec_config = speculator.config();
@@ -902,7 +923,7 @@ mod tests {
         let result = speculator
             .verify_with_hidden_states(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // With mock provider and high threshold, likely to get revise or reject
         assert!(matches!(

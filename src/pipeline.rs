@@ -675,7 +675,10 @@ mod tests {
         let pipeline = create_test_pipeline();
         let query = Query::new("What is the meaning of life?");
 
-        let result = pipeline.process(query).await.unwrap();
+        let result = pipeline
+            .process(query)
+            .await
+            .expect("test operation should succeed");
 
         assert!(result.search_results.is_empty());
         assert!(result.final_answer.contains("No relevant information"));
@@ -689,15 +692,18 @@ mod tests {
         pipeline
             .index(Document::new("The capital of France is Paris."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         pipeline
             .index(Document::new("Paris is known for the Eiffel Tower."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let query = Query::new("What is the capital of France?").with_top_k(3);
 
-        let result = pipeline.process(query).await.unwrap();
+        let result = pipeline
+            .process(query)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!result.search_results.is_empty());
         assert!(result.layers_used.contains(&"Echo".to_string()));
@@ -723,10 +729,13 @@ mod tests {
         pipeline
             .index(Document::new("Test document content."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let query = Query::new("test");
-        let result = pipeline.process(query).await.unwrap();
+        let result = pipeline
+            .process(query)
+            .await
+            .expect("test operation should succeed");
 
         // Should not have speculation or verification due to fast path
         assert!(result.speculation.is_none());
@@ -752,7 +761,7 @@ mod tests {
                 ..Default::default()
             })
             .build()
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!pipeline.config().enable_fast_path);
     }
@@ -782,10 +791,16 @@ mod tests {
             Document::new("Third document"),
         ];
 
-        pipeline.index_batch(docs).await.unwrap();
+        pipeline
+            .index_batch(docs)
+            .await
+            .expect("test operation should succeed");
 
         let query = Query::new("document").with_top_k(5);
-        let result = pipeline.process(query).await.unwrap();
+        let result = pipeline
+            .process(query)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(result.search_results.len(), 3);
     }
@@ -809,10 +824,13 @@ mod tests {
         pipeline
             .index(Document::new("Some test content here."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let query = Query::new("test");
-        let result = pipeline.process(query).await.unwrap();
+        let result = pipeline
+            .process(query)
+            .await
+            .expect("test operation should succeed");
 
         assert!(result.layers_used.contains(&"Echo".to_string()));
         assert!(result.layers_used.contains(&"Speculator".to_string()));
@@ -823,7 +841,7 @@ mod tests {
     fn test_pipeline_config_default_has_retry() {
         let config = PipelineConfig::default();
         assert!(config.retry_config.is_some());
-        let retry = config.retry_config.unwrap();
+        let retry = config.retry_config.expect("test operation should succeed");
         assert_eq!(retry.max_retries, 3);
         assert_eq!(retry.initial_delay_ms, 100);
         assert_eq!(retry.max_delay_ms, 5000);
@@ -907,10 +925,13 @@ mod tests {
         pipeline
             .index(Document::new("Parallel execution test document."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let query = Query::new("parallel test");
-        let result = pipeline.process(query).await.unwrap();
+        let result = pipeline
+            .process(query)
+            .await
+            .expect("test operation should succeed");
 
         // Both Speculator and Judge should be used
         assert!(result.layers_used.contains(&"Echo".to_string()));
@@ -938,7 +959,7 @@ mod tests {
         pipeline
             .index(Document::new("Rust is a systems programming language."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let queries = vec![Query::new("What is Rust?")];
         let results = pipeline.process_batch(queries).await;
@@ -954,15 +975,15 @@ mod tests {
         pipeline
             .index(Document::new("The capital of France is Paris."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         pipeline
             .index(Document::new("Python is a programming language."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         pipeline
             .index(Document::new("The Eiffel Tower is in Paris."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let queries = vec![
             Query::new("What is the capital of France?"),
@@ -985,11 +1006,11 @@ mod tests {
         pipeline
             .index(Document::new("Alpha document content."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         pipeline
             .index(Document::new("Beta document content."))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let queries = vec![Query::new("Alpha"), Query::new("Beta"), Query::new("Alpha")];
 

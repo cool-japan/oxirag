@@ -848,7 +848,9 @@ mod tests {
         trace.add_entry(TraceEntry::new("Speculator").with_timing(50, 200));
         trace.add_entry(TraceEntry::new("Judge").with_timing(200, 250));
 
-        let slowest = trace.slowest_layer().unwrap();
+        let slowest = trace
+            .slowest_layer()
+            .expect("test operation should succeed");
         assert_eq!(slowest.layer_name, "Speculator");
         assert_eq!(slowest.duration_ms, 150);
     }
@@ -903,7 +905,9 @@ mod tests {
 
         assert_eq!(debugger.trace_count(), 1);
 
-        let trace = debugger.get_trace(&trace_id).unwrap();
+        let trace = debugger
+            .get_trace(&trace_id)
+            .expect("test operation should succeed");
         assert_eq!(trace.query_id, "query-1");
     }
 
@@ -916,7 +920,9 @@ mod tests {
         std::thread::sleep(Duration::from_millis(10));
         debugger.record_layer_exit(&trace_id, "Echo", &"output data");
 
-        let trace = debugger.get_trace(&trace_id).unwrap();
+        let trace = debugger
+            .get_trace(&trace_id)
+            .expect("test operation should succeed");
         assert_eq!(trace.entries.len(), 1);
         assert_eq!(trace.entries[0].layer_name, "Echo");
         assert!(trace.entries[0].duration_ms >= 10);
@@ -930,7 +936,9 @@ mod tests {
         debugger.record_layer_entry(&trace_id, "Judge", &"input");
         debugger.record_layer_error(&trace_id, "Judge", "Timeout occurred");
 
-        let trace = debugger.get_trace(&trace_id).unwrap();
+        let trace = debugger
+            .get_trace(&trace_id)
+            .expect("test operation should succeed");
         assert_eq!(trace.entries.len(), 1);
         assert!(trace.entries[0].is_error());
         assert_eq!(trace.entries[0].error, Some("Timeout occurred".to_string()));
@@ -1013,7 +1021,8 @@ mod tests {
         assert!(formatted.contains("\"query_id\": \"query-123\""));
 
         // Verify it's valid JSON
-        let parsed: serde_json::Value = serde_json::from_str(&formatted).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&formatted).expect("test operation should succeed");
         assert_eq!(parsed["query_id"], "query-123");
     }
 
@@ -1108,7 +1117,9 @@ mod tests {
             // Guard drops here and records exit
         }
 
-        let trace = debugger.get_trace(&trace_id).unwrap();
+        let trace = debugger
+            .get_trace(&trace_id)
+            .expect("test operation should succeed");
         assert_eq!(trace.entries.len(), 1);
         assert_eq!(trace.entries[0].layer_name, "Echo");
     }
@@ -1124,7 +1135,9 @@ mod tests {
             // Don't set output - the error was recorded
         }
 
-        let trace = debugger.get_trace(&trace_id).unwrap();
+        let trace = debugger
+            .get_trace(&trace_id)
+            .expect("test operation should succeed");
         // Should have 2 entries: one error, one normal exit
         assert!(!trace.failed_entries().is_empty());
     }
@@ -1210,7 +1223,7 @@ mod tests {
         }
 
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("test operation should succeed");
         }
 
         assert_eq!(debugger.trace_count(), 10);

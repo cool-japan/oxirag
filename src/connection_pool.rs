@@ -132,8 +132,8 @@ impl Default for PoolConfig {
             min_connections: 1,
             max_connections: 10,
             connection_timeout: Duration::from_secs(30),
-            idle_timeout: Duration::from_secs(10 * 60),
-            max_lifetime: Duration::from_secs(60 * 60),
+            idle_timeout: Duration::from_mins(10),
+            max_lifetime: Duration::from_hours(1),
             test_on_acquire: true,
         }
     }
@@ -737,7 +737,7 @@ mod tests {
         let config = PoolConfig::default();
         let pool = ConnectionPool::new(config, create_mock_factory());
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         assert!(conn.is_healthy());
 
         let stats = pool.stats();
@@ -762,14 +762,14 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn1 = pool.acquire().await.unwrap();
+        let conn1 = pool.acquire().await.expect("test operation should succeed");
         let id1 = conn1.id;
         drop(conn1);
 
         // Allow the connection to be returned to the pool
         tokio::task::yield_now().await;
 
-        let conn2 = pool.acquire().await.unwrap();
+        let conn2 = pool.acquire().await.expect("test operation should succeed");
         let id2 = conn2.id;
 
         // Should reuse the same connection
@@ -789,7 +789,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn1 = pool.acquire().await.unwrap();
+        let conn1 = pool.acquire().await.expect("test operation should succeed");
 
         let result = pool.acquire().await;
         assert!(matches!(result, Err(PoolError::AcquireTimeout(_))));
@@ -815,17 +815,20 @@ mod tests {
 
         let pool_clone = Arc::clone(&pool);
         let handle = tokio::spawn(async move {
-            let _conn = pool_clone.acquire().await.unwrap();
+            let _conn = pool_clone
+                .acquire()
+                .await
+                .expect("test operation should succeed");
             sleep(Duration::from_millis(20)).await;
             // Connection dropped here
         });
 
         // Wait a bit then try to acquire
         sleep(Duration::from_millis(50)).await;
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         assert!(conn.is_healthy());
 
-        handle.await.unwrap();
+        handle.await.expect("test operation should succeed");
     }
 
     // Test 6: Health check removes unhealthy connections
@@ -839,7 +842,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::unhealthy(id)) })
         });
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         drop(conn);
 
         tokio::task::yield_now().await;
@@ -867,7 +870,7 @@ mod tests {
         });
 
         // This should work (creates and uses the connection)
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         assert!(conn.is_healthy());
 
         drop(conn);
@@ -887,9 +890,9 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn1 = pool.acquire().await.unwrap();
-        let conn2 = pool.acquire().await.unwrap();
-        let conn3 = pool.acquire().await.unwrap();
+        let conn1 = pool.acquire().await.expect("test operation should succeed");
+        let conn2 = pool.acquire().await.expect("test operation should succeed");
+        let conn3 = pool.acquire().await.expect("test operation should succeed");
 
         let stats = pool.stats();
         assert_eq!(stats.active_connections, 3);
@@ -929,7 +932,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         drop(conn);
 
         pool.shutdown().await;
@@ -950,8 +953,8 @@ mod tests {
         });
 
         // Acquire 2 connections (max)
-        let conn1 = pool.acquire().await.unwrap();
-        let conn2 = pool.acquire().await.unwrap();
+        let conn1 = pool.acquire().await.expect("test operation should succeed");
+        let conn2 = pool.acquire().await.expect("test operation should succeed");
 
         // Resize to 3
         pool.resize(3);
@@ -967,9 +970,18 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let c1 = pool2.acquire().await.unwrap();
-        let c2 = pool2.acquire().await.unwrap();
-        let c3 = pool2.acquire().await.unwrap();
+        let c1 = pool2
+            .acquire()
+            .await
+            .expect("test operation should succeed");
+        let c2 = pool2
+            .acquire()
+            .await
+            .expect("test operation should succeed");
+        let c3 = pool2
+            .acquire()
+            .await
+            .expect("test operation should succeed");
 
         let stats = pool2.stats();
         assert_eq!(stats.active_connections, 3);
@@ -994,14 +1006,14 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn1 = pool.acquire().await.unwrap();
+        let conn1 = pool.acquire().await.expect("test operation should succeed");
         let id1 = conn1.id;
         drop(conn1);
 
         // Wait for connection to expire
         sleep(Duration::from_millis(60)).await;
 
-        let conn2 = pool.acquire().await.unwrap();
+        let conn2 = pool.acquire().await.expect("test operation should succeed");
         let id2 = conn2.id;
 
         // Should be a new connection (different id)
@@ -1023,14 +1035,14 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn1 = pool.acquire().await.unwrap();
+        let conn1 = pool.acquire().await.expect("test operation should succeed");
         let id1 = conn1.id;
         drop(conn1);
 
         // Wait for connection to become idle
         sleep(Duration::from_millis(60)).await;
 
-        let conn2 = pool.acquire().await.unwrap();
+        let conn2 = pool.acquire().await.expect("test operation should succeed");
         let id2 = conn2.id;
 
         // Should be a new connection (different id)
@@ -1054,14 +1066,14 @@ mod tests {
         for _ in 0..10 {
             let pool = Arc::clone(&pool);
             handles.push(tokio::spawn(async move {
-                let conn = pool.acquire().await.unwrap();
+                let conn = pool.acquire().await.expect("test operation should succeed");
                 sleep(Duration::from_millis(10)).await;
                 drop(conn);
             }));
         }
 
         for handle in handles {
-            handle.await.unwrap();
+            handle.await.expect("test operation should succeed");
         }
 
         let stats = pool.stats();
@@ -1080,7 +1092,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
 
         // Test deref
         assert!(conn.is_healthy());
@@ -1099,7 +1111,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let mut conn = pool.acquire().await.unwrap();
+        let mut conn = pool.acquire().await.expect("test operation should succeed");
 
         // Test deref_mut
         conn.healthy = false;
@@ -1119,7 +1131,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         let taken = conn.take();
 
         assert!(taken.is_some());
@@ -1137,10 +1149,10 @@ mod tests {
         let mut conn = MockConnection::new(1);
         assert_eq!(conn.reset_count, 0);
 
-        conn.reset().unwrap();
+        conn.reset().expect("test operation should succeed");
         assert_eq!(conn.reset_count, 1);
 
-        conn.reset().unwrap();
+        conn.reset().expect("test operation should succeed");
         assert_eq!(conn.reset_count, 2);
     }
 
@@ -1206,7 +1218,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         }));
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
 
         let pool_clone = Arc::clone(&pool);
         let handle = tokio::spawn(async move {
@@ -1238,8 +1250,8 @@ mod tests {
         });
 
         for _ in 0..10 {
-            let c1 = pool.acquire().await.unwrap();
-            let c2 = pool.acquire().await.unwrap();
+            let c1 = pool.acquire().await.expect("test operation should succeed");
+            let c2 = pool.acquire().await.expect("test operation should succeed");
             drop(c1);
             drop(c2);
         }
@@ -1276,17 +1288,21 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let mut conn = pool.acquire().await.unwrap();
+        let mut conn = pool.acquire().await.expect("test operation should succeed");
 
         // Test get()
         let ref_conn = conn.get();
         assert!(ref_conn.is_some());
-        assert!(ref_conn.unwrap().is_healthy());
+        assert!(
+            ref_conn
+                .expect("test operation should succeed")
+                .is_healthy()
+        );
 
         // Test get_mut()
         let ref_mut_conn = conn.get_mut();
         assert!(ref_mut_conn.is_some());
-        ref_mut_conn.unwrap().healthy = false;
+        ref_mut_conn.expect("test operation should succeed").healthy = false;
 
         assert!(!conn.is_healthy());
 
@@ -1337,7 +1353,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         let debug_str = format!("{conn:?}");
         assert!(debug_str.contains("PooledConnection"));
 
@@ -1357,7 +1373,7 @@ mod tests {
             Box::pin(async move { Ok(MockConnection::new(id)) })
         });
 
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         drop(conn);
 
         // Wait for expiration
@@ -1383,7 +1399,7 @@ mod tests {
         pool.resize(0);
 
         // Should still be able to acquire
-        let conn = pool.acquire().await.unwrap();
+        let conn = pool.acquire().await.expect("test operation should succeed");
         assert!(conn.is_healthy());
 
         drop(conn);

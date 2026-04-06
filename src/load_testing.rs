@@ -1050,8 +1050,9 @@ mod tests {
             .with_concurrent_users(10)
             .with_total_requests(1000);
 
-        let json = serde_json::to_string(&config).unwrap();
-        let parsed: LoadTestConfig = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&config).expect("test operation should succeed");
+        let parsed: LoadTestConfig =
+            serde_json::from_str(&json).expect("test operation should succeed");
 
         assert_eq!(parsed.concurrent_users, 10);
         assert_eq!(parsed.total_requests, 1000);
@@ -1064,8 +1065,9 @@ mod tests {
         result.successful_requests = 95;
         result.errors.insert("timeout".to_string(), 5);
 
-        let json = serde_json::to_string(&result).unwrap();
-        let parsed: LoadTestResult = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&result).expect("test operation should succeed");
+        let parsed: LoadTestResult =
+            serde_json::from_str(&json).expect("test operation should succeed");
 
         assert_eq!(parsed.total_requests, 100);
         assert_eq!(parsed.successful_requests, 95);

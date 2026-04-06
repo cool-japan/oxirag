@@ -438,8 +438,11 @@ mod tests {
 
         assert_eq!(path.len(), 1);
         assert!(!path.is_empty());
-        assert_eq!(path.start().unwrap().name, "A");
-        assert_eq!(path.end().unwrap().name, "B");
+        assert_eq!(
+            path.start().expect("test operation should succeed").name,
+            "A"
+        );
+        assert_eq!(path.end().expect("test operation should succeed").name, "B");
     }
 
     #[test]

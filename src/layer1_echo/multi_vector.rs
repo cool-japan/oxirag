@@ -688,7 +688,10 @@ mod tests {
         assert_eq!(provider.dimension(), 32);
         assert_eq!(provider.model_id(), "mock-token-embedder");
 
-        let tokens = provider.embed_tokens("hello world test").await.unwrap();
+        let tokens = provider
+            .embed_tokens("hello world test")
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(tokens.len(), 3);
         assert_eq!(tokens[0].position, 0);
@@ -712,7 +715,10 @@ mod tests {
         let provider = MockTokenEmbeddingProvider::new(16);
 
         let texts = ["hello world", "foo bar baz"];
-        let results = provider.embed_tokens_batch(&texts).await.unwrap();
+        let results = provider
+            .embed_tokens_batch(&texts)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].len(), 2);
@@ -725,15 +731,30 @@ mod tests {
         let provider = MockTokenEmbeddingProvider::new(32);
 
         let doc = Document::new("test document");
-        let tokens = provider.embed_tokens("test document").await.unwrap();
+        let tokens = provider
+            .embed_tokens("test document")
+            .await
+            .expect("test operation should succeed");
         let mv_doc = MultiVectorDocument::new(doc.clone(), tokens);
 
-        store.insert(mv_doc).await.unwrap();
+        store
+            .insert(mv_doc)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(store.count().await, 1);
-        let retrieved = store.get(&doc.id).await.unwrap();
+        let retrieved = store
+            .get(&doc.id)
+            .await
+            .expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().document.content, "test document");
+        assert_eq!(
+            retrieved
+                .expect("test operation should succeed")
+                .document
+                .content,
+            "test document"
+        );
     }
 
     #[tokio::test]
@@ -758,29 +779,44 @@ mod tests {
 
         // Index some documents
         let doc1 = Document::new("quick brown fox");
-        let tokens1 = provider.embed_tokens("quick brown fox").await.unwrap();
+        let tokens1 = provider
+            .embed_tokens("quick brown fox")
+            .await
+            .expect("test operation should succeed");
         store
             .insert(MultiVectorDocument::new(doc1, tokens1))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let doc2 = Document::new("lazy dog sleeps");
-        let tokens2 = provider.embed_tokens("lazy dog sleeps").await.unwrap();
+        let tokens2 = provider
+            .embed_tokens("lazy dog sleeps")
+            .await
+            .expect("test operation should succeed");
         store
             .insert(MultiVectorDocument::new(doc2, tokens2))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let doc3 = Document::new("quick fox jumps");
-        let tokens3 = provider.embed_tokens("quick fox jumps").await.unwrap();
+        let tokens3 = provider
+            .embed_tokens("quick fox jumps")
+            .await
+            .expect("test operation should succeed");
         store
             .insert(MultiVectorDocument::new(doc3, tokens3))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search
-        let query_tokens = provider.embed_tokens("quick fox").await.unwrap();
-        let results = store.search(&query_tokens, 2, None).await.unwrap();
+        let query_tokens = provider
+            .embed_tokens("quick fox")
+            .await
+            .expect("test operation should succeed");
+        let results = store
+            .search(&query_tokens, 2, None)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].rank, 0);
@@ -800,15 +836,24 @@ mod tests {
         let provider = MockTokenEmbeddingProvider::new(32);
 
         let doc = Document::new("test doc");
-        let tokens = provider.embed_tokens("test doc").await.unwrap();
+        let tokens = provider
+            .embed_tokens("test doc")
+            .await
+            .expect("test operation should succeed");
         store
             .insert(MultiVectorDocument::new(doc, tokens))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search with very high min_score should return empty
-        let query_tokens = provider.embed_tokens("completely different").await.unwrap();
-        let results = store.search(&query_tokens, 10, Some(100.0)).await.unwrap();
+        let query_tokens = provider
+            .embed_tokens("completely different")
+            .await
+            .expect("test operation should succeed");
+        let results = store
+            .search(&query_tokens, 10, Some(100.0))
+            .await
+            .expect("test operation should succeed");
 
         assert!(results.is_empty());
     }
@@ -820,17 +865,30 @@ mod tests {
 
         let doc = Document::new("test");
         let id = doc.id.clone();
-        let tokens = provider.embed_tokens("test").await.unwrap();
+        let tokens = provider
+            .embed_tokens("test")
+            .await
+            .expect("test operation should succeed");
         store
             .insert(MultiVectorDocument::new(doc, tokens))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
-        assert!(store.delete(&id).await.unwrap());
+        assert!(
+            store
+                .delete(&id)
+                .await
+                .expect("test operation should succeed")
+        );
         assert_eq!(store.count().await, 0);
 
         // Delete non-existent
-        assert!(!store.delete(&id).await.unwrap());
+        assert!(
+            !store
+                .delete(&id)
+                .await
+                .expect("test operation should succeed")
+        );
     }
 
     #[tokio::test]
@@ -840,16 +898,19 @@ mod tests {
 
         for i in 0..5 {
             let doc = Document::new(format!("doc {i}"));
-            let tokens = provider.embed_tokens(&format!("doc {i}")).await.unwrap();
+            let tokens = provider
+                .embed_tokens(&format!("doc {i}"))
+                .await
+                .expect("test operation should succeed");
             store
                 .insert(MultiVectorDocument::new(doc, tokens))
                 .await
-                .unwrap();
+                .expect("test operation should succeed");
         }
 
         assert_eq!(store.count().await, 5);
 
-        store.clear().await.unwrap();
+        store.clear().await.expect("test operation should succeed");
         assert_eq!(store.count().await, 0);
     }
 
@@ -864,11 +925,14 @@ mod tests {
             let tokens = provider
                 .embed_tokens(&format!("document {i}"))
                 .await
-                .unwrap();
+                .expect("test operation should succeed");
             docs.push(MultiVectorDocument::new(doc, tokens));
         }
 
-        store.insert_batch(docs).await.unwrap();
+        store
+            .insert_batch(docs)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(store.count().await, 3);
     }
 
@@ -904,7 +968,10 @@ mod tests {
     async fn test_search_empty_query() {
         let store = InMemoryMultiVectorStore::new(32);
 
-        let results = store.search(&[], 10, None).await.unwrap();
+        let results = store
+            .search(&[], 10, None)
+            .await
+            .expect("test operation should succeed");
         assert!(results.is_empty());
     }
 }

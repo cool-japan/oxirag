@@ -720,9 +720,9 @@ mod tests {
         assert!(page_id.is_some());
         assert_eq!(table.allocated_count(), 1);
 
-        let page = table.get_page(page_id.unwrap());
+        let page = table.get_page(page_id.expect("test operation should succeed"));
         assert!(page.is_some());
-        assert!(page.unwrap().is_allocated);
+        assert!(page.expect("test operation should succeed").is_allocated);
     }
 
     #[test]
@@ -733,7 +733,9 @@ mod tests {
         let page_id = table.allocate_page_with_data(data.clone());
         assert!(page_id.is_some());
 
-        let page = table.get_page(page_id.unwrap()).unwrap();
+        let page = table
+            .get_page(page_id.expect("test operation should succeed"))
+            .expect("test operation should succeed");
         assert_eq!(page.data, data);
     }
 
@@ -741,7 +743,9 @@ mod tests {
     fn test_page_table_free() {
         let mut table = PageTable::new(256, 10);
 
-        let page_id = table.allocate_page().unwrap();
+        let page_id = table
+            .allocate_page()
+            .expect("test operation should succeed");
         assert_eq!(table.allocated_count(), 1);
 
         table.free_page(page_id);
@@ -753,10 +757,14 @@ mod tests {
     fn test_page_table_reuse_freed_pages() {
         let mut table = PageTable::new(256, 10);
 
-        let page_id1 = table.allocate_page().unwrap();
+        let page_id1 = table
+            .allocate_page()
+            .expect("test operation should succeed");
         table.free_page(page_id1);
 
-        let page_id2 = table.allocate_page().unwrap();
+        let page_id2 = table
+            .allocate_page()
+            .expect("test operation should succeed");
         assert_eq!(page_id1, page_id2);
     }
 
@@ -764,8 +772,12 @@ mod tests {
     fn test_page_table_max_pages_limit() {
         let mut table = PageTable::new(256, 2);
 
-        let _id1 = table.allocate_page().unwrap();
-        let _id2 = table.allocate_page().unwrap();
+        let _id1 = table
+            .allocate_page()
+            .expect("test operation should succeed");
+        let _id2 = table
+            .allocate_page()
+            .expect("test operation should succeed");
         let id3 = table.allocate_page();
 
         assert!(id3.is_none());
@@ -775,9 +787,15 @@ mod tests {
     fn test_page_table_defragment() {
         let mut table = PageTable::new(256, 10);
 
-        let id1 = table.allocate_page().unwrap();
-        let _id2 = table.allocate_page().unwrap();
-        let id3 = table.allocate_page().unwrap();
+        let id1 = table
+            .allocate_page()
+            .expect("test operation should succeed");
+        let _id2 = table
+            .allocate_page()
+            .expect("test operation should succeed");
+        let id3 = table
+            .allocate_page()
+            .expect("test operation should succeed");
 
         table.free_page(id1);
         table.free_page(id3);
@@ -790,9 +808,13 @@ mod tests {
     fn test_page_table_evict_lru() {
         let mut table = PageTable::new(256, 10);
 
-        let _id1 = table.allocate_page().unwrap();
+        let _id1 = table
+            .allocate_page()
+            .expect("test operation should succeed");
         std::thread::sleep(std::time::Duration::from_millis(1));
-        let _id2 = table.allocate_page().unwrap();
+        let _id2 = table
+            .allocate_page()
+            .expect("test operation should succeed");
 
         let evicted = table.evict_lru();
         assert!(evicted.is_some());
@@ -803,8 +825,12 @@ mod tests {
     fn test_page_table_clear() {
         let mut table = PageTable::new(256, 10);
 
-        table.allocate_page().unwrap();
-        table.allocate_page().unwrap();
+        table
+            .allocate_page()
+            .expect("test operation should succeed");
+        table
+            .allocate_page()
+            .expect("test operation should succeed");
 
         table.clear();
         assert_eq!(table.allocated_count(), 0);
@@ -852,7 +878,7 @@ mod tests {
 
         let retrieved = cache.get(&fp);
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap(), data);
+        assert_eq!(retrieved.expect("test operation should succeed"), data);
     }
 
     #[test]

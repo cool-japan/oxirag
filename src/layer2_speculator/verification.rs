@@ -768,7 +768,10 @@ mod tests {
         let draft = Draft::new("Test answer", "Test question");
         let context = create_context();
 
-        let result = pipeline.verify(&draft, &context).await.unwrap();
+        let result = pipeline
+            .verify(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(matches!(result.decision, SpeculationDecision::Revise));
         assert_eq!(result.confidence, 0.5);
@@ -786,7 +789,10 @@ mod tests {
         );
         let context = create_context();
 
-        let result = pipeline.verify(&draft, &context).await.unwrap();
+        let result = pipeline
+            .verify(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(result.confidence > 0.0);
     }
@@ -992,7 +998,10 @@ mod tests {
         );
         let context = create_context();
 
-        let result = pipeline.verify(&draft, &context).await.unwrap();
+        let result = pipeline
+            .verify(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         // High keyword overlap should lead to acceptance
         assert!(result.confidence >= 0.5);

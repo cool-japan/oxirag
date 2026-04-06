@@ -477,7 +477,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The capital of France is Paris.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(
@@ -492,7 +492,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The population is greater than one million.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
     }
@@ -503,7 +503,7 @@ mod tests {
         let claims = extractor
             .extract_claims("If it rains, then the ground gets wet.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(
@@ -518,7 +518,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The answer is not correct.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Not(_)));
@@ -533,7 +533,7 @@ mod tests {
                 10,
             )
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(claims.len() >= 2);
     }
@@ -544,7 +544,7 @@ mod tests {
         let claims = extractor
             .extract_claims("A is B. C is D. E is F. G is H.", 2)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(claims.len() <= 2);
     }
@@ -561,7 +561,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("assert"));
         assert!(smt.contains("is"));
     }
@@ -578,7 +580,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("<"));
     }
 
@@ -593,7 +597,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("=>"));
     }
 
@@ -604,7 +610,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The meeting started before lunch.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(
@@ -619,7 +625,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The event occurred after the announcement.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(
@@ -634,7 +640,7 @@ mod tests {
         let claims = extractor
             .extract_claims("Sales increased during the holiday season.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(
@@ -655,7 +661,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("before"));
         assert!(smt.contains("meeting"));
         assert!(smt.contains("lunch"));
@@ -668,7 +676,7 @@ mod tests {
         let claims = extractor
             .extract_claims("Smoking causes cancer.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Causal { .. }));
@@ -680,7 +688,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The plant died because of lack of water.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Causal { .. }));
@@ -692,7 +700,7 @@ mod tests {
         let claims = extractor
             .extract_claims("Exercise leads to better health.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Causal { .. }));
@@ -704,7 +712,7 @@ mod tests {
         let claims = extractor
             .extract_claims("Income correlates with education level.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Causal { .. }));
@@ -722,7 +730,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("causes"));
         assert!(smt.contains("smoking"));
         assert!(smt.contains("cancer"));
@@ -740,7 +750,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("contributes_to"));
     }
 
@@ -756,7 +768,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("correlates_with"));
     }
 
@@ -767,7 +781,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The weather might be sunny tomorrow.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Modal { .. }));
@@ -779,7 +793,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The answer must be correct.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Modal { .. }));
@@ -791,7 +805,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The train will probably arrive on time.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Modal { .. }));
@@ -803,7 +817,7 @@ mod tests {
         let claims = extractor
             .extract_claims("This could be the solution.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Modal { .. }));
@@ -820,7 +834,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("possibly"));
         assert!(smt.contains("sunny"));
     }
@@ -836,7 +852,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("necessarily"));
     }
 
@@ -851,7 +869,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("likely"));
     }
 
@@ -866,7 +886,9 @@ mod tests {
             },
         );
 
-        let smt = extractor.to_smtlib(&claim).unwrap();
+        let smt = extractor
+            .to_smtlib(&claim)
+            .expect("test operation should succeed");
         assert!(smt.contains("unlikely"));
     }
 
@@ -903,7 +925,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The result might not be accurate.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!claims.is_empty());
         // Should wrap modal in negation
@@ -919,7 +941,7 @@ mod tests {
         let claims = extractor
             .extract_claims("The system might be operational.", 10)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(!claims.is_empty());
         assert!(matches!(claims[0].structure, ClaimStructure::Modal { .. }));
     }

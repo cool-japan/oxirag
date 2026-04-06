@@ -243,23 +243,23 @@ mod tests {
         store
             .add_entity(GraphEntity::new("A", EntityType::Concept).with_id("a"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("B", EntityType::Concept).with_id("b"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("C", EntityType::Concept).with_id("c"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("D", EntityType::Concept).with_id("d"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_entity(GraphEntity::new("E", EntityType::Technology).with_id("e"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         store
             .add_relationship(GraphRelationship::new(
@@ -268,7 +268,7 @@ mod tests {
                 RelationshipType::RelatedTo,
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_relationship(GraphRelationship::new(
                 "b",
@@ -276,7 +276,7 @@ mod tests {
                 RelationshipType::RelatedTo,
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_relationship(GraphRelationship::new(
                 "c",
@@ -284,11 +284,11 @@ mod tests {
                 RelationshipType::RelatedTo,
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .add_relationship(GraphRelationship::new("a", "e", RelationshipType::Uses))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         store
     }
@@ -299,7 +299,9 @@ mod tests {
 
         let query = GraphQuery::new(vec!["a".to_string()]).with_max_hops(2);
 
-        let paths = bfs_traverse(&store, &query).await.unwrap();
+        let paths = bfs_traverse(&store, &query)
+            .await
+            .expect("test operation should succeed");
 
         // Should find multiple paths from A
         assert!(!paths.is_empty());
@@ -322,7 +324,9 @@ mod tests {
             .with_max_hops(3)
             .with_entity_filter(vec![EntityType::Technology]);
 
-        let paths = bfs_traverse(&store, &query).await.unwrap();
+        let paths = bfs_traverse(&store, &query)
+            .await
+            .expect("test operation should succeed");
 
         // Should only find paths that pass through Technology entities
         for path in &paths {
@@ -343,7 +347,9 @@ mod tests {
             .with_max_hops(3)
             .with_relationship_filter(vec![RelationshipType::Uses]);
 
-        let paths = bfs_traverse(&store, &query).await.unwrap();
+        let paths = bfs_traverse(&store, &query)
+            .await
+            .expect("test operation should succeed");
 
         // Should only follow USES relationships
         for path in &paths {
@@ -366,13 +372,13 @@ mod tests {
             Direction::Outgoing,
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
 
         assert!(path.is_some());
-        let path = path.unwrap();
+        let path = path.expect("test operation should succeed");
         assert_eq!(path.len(), 3); // 3 relationships
-        assert_eq!(path.start().unwrap().id, "a");
-        assert_eq!(path.end().unwrap().id, "d");
+        assert_eq!(path.start().expect("test operation should succeed").id, "a");
+        assert_eq!(path.end().expect("test operation should succeed").id, "d");
     }
 
     #[tokio::test]
@@ -388,7 +394,7 @@ mod tests {
             Direction::Outgoing,
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
 
         assert!(path.is_none());
     }
@@ -400,7 +406,7 @@ mod tests {
         let entities =
             find_entities_within_hops(&store, &"a".to_string(), 2, Direction::Outgoing, None, None)
                 .await
-                .unwrap();
+                .expect("test operation should succeed");
 
         // Should find B (1 hop), E (1 hop), C (2 hops)
         assert_eq!(entities.len(), 3);
@@ -424,7 +430,7 @@ mod tests {
             None,
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
 
         // Should only find E (Technology)
         assert_eq!(entities.len(), 1);

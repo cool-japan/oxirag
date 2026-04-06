@@ -761,7 +761,10 @@ mod tests {
         let store = InMemoryVectorStore::new(3);
         let manager = IndexManager::new(store);
 
-        let stats = manager.get_stats().await.unwrap();
+        let stats = manager
+            .get_stats()
+            .await
+            .expect("test operation should succeed");
         assert_eq!(stats.document_count, 0);
         assert_eq!(stats.dimension, 3);
     }
@@ -772,14 +775,17 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0, 0.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc("doc2", vec![0.0, 1.0, 0.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let manager = IndexManager::new(store);
-        let stats = manager.get_stats().await.unwrap();
+        let stats = manager
+            .get_stats()
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(stats.document_count, 2);
         assert_eq!(stats.embedding_count, 2);
@@ -794,8 +800,14 @@ mod tests {
         let doc2 = create_test_doc("doc2", vec![0.0, 1.0, 0.0]);
         let id1 = doc1.document.id.clone();
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
 
         let mut manager = IndexManager::new(store);
 
@@ -804,13 +816,19 @@ mod tests {
         assert_eq!(manager.pending_deletions().await, 1);
 
         // Vacuum
-        let result = manager.vacuum().await.unwrap();
+        let result = manager
+            .vacuum()
+            .await
+            .expect("test operation should succeed");
         assert!(result.success);
         assert_eq!(result.entries_removed, 1);
         assert_eq!(manager.pending_deletions().await, 0);
 
         // Verify document was deleted
-        let stats = manager.get_stats().await.unwrap();
+        let stats = manager
+            .get_stats()
+            .await
+            .expect("test operation should succeed");
         assert_eq!(stats.document_count, 1);
     }
 
@@ -820,15 +838,18 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc("doc2", vec![0.0, 1.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let mut manager = IndexManager::new(store);
 
-        let result = manager.optimize(&OptimizeConfig::default()).await.unwrap();
+        let result = manager
+            .optimize(&OptimizeConfig::default())
+            .await
+            .expect("test operation should succeed");
         assert!(result.success);
         assert_eq!(result.stats_before.document_count, 2);
         assert_eq!(result.stats_after.document_count, 2);
@@ -840,11 +861,14 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let mut manager = IndexManager::new(store);
 
-        let stats = manager.rebuild_index().await.unwrap();
+        let stats = manager
+            .rebuild_index()
+            .await
+            .expect("test operation should succeed");
         assert_eq!(stats.document_count, 1);
         assert_eq!(stats.fragmentation_ratio, 0.0);
     }
@@ -855,11 +879,11 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc("doc2", vec![0.0, 1.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let mut manager = IndexManager::new(store);
 
@@ -867,7 +891,7 @@ mod tests {
         let snapshot = manager
             .create_snapshot(Some("Test snapshot"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(snapshot.stats.document_count, 2);
         assert_eq!(snapshot.description, Some("Test snapshot".to_string()));
 
@@ -876,12 +900,23 @@ mod tests {
         assert_eq!(snapshots.len(), 1);
 
         // Clear the store
-        manager.store_mut().await.clear().await.unwrap();
-        let stats = manager.get_stats().await.unwrap();
+        manager
+            .store_mut()
+            .await
+            .clear()
+            .await
+            .expect("test operation should succeed");
+        let stats = manager
+            .get_stats()
+            .await
+            .expect("test operation should succeed");
         assert_eq!(stats.document_count, 0);
 
         // Restore snapshot
-        let restored_stats = manager.restore_snapshot(&snapshot).await.unwrap();
+        let restored_stats = manager
+            .restore_snapshot(&snapshot)
+            .await
+            .expect("test operation should succeed");
         // Note: restoration depends on iteration support which is limited
         // So we just verify it doesn't error and stats are valid
         let _ = restored_stats.document_count;
@@ -892,7 +927,10 @@ mod tests {
         let store = InMemoryVectorStore::new(3);
         let manager = IndexManager::new(store);
 
-        let snapshot = manager.create_snapshot(None).await.unwrap();
+        let snapshot = manager
+            .create_snapshot(None)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(manager.list_snapshots().await.len(), 1);
 
         let deleted = manager.delete_snapshot(&snapshot.id).await;
@@ -980,7 +1018,7 @@ mod tests {
         let result = manager
             .merge_indices(vec![index1, index2], true)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(result.success);
         assert_eq!(result.indices_merged, 2);
         assert_eq!(result.total_documents, 2);
@@ -1030,7 +1068,7 @@ mod tests {
         let result = manager
             .merge_indices(vec![index1, index2], true)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(result.success);
         assert_eq!(result.duplicates_skipped, 1);
         assert_eq!(result.total_documents, 1);
@@ -1087,8 +1125,9 @@ mod tests {
         };
 
         // Test serialization/deserialization
-        let json = serde_json::to_string(&serialized).unwrap();
-        let parsed: SerializedIndex = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&serialized).expect("test operation should succeed");
+        let parsed: SerializedIndex =
+            serde_json::from_str(&json).expect("test operation should succeed");
 
         assert_eq!(parsed.version, 1);
         assert_eq!(parsed.dimension, 384);
@@ -1167,7 +1206,7 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let manager = IndexManager::new(store);
 
@@ -1183,7 +1222,7 @@ mod tests {
             store
                 .insert(create_test_doc("doc2", vec![0.0, 1.0, 0.0]))
                 .await
-                .unwrap();
+                .expect("test operation should succeed");
         }
 
         let store = manager.store().await;

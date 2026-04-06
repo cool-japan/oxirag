@@ -29,7 +29,7 @@ use crate::error::HiddenStateError;
 /// async fn main() {
 ///     let provider = MockHiddenStateProvider::new("test-model", 12, 768);
 ///
-///     let states = provider.extract_hidden_states("Hello, world!").await.unwrap();
+///     let states = provider.extract_hidden_states("Hello, world!").await.expect("test operation should succeed");
 ///     println!("Extracted {} layers", states.layers.len());
 /// }
 /// ```
@@ -189,7 +189,7 @@ mod tests {
         let states = provider
             .extract_hidden_states("Hello, world!")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states.model_id, "test-model");
         assert_eq!(states.num_layers, 12);
@@ -202,7 +202,7 @@ mod tests {
         let (states, kv) = provider
             .extract_with_kv_cache("Test input", None)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states.model_id, "test-model");
         assert_eq!(kv.model_id, "test-model");

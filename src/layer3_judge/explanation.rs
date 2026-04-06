@@ -480,7 +480,11 @@ mod tests {
 
         let counterexample = generate_counterexample(&claim, "");
         assert!(counterexample.is_some());
-        assert!(counterexample.unwrap().contains("comparison"));
+        assert!(
+            counterexample
+                .expect("test operation should succeed")
+                .contains("comparison")
+        );
     }
 
     #[test]

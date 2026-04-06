@@ -123,7 +123,7 @@ mod tests {
         tracker
             .track_query("test", Some("answer"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(tracker.stats().total_queries_tracked, 1);
     }
 

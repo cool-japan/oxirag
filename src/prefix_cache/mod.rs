@@ -197,12 +197,18 @@ mod tests {
         let entry = KVCacheEntry::new("system_prompt", fingerprint.clone(), kv_data.clone(), 10);
 
         // Store in cache
-        let key = cache.put(entry).await.unwrap();
+        let key = cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
         assert!(!key.is_empty());
 
         // Should now be a hit
         assert!(cache.contains(&fingerprint).await);
-        let retrieved = cache.get(&fingerprint).await.unwrap();
+        let retrieved = cache
+            .get(&fingerprint)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(retrieved.kv_data.len(), 256);
 
         // Stats should reflect the hit
@@ -246,7 +252,10 @@ mod tests {
         let short_content = "Hello";
         let short_fp = generator.generate(short_content);
         let short_entry = KVCacheEntry::new("short", short_fp.clone(), vec![1.0; 10], 5);
-        cache.put(short_entry).await.unwrap();
+        cache
+            .put(short_entry)
+            .await
+            .expect("test operation should succeed");
 
         // Look up with longer content - should find prefix match
         let long_content = "Hello, world! How are you?";
@@ -285,7 +294,7 @@ mod tests {
                 ))
             })
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(entry1.kv_data, vec![1.0, 2.0, 3.0]);
 
@@ -300,7 +309,7 @@ mod tests {
                 ))
             })
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(entry2.kv_data, vec![1.0, 2.0, 3.0]);
     }
@@ -374,8 +383,12 @@ mod tests {
     fn test_page_table_operations() {
         let mut table = PageTable::new(256, 10);
 
-        let id1 = table.allocate_page().unwrap();
-        let _id2 = table.allocate_page().unwrap();
+        let id1 = table
+            .allocate_page()
+            .expect("test operation should succeed");
+        let _id2 = table
+            .allocate_page()
+            .expect("test operation should succeed");
 
         assert_eq!(table.allocated_count(), 2);
 
@@ -383,7 +396,9 @@ mod tests {
         assert_eq!(table.allocated_count(), 1);
 
         // Freed page should be reused
-        let id3 = table.allocate_page().unwrap();
+        let id3 = table
+            .allocate_page()
+            .expect("test operation should succeed");
         assert_eq!(id3, id1);
     }
 
@@ -399,7 +414,10 @@ mod tests {
         let fp = ContextFingerprint::new(12345, 100, "test");
         let entry = KVCacheEntry::new("test", fp.clone(), vec![1.0; 10], 100);
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
         assert!(cache.contains(&fp).await);
 
         let stats = cache.hierarchical_stats();
@@ -413,7 +431,10 @@ mod tests {
         let fp = ContextFingerprint::new(12345, 100, "test");
         let entry = KVCacheEntry::new("test", fp.clone(), vec![1.0; 10], 100);
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         // Access the entry
         cache.get(&fp).await;
@@ -505,8 +526,14 @@ mod tests {
         let entry1 = KVCacheEntry::new("parent_key", fp1.clone(), vec![1.0; 10], 100);
         let entry2 = KVCacheEntry::new("child_key", fp2.clone(), vec![2.0; 10], 100);
 
-        let key1 = cache.put(entry1).await.unwrap();
-        let key2 = cache.put(entry2).await.unwrap();
+        let key1 = cache
+            .put(entry1)
+            .await
+            .expect("test operation should succeed");
+        let key2 = cache
+            .put(entry2)
+            .await
+            .expect("test operation should succeed");
 
         // Register dependency
         manager.register_dependency(key2.clone(), key1.clone());

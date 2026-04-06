@@ -562,7 +562,7 @@ mod tests {
         let states = provider
             .extract_hidden_states("Hello, world!")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states.model_id, "test-model");
         assert_eq!(states.num_layers, 6);
@@ -575,8 +575,14 @@ mod tests {
     async fn test_mock_provider_deterministic() {
         let provider = MockHiddenStateProvider::new("test-model", 4, 128);
 
-        let states1 = provider.extract_hidden_states("test input").await.unwrap();
-        let states2 = provider.extract_hidden_states("test input").await.unwrap();
+        let states1 = provider
+            .extract_hidden_states("test input")
+            .await
+            .expect("test operation should succeed");
+        let states2 = provider
+            .extract_hidden_states("test input")
+            .await
+            .expect("test operation should succeed");
 
         // Same input should produce same output
         assert_eq!(
@@ -589,8 +595,14 @@ mod tests {
     async fn test_mock_provider_different_inputs() {
         let provider = MockHiddenStateProvider::new("test-model", 4, 128);
 
-        let states1 = provider.extract_hidden_states("input one").await.unwrap();
-        let states2 = provider.extract_hidden_states("input two").await.unwrap();
+        let states1 = provider
+            .extract_hidden_states("input one")
+            .await
+            .expect("test operation should succeed");
+        let states2 = provider
+            .extract_hidden_states("input two")
+            .await
+            .expect("test operation should succeed");
 
         // Different inputs should produce different outputs
         assert_ne!(
@@ -604,7 +616,10 @@ mod tests {
         let config = HiddenStateConfig::default().with_capture_attention_weights(true);
         let provider = MockHiddenStateProvider::new("test-model", 4, 128).with_config(config);
 
-        let states = provider.extract_hidden_states("test").await.unwrap();
+        let states = provider
+            .extract_hidden_states("test")
+            .await
+            .expect("test operation should succeed");
 
         for layer in &states.layers {
             assert!(layer.attention_weights.is_some());
@@ -617,7 +632,7 @@ mod tests {
         let (states, kv_cache) = provider
             .extract_with_kv_cache("test input", None)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states.model_id, "test-model");
         assert_eq!(kv_cache.model_id, "test-model");
@@ -693,9 +708,10 @@ mod tests {
     fn test_state_pooling_mean() {
         // Shape: [1, 2, 4] - batch=1, seq_len=2, hidden_dim=4
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4])).unwrap();
+        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4]))
+            .expect("test operation should succeed");
 
-        let pooled = StatePooling::mean_pool(&tensor).unwrap();
+        let pooled = StatePooling::mean_pool(&tensor).expect("test operation should succeed");
         // Mean of each column: [(1+5)/2, (2+6)/2, (3+7)/2, (4+8)/2] = [3, 4, 5, 6]
         assert_eq!(pooled.shape.dims, vec![4]);
         assert!((pooled.data[0] - 3.0).abs() < 0.001);
@@ -705,9 +721,10 @@ mod tests {
     #[test]
     fn test_state_pooling_max() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4])).unwrap();
+        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4]))
+            .expect("test operation should succeed");
 
-        let pooled = StatePooling::max_pool(&tensor).unwrap();
+        let pooled = StatePooling::max_pool(&tensor).expect("test operation should succeed");
         // Max of each column: [5, 6, 7, 8]
         assert_eq!(pooled.shape.dims, vec![4]);
         assert!((pooled.data[0] - 5.0).abs() < 0.001);
@@ -717,9 +734,10 @@ mod tests {
     #[test]
     fn test_state_pooling_cls() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4])).unwrap();
+        let tensor = HiddenStateTensor::from_vec(data, TensorShape::new(vec![1, 2, 4]))
+            .expect("test operation should succeed");
 
-        let pooled = StatePooling::cls_pool(&tensor).unwrap();
+        let pooled = StatePooling::cls_pool(&tensor).expect("test operation should succeed");
         // First token: [1, 2, 3, 4]
         assert_eq!(pooled.shape.dims, vec![4]);
         assert!((pooled.data[0] - 1.0).abs() < 0.001);
@@ -729,8 +747,14 @@ mod tests {
     #[tokio::test]
     async fn test_layer_similarity() {
         let provider = MockHiddenStateProvider::new("test-model", 4, 64);
-        let states1 = provider.extract_hidden_states("hello").await.unwrap();
-        let states2 = provider.extract_hidden_states("hello").await.unwrap();
+        let states1 = provider
+            .extract_hidden_states("hello")
+            .await
+            .expect("test operation should succeed");
+        let states2 = provider
+            .extract_hidden_states("hello")
+            .await
+            .expect("test operation should succeed");
 
         let similarities = StateSimilarity::layer_similarity(&states1, &states2);
         assert_eq!(similarities.len(), 4);

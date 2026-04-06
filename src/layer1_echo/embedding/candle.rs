@@ -411,7 +411,10 @@ mod tests {
     #[tokio::test]
     async fn test_mock_provider_embed() {
         let provider = MockEmbeddingProvider::new(128);
-        let embedding = provider.embed("test text").await.unwrap();
+        let embedding = provider
+            .embed("test text")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(embedding.len(), 128);
     }
 
@@ -421,7 +424,7 @@ mod tests {
         let embeddings = provider
             .embed_batch(&["text1", "text2", "text3"])
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(embeddings.len(), 3);
         for emb in embeddings {
             assert_eq!(emb.len(), 64);
@@ -431,23 +434,38 @@ mod tests {
     #[tokio::test]
     async fn test_mock_provider_deterministic() {
         let provider = MockEmbeddingProvider::new(32);
-        let emb1 = provider.embed("same text").await.unwrap();
-        let emb2 = provider.embed("same text").await.unwrap();
+        let emb1 = provider
+            .embed("same text")
+            .await
+            .expect("test operation should succeed");
+        let emb2 = provider
+            .embed("same text")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(emb1, emb2);
     }
 
     #[tokio::test]
     async fn test_mock_provider_different_texts() {
         let provider = MockEmbeddingProvider::new(32);
-        let emb1 = provider.embed("text one").await.unwrap();
-        let emb2 = provider.embed("text two").await.unwrap();
+        let emb1 = provider
+            .embed("text one")
+            .await
+            .expect("test operation should succeed");
+        let emb2 = provider
+            .embed("text two")
+            .await
+            .expect("test operation should succeed");
         assert_ne!(emb1, emb2);
     }
 
     #[tokio::test]
     async fn test_mock_provider_normalized() {
         let provider = MockEmbeddingProvider::new(64);
-        let embedding = provider.embed("test").await.unwrap();
+        let embedding = provider
+            .embed("test")
+            .await
+            .expect("test operation should succeed");
         let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 1e-5);
     }

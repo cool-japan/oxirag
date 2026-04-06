@@ -269,11 +269,20 @@ mod tests {
         let doc = create_test_doc("test", vec![1.0, 0.0, 0.0]);
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
-        let retrieved = store.get(&id).await.unwrap();
+        let retrieved = store.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().document.content, "test");
+        assert_eq!(
+            retrieved
+                .expect("test operation should succeed")
+                .document
+                .content,
+            "test"
+        );
     }
 
     #[tokio::test]
@@ -296,7 +305,10 @@ mod tests {
         let mut doc2 = create_test_doc("test2", vec![0.0, 1.0, 0.0]);
         doc2.document.id = id;
 
-        store.insert(doc1).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
         let result = store.insert(doc2).await;
         assert!(matches!(result, Err(VectorStoreError::DuplicateId(_))));
     }
@@ -307,10 +319,16 @@ mod tests {
         let doc = create_test_doc("test", vec![1.0, 0.0, 0.0]);
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(store.count().await, 1);
 
-        let deleted = store.delete(&id).await.unwrap();
+        let deleted = store
+            .delete(&id)
+            .await
+            .expect("test operation should succeed");
         assert!(deleted);
         assert_eq!(store.count().await, 0);
     }
@@ -318,7 +336,10 @@ mod tests {
     #[tokio::test]
     async fn test_delete_nonexistent() {
         let mut store = InMemoryVectorStore::new(3);
-        let deleted = store.delete(&DocumentId::new()).await.unwrap();
+        let deleted = store
+            .delete(&DocumentId::new())
+            .await
+            .expect("test operation should succeed");
         assert!(!deleted);
     }
 
@@ -331,12 +352,24 @@ mod tests {
         let doc2 = create_test_doc("orthogonal", vec![0.0, 1.0]);
         let doc3 = create_test_doc("somewhat similar", vec![0.8, 0.6]);
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
-        store.insert(doc3).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc3)
+            .await
+            .expect("test operation should succeed");
 
         // Search with a query similar to doc1
-        let results = store.search(&[1.0, 0.0], 2, None).await.unwrap();
+        let results = store
+            .search(&[1.0, 0.0], 2, None)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].document.content, "similar");
@@ -351,11 +384,20 @@ mod tests {
         let doc1 = create_test_doc("similar", vec![1.0, 0.0]);
         let doc2 = create_test_doc("orthogonal", vec![0.0, 1.0]);
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
 
         // Search with high min_score
-        let results = store.search(&[1.0, 0.0], 10, Some(0.9)).await.unwrap();
+        let results = store
+            .search(&[1.0, 0.0], 10, Some(0.9))
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "similar");
@@ -364,7 +406,10 @@ mod tests {
     #[tokio::test]
     async fn test_search_empty_store() {
         let store = InMemoryVectorStore::new(3);
-        let results = store.search(&[1.0, 0.0, 0.0], 10, None).await.unwrap();
+        let results = store
+            .search(&[1.0, 0.0, 0.0], 10, None)
+            .await
+            .expect("test operation should succeed");
         assert!(results.is_empty());
     }
 
@@ -375,11 +420,11 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc("doc2", vec![0.0, 1.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let result = store.insert(create_test_doc("doc3", vec![0.5, 0.5])).await;
 
@@ -396,15 +441,15 @@ mod tests {
         store
             .insert(create_test_doc("doc1", vec![1.0, 0.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc("doc2", vec![0.0, 1.0]))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(store.count().await, 2);
 
-        store.clear().await.unwrap();
+        store.clear().await.expect("test operation should succeed");
         assert_eq!(store.count().await, 0);
     }
 
@@ -415,11 +460,23 @@ mod tests {
 
         let doc = create_test_doc("test", vec![2.0, 0.0]);
 
-        cosine_store.insert(doc.clone()).await.unwrap();
-        dot_store.insert(doc).await.unwrap();
+        cosine_store
+            .insert(doc.clone())
+            .await
+            .expect("test operation should succeed");
+        dot_store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
-        let cosine_results = cosine_store.search(&[1.0, 0.0], 1, None).await.unwrap();
-        let dot_results = dot_store.search(&[1.0, 0.0], 1, None).await.unwrap();
+        let cosine_results = cosine_store
+            .search(&[1.0, 0.0], 1, None)
+            .await
+            .expect("test operation should succeed");
+        let dot_results = dot_store
+            .search(&[1.0, 0.0], 1, None)
+            .await
+            .expect("test operation should succeed");
 
         // Cosine should be 1.0 (same direction)
         assert!((cosine_results[0].score - 1.0).abs() < 1e-6);
@@ -433,14 +490,24 @@ mod tests {
         let doc = create_test_doc("test", vec![1.0, 0.0]);
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
         // Update the embedding
-        let updated = store.update(&id, vec![0.0, 1.0]).await.unwrap();
+        let updated = store
+            .update(&id, vec![0.0, 1.0])
+            .await
+            .expect("test operation should succeed");
         assert!(updated);
 
         // Verify the embedding was updated
-        let retrieved = store.get(&id).await.unwrap().unwrap();
+        let retrieved = store
+            .get(&id)
+            .await
+            .expect("test operation should succeed")
+            .expect("test operation should succeed");
         assert_eq!(retrieved.embedding, vec![0.0, 1.0]);
     }
 
@@ -459,7 +526,10 @@ mod tests {
         let doc = create_test_doc("test", vec![1.0, 0.0]);
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
         let result = store.update(&id, vec![1.0, 0.0, 0.0]).await; // wrong dimension
         assert!(matches!(
@@ -475,12 +545,19 @@ mod tests {
         let id = doc.document.id.clone();
 
         // Upsert a new document
-        let inserted = store.upsert(doc).await.unwrap();
+        let inserted = store
+            .upsert(doc)
+            .await
+            .expect("test operation should succeed");
         assert!(inserted); // Should return true for insert
 
         assert_eq!(store.count().await, 1);
 
-        let retrieved = store.get(&id).await.unwrap().unwrap();
+        let retrieved = store
+            .get(&id)
+            .await
+            .expect("test operation should succeed")
+            .expect("test operation should succeed");
         assert_eq!(retrieved.document.content, "test");
     }
 
@@ -490,19 +567,29 @@ mod tests {
         let doc = create_test_doc("test", vec![1.0, 0.0]);
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
         // Create a new document with the same ID but different content
         let mut updated_doc = create_test_doc("updated content", vec![0.0, 1.0]);
         updated_doc.document.id = id.clone();
 
         // Upsert should update
-        let inserted = store.upsert(updated_doc).await.unwrap();
+        let inserted = store
+            .upsert(updated_doc)
+            .await
+            .expect("test operation should succeed");
         assert!(!inserted); // Should return false for update
 
         assert_eq!(store.count().await, 1);
 
-        let retrieved = store.get(&id).await.unwrap().unwrap();
+        let retrieved = store
+            .get(&id)
+            .await
+            .expect("test operation should succeed")
+            .expect("test operation should succeed");
         assert_eq!(retrieved.document.content, "updated content");
         assert_eq!(retrieved.embedding, vec![0.0, 1.0]);
     }
@@ -525,12 +612,18 @@ mod tests {
         let doc1 = create_test_doc("doc1", vec![1.0, 0.0]);
         let id1 = doc1.document.id.clone();
 
-        store.insert(doc1).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
 
         // Upsert existing document should work (update)
         let mut updated_doc = create_test_doc("doc1 updated", vec![0.5, 0.5]);
         updated_doc.document.id = id1;
-        let inserted = store.upsert(updated_doc).await.unwrap();
+        let inserted = store
+            .upsert(updated_doc)
+            .await
+            .expect("test operation should succeed");
         assert!(!inserted);
 
         // Upsert new document should fail due to capacity
@@ -550,20 +643,35 @@ mod tests {
         let id1 = doc1.document.id.clone();
         let doc2 = create_test_doc("doc2", vec![0.0, 1.0]);
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
 
         // Initially, doc1 should be most similar to [1.0, 0.0]
-        let results = store.search(&[1.0, 0.0], 1, None).await.unwrap();
+        let results = store
+            .search(&[1.0, 0.0], 1, None)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(results[0].document.content, "doc1");
 
         // Update doc1's embedding to [0.0, 1.0]
-        store.update(&id1, vec![0.0, 1.0]).await.unwrap();
+        store
+            .update(&id1, vec![0.0, 1.0])
+            .await
+            .expect("test operation should succeed");
 
         // Now doc2 should be most similar to [1.0, 0.0] (doc1 is orthogonal)
         // Actually both have the same embedding now, but doc2 was the original
         // Let's search for [1.0, 0.0] - both are now orthogonal
-        let results = store.search(&[0.0, 1.0], 2, None).await.unwrap();
+        let results = store
+            .search(&[0.0, 1.0], 2, None)
+            .await
+            .expect("test operation should succeed");
         // Both should have score 1.0 now
         assert!((results[0].score - 1.0).abs() < 1e-6);
         assert!((results[1].score - 1.0).abs() < 1e-6);
@@ -592,7 +700,7 @@ mod tests {
                 &[("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "tech doc",
@@ -600,7 +708,7 @@ mod tests {
                 &[("category", "technology")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "art doc",
@@ -608,14 +716,14 @@ mod tests {
                 &[("category", "art")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search with category filter
         let filter = MetadataFilter::eq("category", "science");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "science doc");
@@ -632,7 +740,7 @@ mod tests {
                 &[("status", "published")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "draft doc",
@@ -640,14 +748,14 @@ mod tests {
                 &[("status", "draft")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for non-draft documents
         let filter = MetadataFilter::ne("status", "draft");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "published doc");
@@ -664,7 +772,7 @@ mod tests {
                 &[("title", "Learning Rust Programming")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "python programming",
@@ -672,14 +780,14 @@ mod tests {
                 &[("title", "Python Guide")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for titles containing "Rust"
         let filter = MetadataFilter::contains("title", "Rust");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "rust programming");
@@ -696,7 +804,7 @@ mod tests {
                 &[("author", "John Doe")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "without author",
@@ -704,14 +812,14 @@ mod tests {
                 &[("category", "general")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for documents with author field
         let filter = MetadataFilter::exists("author");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "with author");
@@ -728,7 +836,7 @@ mod tests {
                 &[("deprecated", "true")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "active doc",
@@ -736,14 +844,14 @@ mod tests {
                 &[("status", "active")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for documents without deprecated field
         let filter = MetadataFilter::not_exists("deprecated");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "active doc");
@@ -760,7 +868,7 @@ mod tests {
                 &[("status", "published"), ("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "draft science",
@@ -768,7 +876,7 @@ mod tests {
                 &[("status", "draft"), ("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "published tech",
@@ -776,7 +884,7 @@ mod tests {
                 &[("status", "published"), ("category", "technology")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for published science documents
         let filter = MetadataFilter::and(vec![
@@ -786,7 +894,7 @@ mod tests {
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "published science");
@@ -803,7 +911,7 @@ mod tests {
                 &[("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "tech doc",
@@ -811,7 +919,7 @@ mod tests {
                 &[("category", "technology")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "art doc",
@@ -819,7 +927,7 @@ mod tests {
                 &[("category", "art")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for science OR technology documents
         let filter = MetadataFilter::or(vec![
@@ -829,7 +937,7 @@ mod tests {
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
         // Verify both science and tech are present (order by similarity)
@@ -852,7 +960,7 @@ mod tests {
                 &[("status", "published"), ("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "published tech",
@@ -860,7 +968,7 @@ mod tests {
                 &[("status", "published"), ("category", "technology")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "draft science",
@@ -868,7 +976,7 @@ mod tests {
                 &[("status", "draft"), ("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "published art",
@@ -876,7 +984,7 @@ mod tests {
                 &[("status", "published"), ("category", "art")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search for: published AND (science OR technology)
         let filter = MetadataFilter::and(vec![
@@ -889,7 +997,7 @@ mod tests {
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
         let contents: Vec<&str> = results
@@ -913,7 +1021,7 @@ mod tests {
                 &[("category", "a")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "doc2",
@@ -921,13 +1029,13 @@ mod tests {
                 &[("category", "b")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search without filter should return all
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, None)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
     }
@@ -943,14 +1051,14 @@ mod tests {
                 &[("category", "a")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search with filter that matches nothing
         let filter = MetadataFilter::eq("category", "nonexistent");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(results.is_empty());
     }
@@ -978,7 +1086,7 @@ mod tests {
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(results.is_empty());
     }
@@ -994,7 +1102,7 @@ mod tests {
                 &[("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         store
             .insert(create_test_doc_with_metadata(
                 "low similarity",
@@ -1002,14 +1110,14 @@ mod tests {
                 &[("category", "science")],
             ))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search with filter and high min_score
         let filter = MetadataFilter::eq("category", "science");
         let results = store
             .search_with_filter(&[1.0, 0.0], 10, Some(0.9), Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "high similarity");
@@ -1027,14 +1135,14 @@ mod tests {
                     &[("category", "science")],
                 ))
                 .await
-                .unwrap();
+                .expect("test operation should succeed");
         }
 
         let filter = MetadataFilter::eq("category", "science");
         let results = store
             .search_with_filter(&[1.0, 0.0], 2, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
     }

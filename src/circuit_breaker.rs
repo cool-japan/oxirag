@@ -646,7 +646,10 @@ mod tests {
         let breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
         let permit = breaker.allow_request().await;
         assert!(permit.is_ok());
-        permit.unwrap().success().await;
+        permit
+            .expect("test operation should succeed")
+            .success()
+            .await;
     }
 
     // Test 3: Transitions to open after failure threshold
@@ -660,7 +663,10 @@ mod tests {
 
         // Record 3 failures
         for _ in 0..3 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.failure().await;
         }
 
@@ -676,7 +682,10 @@ mod tests {
         };
         let breaker = CircuitBreaker::new(config);
 
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         let result = breaker.allow_request().await;
@@ -694,7 +703,10 @@ mod tests {
         };
         let breaker = CircuitBreaker::new(config);
 
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
         assert_eq!(breaker.state().await, CircuitState::Open);
 
@@ -716,7 +728,10 @@ mod tests {
         let breaker = CircuitBreaker::new(config);
 
         // Open the circuit
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         // Wait for half-open
@@ -725,7 +740,10 @@ mod tests {
 
         // Record successes
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.success().await;
         }
 
@@ -743,7 +761,10 @@ mod tests {
         let breaker = CircuitBreaker::new(config);
 
         // Open the circuit
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         // Wait for half-open
@@ -751,7 +772,10 @@ mod tests {
         assert_eq!(breaker.state().await, CircuitState::HalfOpen);
 
         // Fail in half-open
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         assert_eq!(breaker.state().await, CircuitState::Open);
@@ -769,7 +793,10 @@ mod tests {
         let breaker = CircuitBreaker::new(config);
 
         // Open the circuit
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         // Wait for half-open
@@ -796,17 +823,26 @@ mod tests {
 
         // Record 2 failures
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.failure().await;
         }
 
         // Record a success
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.success().await;
 
         // Record 2 more failures - should not open
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.failure().await;
         }
 
@@ -838,7 +874,10 @@ mod tests {
         let breaker = CircuitBreaker::new(config);
 
         // Open the circuit
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
         assert_eq!(breaker.state().await, CircuitState::Open);
 
@@ -862,13 +901,19 @@ mod tests {
 
         // 3 successes
         for _ in 0..3 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.success().await;
         }
 
         // 2 failures
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.failure().await;
         }
 
@@ -888,7 +933,10 @@ mod tests {
         };
         let breaker = CircuitBreaker::new(config);
 
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         // Try 3 rejected requests
@@ -912,7 +960,10 @@ mod tests {
         let breaker = CircuitBreaker::new(config);
 
         // Closed -> Open
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         // Wait for Open -> HalfOpen
@@ -920,7 +971,10 @@ mod tests {
         let _ = breaker.state().await;
 
         // HalfOpen -> Closed
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.success().await;
 
         let stats = breaker.stats_async().await;
@@ -961,16 +1015,34 @@ mod tests {
         let breaker_a = registry.get_or_create("service-a").await;
         let breaker_b = registry.get_or_create("service-b").await;
 
-        let permit = breaker_a.allow_request().await.unwrap();
+        let permit = breaker_a
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.success().await;
 
-        let permit = breaker_b.allow_request().await.unwrap();
+        let permit = breaker_b
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         let stats = registry.all_stats().await;
         assert_eq!(stats.len(), 2);
-        assert_eq!(stats.get("service-a").unwrap().successful_requests, 1);
-        assert_eq!(stats.get("service-b").unwrap().failed_requests, 1);
+        assert_eq!(
+            stats
+                .get("service-a")
+                .expect("test operation should succeed")
+                .successful_requests,
+            1
+        );
+        assert_eq!(
+            stats
+                .get("service-b")
+                .expect("test operation should succeed")
+                .failed_requests,
+            1
+        );
     }
 
     // Test 18: Registry reset_all
@@ -983,7 +1055,10 @@ mod tests {
         let registry = CircuitBreakerRegistry::new(config);
 
         let breaker = registry.get_or_create("service").await;
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
         assert_eq!(breaker.state().await, CircuitState::Open);
 
@@ -1000,7 +1075,7 @@ mod tests {
             with_circuit_breaker(&breaker, async { Ok(42) }).await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 42);
+        assert_eq!(result.expect("test operation should succeed"), 42);
 
         let stats = breaker.stats();
         assert_eq!(stats.successful_requests, 1);
@@ -1036,7 +1111,10 @@ mod tests {
         let breaker = CircuitBreaker::new(config);
 
         // Open the circuit
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
         permit.failure().await;
 
         let result: Result<i32, CircuitBreakerOrOperationError<std::io::Error>> =
@@ -1062,7 +1140,10 @@ mod tests {
         for i in 0..100 {
             let breaker = Arc::clone(&breaker);
             handles.push(tokio::spawn(async move {
-                let permit = breaker.allow_request().await.unwrap();
+                let permit = breaker
+                    .allow_request()
+                    .await
+                    .expect("test operation should succeed");
                 if i % 2 == 0 {
                     permit.success().await;
                 } else {
@@ -1072,7 +1153,7 @@ mod tests {
         }
 
         for handle in handles {
-            handle.await.unwrap();
+            handle.await.expect("test operation should succeed");
         }
 
         let stats = breaker.stats();
@@ -1094,7 +1175,10 @@ mod tests {
 
         // 2 successes
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.success().await;
         }
 
@@ -1152,17 +1236,26 @@ mod tests {
             with_service_circuit_breaker(&registry, "test-service", async { Ok(42) }).await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 42);
+        assert_eq!(result.expect("test operation should succeed"), 42);
 
         let stats = registry.all_stats().await;
-        assert_eq!(stats.get("test-service").unwrap().successful_requests, 1);
+        assert_eq!(
+            stats
+                .get("test-service")
+                .expect("test operation should succeed")
+                .successful_requests,
+            1
+        );
     }
 
     // Test 27: CircuitPermit elapsed time
     #[tokio::test]
     async fn test_permit_elapsed() {
         let breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
-        let permit = breaker.allow_request().await.unwrap();
+        let permit = breaker
+            .allow_request()
+            .await
+            .expect("test operation should succeed");
 
         sleep(Duration::from_millis(10)).await;
 
@@ -1219,7 +1312,10 @@ mod tests {
 
         // Open after failures
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.failure().await;
         }
         assert_eq!(breaker.state().await, CircuitState::Open);
@@ -1230,7 +1326,10 @@ mod tests {
 
         // Back to Closed after successes
         for _ in 0..2 {
-            let permit = breaker.allow_request().await.unwrap();
+            let permit = breaker
+                .allow_request()
+                .await
+                .expect("test operation should succeed");
             permit.success().await;
         }
         assert_eq!(breaker.state().await, CircuitState::Closed);
@@ -1255,13 +1354,16 @@ mod tests {
                 if !created.swap(true, Ordering::SeqCst) {
                     // First thread to create
                 }
-                let permit = breaker.allow_request().await.unwrap();
+                let permit = breaker
+                    .allow_request()
+                    .await
+                    .expect("test operation should succeed");
                 permit.success().await;
             }));
         }
 
         for handle in handles {
-            handle.await.unwrap();
+            handle.await.expect("test operation should succeed");
         }
 
         assert_eq!(registry.len().await, 3);

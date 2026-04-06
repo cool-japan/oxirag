@@ -330,7 +330,10 @@ mod tests {
         .with_confidence(0.9);
 
         let context = create_context();
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(result.confidence > 0.5);
         assert!(matches!(
@@ -345,7 +348,10 @@ mod tests {
         let draft = Draft::new("", "What is the capital of France?");
 
         let context = create_context();
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(result.confidence < 0.5);
         assert!(!result.issues.is_empty());
@@ -360,7 +366,10 @@ mod tests {
         );
 
         let context = create_context();
-        let result = speculator.verify_draft(&draft, &context).await.unwrap();
+        let result = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         // Should detect uncertainty markers
         assert!(
@@ -377,11 +386,14 @@ mod tests {
         let draft = Draft::new("Paris", "What is the capital of France?");
 
         let context = create_context();
-        let speculation = speculator.verify_draft(&draft, &context).await.unwrap();
+        let speculation = speculator
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
         let revised = speculator
             .revise_draft(&draft, &context, &speculation)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(revised.content.len() > draft.content.len());
     }

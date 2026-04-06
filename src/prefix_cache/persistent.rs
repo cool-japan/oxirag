@@ -1010,7 +1010,7 @@ mod tests {
         let cache = PersistentPrefixCache::open(config.clone());
         assert!(cache.is_ok());
 
-        let cache = cache.unwrap();
+        let cache = cache.expect("test operation should succeed");
         assert!(cache.is_empty());
         assert_eq!(cache.len(), 0);
     }
@@ -1019,17 +1019,26 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_put_and_get() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        let key = cache.put(entry).await.unwrap();
+        let key = cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
         assert!(!key.is_empty());
 
         let retrieved = cache.get(&fingerprint).await;
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().fingerprint.hash, 12345);
+        assert_eq!(
+            retrieved
+                .expect("test operation should succeed")
+                .fingerprint
+                .hash,
+            12345
+        );
     }
 
     // Test 3: Index operations - save and load
@@ -1039,16 +1048,20 @@ mod tests {
 
         // Create cache and add entry
         {
-            let mut cache = PersistentPrefixCache::open(config.clone()).unwrap();
+            let mut cache =
+                PersistentPrefixCache::open(config.clone()).expect("test operation should succeed");
             let entry = create_test_entry("test1", 12345, 10);
-            cache.put(entry).await.unwrap();
-            cache.save_index().unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
+            cache.save_index().expect("test operation should succeed");
         }
 
         // Reopen and verify
         {
-            let cache =
-                PersistentPrefixCache::open(PersistentCacheConfig::new(temp_dir.path())).unwrap();
+            let cache = PersistentPrefixCache::open(PersistentCacheConfig::new(temp_dir.path()))
+                .expect("test operation should succeed");
             let fp = ContextFingerprint::new(12345, 100, "test test1");
             assert!(cache.contains(&fp).await);
         }
@@ -1058,11 +1071,14 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_multiple_entries() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         for i in 0..5 {
             let entry = create_test_entry(&format!("test{i}"), i as u64, 10);
-            cache.put(entry).await.unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(cache.len(), 5);
@@ -1077,11 +1093,14 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_remove() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
-        let key = cache.put(entry).await.unwrap();
+        let key = cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         assert!(cache.contains(&fingerprint).await);
 
@@ -1094,11 +1113,14 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_clear() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         for i in 0..5 {
             let entry = create_test_entry(&format!("test{i}"), i as u64, 10);
-            cache.put(entry).await.unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(cache.len(), 5);
@@ -1111,19 +1133,22 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_compaction() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         // Add entries with immediate expiration
         for i in 0..5 {
             let fp = ContextFingerprint::new(i as u64, 100, format!("test {i}"));
             let entry = KVCacheEntry::new(format!("test{i}"), fp, vec![0.0; 10], 100)
                 .with_ttl(Duration::from_secs(0));
-            cache.put(entry).await.unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         std::thread::sleep(Duration::from_millis(10));
 
-        let stats = cache.compact().unwrap();
+        let stats = cache.compact().expect("test operation should succeed");
         assert_eq!(stats.entries_removed, 5);
     }
 
@@ -1131,13 +1156,16 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_ttl_expiration() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         let fp = ContextFingerprint::new(12345, 100, "test");
         let entry = KVCacheEntry::new("test1", fp.clone(), vec![0.0; 10], 100)
             .with_ttl(Duration::from_secs(0));
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         std::thread::sleep(Duration::from_millis(10));
         let result = cache.get(&fp).await;
@@ -1148,13 +1176,16 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_evict_expired() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         for i in 0..5 {
             let fp = ContextFingerprint::new(i as u64, 100, format!("test {i}"));
             let entry = KVCacheEntry::new(format!("test{i}"), fp, vec![0.0; 10], 100)
                 .with_ttl(Duration::from_secs(0));
-            cache.put(entry).await.unwrap();
+            cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(cache.len(), 5);
@@ -1175,7 +1206,7 @@ mod tests {
         let cache = HybridPersistentCache::new(memory_config, persistent_config);
         assert!(cache.is_ok());
 
-        let cache = cache.unwrap();
+        let cache = cache.expect("test operation should succeed");
         assert!(cache.is_empty());
     }
 
@@ -1185,12 +1216,16 @@ mod tests {
         let (_temp_dir, persistent_config) = create_temp_config();
         let memory_config = PrefixCacheConfig::default();
 
-        let mut cache = HybridPersistentCache::new(memory_config, persistent_config).unwrap();
+        let mut cache = HybridPersistentCache::new(memory_config, persistent_config)
+            .expect("test operation should succeed");
 
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         let retrieved = cache.get(&fingerprint).await;
         assert!(retrieved.is_some());
@@ -1203,13 +1238,16 @@ mod tests {
         let memory_config = PrefixCacheConfig::default();
 
         let mut cache = HybridPersistentCache::new(memory_config, persistent_config)
-            .unwrap()
+            .expect("test operation should succeed")
             .with_write_through(true);
 
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         // Should be in both caches
         assert!(cache.memory_cache.contains(&fingerprint).await);
@@ -1223,20 +1261,27 @@ mod tests {
         let memory_config = PrefixCacheConfig::default();
 
         let mut cache = HybridPersistentCache::new(memory_config, persistent_config)
-            .unwrap()
+            .expect("test operation should succeed")
             .with_write_through(false); // Disable write-through
 
         // Add entries only to memory
         for i in 0..5 {
             let entry = create_test_entry(&format!("test{i}"), i as u64, 10);
-            cache.memory_cache.put(entry).await.unwrap();
+            cache
+                .memory_cache
+                .put(entry)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(cache.memory_cache.len(), 5);
         assert_eq!(cache.persistent_cache.len(), 0);
 
         // Flush to disk
-        let flushed = cache.flush_to_disk().await.unwrap();
+        let flushed = cache
+            .flush_to_disk()
+            .await
+            .expect("test operation should succeed");
         assert_eq!(flushed, 5);
         assert_eq!(cache.persistent_cache.len(), 5);
     }
@@ -1249,13 +1294,18 @@ mod tests {
         // First, populate persistent cache
         {
             let memory_config = PrefixCacheConfig::default();
-            let mut cache = HybridPersistentCache::new(memory_config, persistent_config).unwrap();
+            let mut cache = HybridPersistentCache::new(memory_config, persistent_config)
+                .expect("test operation should succeed");
 
             for i in 0..5 {
                 let entry = create_test_entry(&format!("test{i}"), i as u64, 10);
-                cache.persistent_cache.put(entry).await.unwrap();
+                cache
+                    .persistent_cache
+                    .put(entry)
+                    .await
+                    .expect("test operation should succeed");
             }
-            cache.sync().unwrap();
+            cache.sync().expect("test operation should succeed");
         }
 
         // Reopen and warm cache
@@ -1265,12 +1315,15 @@ mod tests {
                 memory_config,
                 PersistentCacheConfig::new(temp_dir.path()),
             )
-            .unwrap();
+            .expect("test operation should succeed");
 
             assert_eq!(cache.memory_cache.len(), 0);
             assert_eq!(cache.persistent_cache.len(), 5);
 
-            let loaded = cache.warm_cache(3).await.unwrap();
+            let loaded = cache
+                .warm_cache(3)
+                .await
+                .expect("test operation should succeed");
             assert_eq!(loaded, 3);
             assert_eq!(cache.memory_cache.len(), 3);
         }
@@ -1282,12 +1335,16 @@ mod tests {
         let (_temp_dir, persistent_config) = create_temp_config();
         let memory_config = PrefixCacheConfig::default();
 
-        let mut cache = HybridPersistentCache::new(memory_config, persistent_config).unwrap();
+        let mut cache = HybridPersistentCache::new(memory_config, persistent_config)
+            .expect("test operation should succeed");
 
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
 
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
         cache.get(&fingerprint).await;
 
         let (memory_stats, _persistent_stats) = cache.combined_stats();
@@ -1340,7 +1397,7 @@ mod tests {
     // Test 18: PersistentCacheConfig builder
     #[test]
     fn test_persistent_cache_config_builder() {
-        let tmp = tempfile::TempDir::new().unwrap();
+        let tmp = tempfile::TempDir::new().expect("test operation should succeed");
         let config = PersistentCacheConfig::new(tmp.path())
             .with_max_file_size(100 * 1024 * 1024)
             .with_sync_interval(30)
@@ -1357,10 +1414,13 @@ mod tests {
     #[tokio::test]
     async fn test_persistent_cache_sync() {
         let (_temp_dir, config) = create_temp_config();
-        let mut cache = PersistentPrefixCache::open(config).unwrap();
+        let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
         let entry = create_test_entry("test1", 12345, 10);
-        cache.put(entry).await.unwrap();
+        cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         let result = cache.sync();
         assert!(result.is_ok());
@@ -1372,11 +1432,15 @@ mod tests {
         let (_temp_dir, persistent_config) = create_temp_config();
         let memory_config = PrefixCacheConfig::default();
 
-        let mut cache = HybridPersistentCache::new(memory_config, persistent_config).unwrap();
+        let mut cache = HybridPersistentCache::new(memory_config, persistent_config)
+            .expect("test operation should succeed");
 
         let entry = create_test_entry("test1", 12345, 10);
         let fingerprint = entry.fingerprint.clone();
-        let key = cache.put(entry).await.unwrap();
+        let key = cache
+            .put(entry)
+            .await
+            .expect("test operation should succeed");
 
         assert!(cache.contains(&fingerprint).await);
 

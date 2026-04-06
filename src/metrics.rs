@@ -299,12 +299,18 @@ mod tests {
 
         let metrics = collector.snapshot();
 
-        let echo_timing = metrics.layer_timings.get("Echo").unwrap();
+        let echo_timing = metrics
+            .layer_timings
+            .get("Echo")
+            .expect("test operation should succeed");
         assert_eq!(echo_timing.invocations, 2);
         assert_eq!(echo_timing.min_time_ms, 50);
         assert_eq!(echo_timing.max_time_ms, 100);
 
-        let spec_timing = metrics.layer_timings.get("Speculator").unwrap();
+        let spec_timing = metrics
+            .layer_timings
+            .get("Speculator")
+            .expect("test operation should succeed");
         assert_eq!(spec_timing.invocations, 1);
     }
 
@@ -356,7 +362,10 @@ mod tests {
         }
 
         let metrics = collector.snapshot();
-        let timing = metrics.layer_timings.get("TestLayer").unwrap();
+        let timing = metrics
+            .layer_timings
+            .get("TestLayer")
+            .expect("test operation should succeed");
         assert_eq!(timing.invocations, 1);
         assert!(timing.total_time_ms >= 10);
     }
@@ -378,7 +387,7 @@ mod tests {
         }
 
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("test operation should succeed");
         }
 
         let metrics = collector.snapshot();

@@ -238,14 +238,23 @@ mod tests {
         let doc2 = Document::new("A lazy dog sleeps");
         let doc3 = Document::new("The quick brown dog");
 
-        echo.index(doc1).await.unwrap();
-        echo.index(doc2).await.unwrap();
-        echo.index(doc3).await.unwrap();
+        echo.index(doc1)
+            .await
+            .expect("test operation should succeed");
+        echo.index(doc2)
+            .await
+            .expect("test operation should succeed");
+        echo.index(doc3)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(echo.count().await, 3);
 
         // Search
-        let results = echo.search("quick fox", 2, None).await.unwrap();
+        let results = echo
+            .search("quick fox", 2, None)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(results.len(), 2);
     }
 
@@ -261,7 +270,10 @@ mod tests {
             Document::new("Document three"),
         ];
 
-        let ids = echo.index_batch(docs).await.unwrap();
+        let ids = echo
+            .index_batch(docs)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(ids.len(), 3);
         assert_eq!(echo.count().await, 3);
     }
@@ -275,19 +287,27 @@ mod tests {
         let doc = Document::new("Test document");
         let id = doc.id.clone();
 
-        echo.index(doc).await.unwrap();
+        echo.index(doc)
+            .await
+            .expect("test operation should succeed");
 
         // Get
-        let retrieved = echo.get(&id).await.unwrap();
+        let retrieved = echo.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().content, "Test document");
+        assert_eq!(
+            retrieved.expect("test operation should succeed").content,
+            "Test document"
+        );
 
         // Delete
-        let deleted = echo.delete(&id).await.unwrap();
+        let deleted = echo
+            .delete(&id)
+            .await
+            .expect("test operation should succeed");
         assert!(deleted);
 
         // Verify deleted
-        let retrieved = echo.get(&id).await.unwrap();
+        let retrieved = echo.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_none());
     }
 
@@ -297,12 +317,16 @@ mod tests {
         let store = InMemoryVectorStore::new(32);
         let mut echo = EchoLayer::new(provider, store);
 
-        echo.index(Document::new("doc1")).await.unwrap();
-        echo.index(Document::new("doc2")).await.unwrap();
+        echo.index(Document::new("doc1"))
+            .await
+            .expect("test operation should succeed");
+        echo.index(Document::new("doc2"))
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(echo.count().await, 2);
 
-        echo.clear().await.unwrap();
+        echo.clear().await.expect("test operation should succeed");
         assert_eq!(echo.count().await, 0);
     }
 
@@ -315,13 +339,18 @@ mod tests {
         let doc = Document::new("original content");
         let id = doc.id.clone();
 
-        echo.index(doc).await.unwrap();
+        echo.index(doc)
+            .await
+            .expect("test operation should succeed");
 
         // Create updated document with same ID
         let mut updated_doc = Document::new("updated content");
         updated_doc.id = id.clone();
 
-        let updated = echo.update_document(&updated_doc).await.unwrap();
+        let updated = echo
+            .update_document(&updated_doc)
+            .await
+            .expect("test operation should succeed");
         assert!(updated);
 
         // The document content in the store is not changed by update
@@ -350,14 +379,20 @@ mod tests {
         let doc = Document::new("new document");
         let id = doc.id.clone();
 
-        let inserted = echo.upsert_document(doc).await.unwrap();
+        let inserted = echo
+            .upsert_document(doc)
+            .await
+            .expect("test operation should succeed");
         assert!(inserted); // Should return true for insert
 
         assert_eq!(echo.count().await, 1);
 
-        let retrieved = echo.get(&id).await.unwrap();
+        let retrieved = echo.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().content, "new document");
+        assert_eq!(
+            retrieved.expect("test operation should succeed").content,
+            "new document"
+        );
     }
 
     #[tokio::test]
@@ -369,20 +404,28 @@ mod tests {
         let doc = Document::new("original document");
         let id = doc.id.clone();
 
-        echo.index(doc).await.unwrap();
+        echo.index(doc)
+            .await
+            .expect("test operation should succeed");
 
         // Create updated document with same ID
         let mut updated_doc = Document::new("updated document");
         updated_doc.id = id.clone();
 
-        let inserted = echo.upsert_document(updated_doc).await.unwrap();
+        let inserted = echo
+            .upsert_document(updated_doc)
+            .await
+            .expect("test operation should succeed");
         assert!(!inserted); // Should return false for update
 
         assert_eq!(echo.count().await, 1);
 
-        let retrieved = echo.get(&id).await.unwrap();
+        let retrieved = echo.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().content, "updated document");
+        assert_eq!(
+            retrieved.expect("test operation should succeed").content,
+            "updated document"
+        );
     }
 
     #[tokio::test]
@@ -396,22 +439,22 @@ mod tests {
             Document::new("Science article about physics").with_metadata("category", "science"),
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
         echo.index(
             Document::new("Technology news about AI").with_metadata("category", "technology"),
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
         echo.index(Document::new("Art exhibition review").with_metadata("category", "art"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search with filter for science category
         let filter = MetadataFilter::eq("category", "science");
         let results = echo
             .search_with_filter("physics", 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(
@@ -433,21 +476,21 @@ mod tests {
                 .with_metadata("status", "published"),
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
         echo.index(
             Document::new("Draft science paper")
                 .with_metadata("category", "science")
                 .with_metadata("status", "draft"),
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
         echo.index(
             Document::new("Published tech blog")
                 .with_metadata("category", "technology")
                 .with_metadata("status", "published"),
         )
         .await
-        .unwrap();
+        .expect("test operation should succeed");
 
         // Search for published science documents
         let filter = MetadataFilter::and(vec![
@@ -457,7 +500,7 @@ mod tests {
         let results = echo
             .search_with_filter("paper", 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert!(results[0].document.content.contains("Published science"));
@@ -471,16 +514,16 @@ mod tests {
 
         echo.index(Document::new("doc1").with_metadata("cat", "a"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         echo.index(Document::new("doc2").with_metadata("cat", "b"))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Search without filter should return all
         let results = echo
             .search_with_filter("doc", 10, None, None)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert_eq!(results.len(), 2);
     }
 }

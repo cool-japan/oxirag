@@ -421,7 +421,10 @@ mod tests {
         let entry = KVCacheEntry::new("key1", fp, vec![], 10).with_ttl_secs(60);
 
         assert!(entry.ttl.is_some());
-        assert_eq!(entry.ttl.unwrap(), Duration::from_secs(60));
+        assert_eq!(
+            entry.ttl.expect("test operation should succeed"),
+            Duration::from_secs(60)
+        );
     }
 
     #[test]
@@ -477,7 +480,10 @@ mod tests {
         assert!(result.is_hit());
         assert!(!result.is_miss());
         assert!(result.entry().is_some());
-        assert_eq!(result.entry().unwrap().key, "key1");
+        assert_eq!(
+            result.entry().expect("test operation should succeed").key,
+            "key1"
+        );
     }
 
     #[test]

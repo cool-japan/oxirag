@@ -991,7 +991,10 @@ mod tests {
         let config = SpeculativeDecodingConfig::default();
 
         let mut decoder = SpeculativeDecoder::new(draft, target, config);
-        let output = decoder.generate("Hello", 10).await.unwrap();
+        let output = decoder
+            .generate("Hello", 10)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!output.tokens.is_empty());
         assert!(!output.steps.is_empty());
@@ -1036,7 +1039,10 @@ mod tests {
         let config = SpeculativeDecodingConfig::default();
         let mut decoder = MockSpeculativeDecoder::new(config);
 
-        let output = decoder.generate("Test", 10).await.unwrap();
+        let output = decoder
+            .generate("Test", 10)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!output.tokens.is_empty());
         assert!(!output.text.is_empty());
@@ -1047,7 +1053,10 @@ mod tests {
         let config = SpeculativeDecodingConfig::default();
         let mut decoder = MockSpeculativeDecoder::new(config).with_acceptance_rate(0.5);
 
-        let output = decoder.generate("Test", 20).await.unwrap();
+        let output = decoder
+            .generate("Test", 20)
+            .await
+            .expect("test operation should succeed");
 
         // With 50% acceptance, we should see some rejections
         let steps_with_corrections = output

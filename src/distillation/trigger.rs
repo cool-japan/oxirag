@@ -145,7 +145,7 @@ impl DistillationTrigger {
     pub fn new(conditions: Vec<TriggerCondition>) -> Self {
         Self {
             conditions,
-            cooldown: Duration::from_secs(60 * 60), // 1 hour default
+            cooldown: Duration::from_hours(1),
             last_triggered: HashMap::new(),
         }
     }
@@ -692,7 +692,7 @@ mod tests {
         trigger.mark_triggered(&candidate.pattern);
         let remaining = trigger.remaining_cooldown(&candidate.pattern);
         assert!(remaining.is_some());
-        assert!(remaining.unwrap().as_secs() > 0);
+        assert!(remaining.expect("test operation should succeed").as_secs() > 0);
     }
 
     #[test]

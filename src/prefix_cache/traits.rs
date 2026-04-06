@@ -157,7 +157,7 @@ mod tests {
                 ))
             })
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(computed);
         assert_eq!(entry.fingerprint, fingerprint);
@@ -175,7 +175,7 @@ mod tests {
                 ))
             })
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(!computed2);
         assert_eq!(entry2.kv_data, vec![1.0, 2.0]); // Original data

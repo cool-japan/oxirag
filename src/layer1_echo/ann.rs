@@ -912,12 +912,14 @@ mod tests {
         let id = DocumentId::new();
         let vector = vec![1.0, 0.0, 0.0, 0.0];
 
-        index.insert(id.clone(), vector.clone()).unwrap();
+        index
+            .insert(id.clone(), vector.clone())
+            .expect("test operation should succeed");
 
         assert_eq!(index.len(), 1);
         assert!(!index.is_empty());
 
-        let node = index.get_node(&id).unwrap();
+        let node = index.get_node(&id).expect("test operation should succeed");
         assert_eq!(node.vector, vector);
     }
 
@@ -930,7 +932,9 @@ mod tests {
         for i in 0..10 {
             let id = DocumentId::from_string(format!("doc_{i}"));
             let vector = create_random_vector(4, i);
-            index.insert(id, vector).unwrap();
+            index
+                .insert(id, vector)
+                .expect("test operation should succeed");
         }
 
         assert_eq!(index.len(), 10);
@@ -966,16 +970,16 @@ mod tests {
 
         index
             .insert(DocumentId::from_string("target"), target.clone())
-            .unwrap();
+            .expect("test operation should succeed");
         index
             .insert(DocumentId::from_string("other1"), other1)
-            .unwrap();
+            .expect("test operation should succeed");
         index
             .insert(DocumentId::from_string("other2"), other2)
-            .unwrap();
+            .expect("test operation should succeed");
         index
             .insert(DocumentId::from_string("similar"), similar)
-            .unwrap();
+            .expect("test operation should succeed");
 
         let results = index.search(&target, 2);
 
@@ -1004,7 +1008,9 @@ mod tests {
             let id = DocumentId::from_string(format!("doc_{i}"));
             let vector = normalize_vector(&create_random_vector(32, i));
             vectors.push((id.clone(), vector.clone()));
-            index.insert(id, vector).unwrap();
+            index
+                .insert(id, vector)
+                .expect("test operation should succeed");
         }
 
         // Search with a query
@@ -1045,8 +1051,12 @@ mod tests {
         let id1 = DocumentId::from_string("doc1");
         let id2 = DocumentId::from_string("doc2");
 
-        index.insert(id1.clone(), vec![1.0, 0.0, 0.0, 0.0]).unwrap();
-        index.insert(id2.clone(), vec![0.0, 1.0, 0.0, 0.0]).unwrap();
+        index
+            .insert(id1.clone(), vec![1.0, 0.0, 0.0, 0.0])
+            .expect("test operation should succeed");
+        index
+            .insert(id2.clone(), vec![0.0, 1.0, 0.0, 0.0])
+            .expect("test operation should succeed");
 
         assert_eq!(index.len(), 2);
 
@@ -1086,9 +1096,15 @@ mod tests {
         let id = DocumentId::from_string("test");
         let vector = vec![1.0, 0.0, 0.0, 0.0];
 
-        cosine_index.insert(id.clone(), vector.clone()).unwrap();
-        dot_index.insert(id.clone(), vector.clone()).unwrap();
-        euc_index.insert(id, vector.clone()).unwrap();
+        cosine_index
+            .insert(id.clone(), vector.clone())
+            .expect("test operation should succeed");
+        dot_index
+            .insert(id.clone(), vector.clone())
+            .expect("test operation should succeed");
+        euc_index
+            .insert(id, vector.clone())
+            .expect("test operation should succeed");
 
         let query = vec![1.0, 0.0, 0.0, 0.0];
 
@@ -1118,10 +1134,10 @@ mod tests {
 
         index
             .insert(DocumentId::from_string("similar"), similar)
-            .unwrap();
+            .expect("test operation should succeed");
         index
             .insert(DocumentId::from_string("dissimilar"), dissimilar)
-            .unwrap();
+            .expect("test operation should succeed");
 
         let query = normalize_vector(&[1.0, 0.0, 0.0, 0.0]);
 
@@ -1153,7 +1169,9 @@ mod tests {
 
         let id = DocumentId::from_string("only");
         let vector = vec![1.0, 0.0, 0.0, 0.0];
-        index.insert(id.clone(), vector.clone()).unwrap();
+        index
+            .insert(id.clone(), vector.clone())
+            .expect("test operation should succeed");
 
         let results = index.search(&vector, 10);
 
@@ -1169,7 +1187,9 @@ mod tests {
 
         for i in 0..10 {
             let id = DocumentId::from_string(format!("doc_{i}"));
-            index.insert(id, create_random_vector(4, i)).unwrap();
+            index
+                .insert(id, create_random_vector(4, i))
+                .expect("test operation should succeed");
         }
 
         assert_eq!(index.len(), 10);
@@ -1188,7 +1208,9 @@ mod tests {
 
         for i in 0..10 {
             let id = DocumentId::from_string(format!("doc_{i}"));
-            index.insert(id, create_random_vector(4, i)).unwrap();
+            index
+                .insert(id, create_random_vector(4, i))
+                .expect("test operation should succeed");
         }
 
         let stats = index.stats();
@@ -1207,12 +1229,16 @@ mod tests {
         let vector1 = vec![1.0, 0.0, 0.0, 0.0];
         let vector2 = vec![0.0, 1.0, 0.0, 0.0];
 
-        index.insert(id.clone(), vector1).unwrap();
-        index.insert(id.clone(), vector2.clone()).unwrap();
+        index
+            .insert(id.clone(), vector1)
+            .expect("test operation should succeed");
+        index
+            .insert(id.clone(), vector2.clone())
+            .expect("test operation should succeed");
 
         assert_eq!(index.len(), 1);
 
-        let node = index.get_node(&id).unwrap();
+        let node = index.get_node(&id).expect("test operation should succeed");
         assert_eq!(node.vector, vector2);
     }
 
@@ -1226,13 +1252,22 @@ mod tests {
 
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(store.count().await, 1);
 
-        let retrieved = store.get(&id).await.unwrap();
+        let retrieved = store.get(&id).await.expect("test operation should succeed");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().document.content, "test content");
+        assert_eq!(
+            retrieved
+                .expect("test operation should succeed")
+                .document
+                .content,
+            "test content"
+        );
     }
 
     // Test 18: AnnVectorStore search
@@ -1251,11 +1286,20 @@ mod tests {
             normalize_vector(&[0.0, 1.0, 0.0, 0.0]),
         );
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
 
         let query = normalize_vector(&[1.0, 0.0, 0.0, 0.0]);
-        let results = store.search(&query, 2, None).await.unwrap();
+        let results = store
+            .search(&query, 2, None)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].document.content, "similar");
@@ -1278,8 +1322,14 @@ mod tests {
             normalize_vector(&[0.9, 0.2, 0.0, 0.0]),
         );
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
 
         let query = normalize_vector(&[1.0, 0.0, 0.0, 0.0]);
         let filter = MetadataFilter::eq("category", "science");
@@ -1287,7 +1337,7 @@ mod tests {
         let results = store
             .search_with_filter(&query, 10, None, Some(&filter))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document.content, "science doc");
@@ -1304,7 +1354,10 @@ mod tests {
         let id = doc.document.id.clone();
 
         // First upsert (insert)
-        let is_new = store.upsert(doc).await.unwrap();
+        let is_new = store
+            .upsert(doc)
+            .await
+            .expect("test operation should succeed");
         assert!(is_new);
         assert_eq!(store.count().await, 1);
 
@@ -1314,11 +1367,18 @@ mod tests {
             vec![0.0, 1.0, 0.0, 0.0],
         );
 
-        let is_new = store.upsert(updated_doc).await.unwrap();
+        let is_new = store
+            .upsert(updated_doc)
+            .await
+            .expect("test operation should succeed");
         assert!(!is_new);
         assert_eq!(store.count().await, 1);
 
-        let retrieved = store.get(&id).await.unwrap().unwrap();
+        let retrieved = store
+            .get(&id)
+            .await
+            .expect("test operation should succeed")
+            .expect("test operation should succeed");
         assert_eq!(retrieved.document.content, "updated");
     }
 
@@ -1332,10 +1392,16 @@ mod tests {
 
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(store.count().await, 1);
 
-        let deleted = store.delete(&id).await.unwrap();
+        let deleted = store
+            .delete(&id)
+            .await
+            .expect("test operation should succeed");
         assert!(deleted);
         assert_eq!(store.count().await, 0);
     }
@@ -1353,15 +1419,24 @@ mod tests {
 
         let id = doc.document.id.clone();
 
-        store.insert(doc).await.unwrap();
+        store
+            .insert(doc)
+            .await
+            .expect("test operation should succeed");
 
         // Update embedding
         let new_embedding = normalize_vector(&[0.0, 1.0, 0.0, 0.0]);
-        let updated = store.update(&id, new_embedding.clone()).await.unwrap();
+        let updated = store
+            .update(&id, new_embedding.clone())
+            .await
+            .expect("test operation should succeed");
         assert!(updated);
 
         // Verify by searching
-        let results = store.search(&new_embedding, 1, None).await.unwrap();
+        let results = store
+            .search(&new_embedding, 1, None)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(results[0].document.id, id);
     }
 
@@ -1374,12 +1449,15 @@ mod tests {
         for i in 0..5 {
             let doc =
                 IndexedDocument::new(Document::new(format!("doc{i}")), create_random_vector(4, i));
-            store.insert(doc).await.unwrap();
+            store
+                .insert(doc)
+                .await
+                .expect("test operation should succeed");
         }
 
         assert_eq!(store.count().await, 5);
 
-        store.clear().await.unwrap();
+        store.clear().await.expect("test operation should succeed");
 
         assert_eq!(store.count().await, 0);
     }
@@ -1398,10 +1476,18 @@ mod tests {
         let v3 = normalize_vector(&[0.7, 0.7, 0.0, 0.0]); // sim ~ 0.71
         let v4 = normalize_vector(&[0.0, 1.0, 0.0, 0.0]); // sim ~ 0.0
 
-        index.insert(DocumentId::from_string("v4"), v4).unwrap();
-        index.insert(DocumentId::from_string("v2"), v2).unwrap();
-        index.insert(DocumentId::from_string("v3"), v3).unwrap();
-        index.insert(DocumentId::from_string("v1"), v1).unwrap();
+        index
+            .insert(DocumentId::from_string("v4"), v4)
+            .expect("test operation should succeed");
+        index
+            .insert(DocumentId::from_string("v2"), v2)
+            .expect("test operation should succeed");
+        index
+            .insert(DocumentId::from_string("v3"), v3)
+            .expect("test operation should succeed");
+        index
+            .insert(DocumentId::from_string("v1"), v1)
+            .expect("test operation should succeed");
 
         let results = index.search(&query, 4);
 

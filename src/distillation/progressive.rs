@@ -1265,8 +1265,17 @@ mod tests {
 
         assert_eq!(metrics.epoch, 1);
         assert!((metrics.train_loss - 0.5).abs() < f32::EPSILON);
-        assert!((metrics.val_loss.unwrap() - 0.6).abs() < f32::EPSILON);
-        assert!((metrics.train_accuracy.unwrap() - 0.8).abs() < f32::EPSILON);
+        assert!(
+            (metrics.val_loss.expect("test operation should succeed") - 0.6).abs() < f32::EPSILON
+        );
+        assert!(
+            (metrics
+                .train_accuracy
+                .expect("test operation should succeed")
+                - 0.8)
+                .abs()
+                < f32::EPSILON
+        );
     }
 
     #[test]
@@ -1303,7 +1312,14 @@ mod tests {
         ];
         let result = StageResult::success(0, 0.25, 7.0, history);
 
-        assert!((result.best_val_loss().unwrap() - 0.35).abs() < f32::EPSILON);
+        assert!(
+            (result
+                .best_val_loss()
+                .expect("test operation should succeed")
+                - 0.35)
+                .abs()
+                < f32::EPSILON
+        );
         assert_eq!(result.best_epoch(), Some(2));
     }
 
@@ -1508,7 +1524,9 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = pd.run_stage(0, &data).unwrap();
+            let result = pd
+                .run_stage(0, &data)
+                .expect("test operation should succeed");
 
             assert!(result.success);
             assert_eq!(result.stage_idx, 0);
@@ -1561,7 +1579,7 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = pd.run_all(&data).unwrap();
+            let result = pd.run_all(&data).expect("test operation should succeed");
 
             assert!(result.all_stages_success);
             assert_eq!(result.stages_completed, 2);
@@ -1577,7 +1595,9 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = mock.run_stage(0, &data).unwrap();
+            let result = mock
+                .run_stage(0, &data)
+                .expect("test operation should succeed");
 
             assert!(result.success);
             assert_eq!(mock.inner().current_stage(), 1);
@@ -1611,7 +1631,9 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = mock.run_stage(0, &data).unwrap();
+            let result = mock
+                .run_stage(0, &data)
+                .expect("test operation should succeed");
 
             // Final loss should be less than custom starting loss after training
             assert!(result.final_loss < 0.5);
@@ -1633,7 +1655,7 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = mock.run_all(&data).unwrap();
+            let result = mock.run_all(&data).expect("test operation should succeed");
 
             assert!(result.all_stages_success);
             assert_eq!(result.stage_results.len(), 2);
@@ -1655,7 +1677,7 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = mock.run_all(&data).unwrap();
+            let result = mock.run_all(&data).expect("test operation should succeed");
 
             assert!(!result.all_stages_success);
             assert_eq!(result.stages_completed, 1);
@@ -1679,7 +1701,7 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = mock.run_all(&data).unwrap();
+            let result = mock.run_all(&data).expect("test operation should succeed");
 
             assert!(!result.all_stages_success);
             // All 3 stages attempted due to continue_on_failure
@@ -1708,7 +1730,9 @@ mod tests {
                 confidence: 0.9,
             }];
 
-            let result = pd.run_stage(0, &data).unwrap();
+            let result = pd
+                .run_stage(0, &data)
+                .expect("test operation should succeed");
 
             // Early stopping may have kicked in before all 10 epochs
             assert!(result.training_history.len() <= 10);

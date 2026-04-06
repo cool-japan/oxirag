@@ -936,7 +936,10 @@ mod tests {
         let query = Query::new("programming languages");
         let results = create_test_results();
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(reranked.len(), 3);
         assert!(reranked[0].score >= reranked[1].score);
@@ -956,7 +959,10 @@ mod tests {
         let query = Query::new("test");
         let results = vec![SearchResult::new(Document::new("test document"), 1.0, 0)];
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert!((reranked[0].score - 0.5).abs() < 0.001);
     }
@@ -969,7 +975,10 @@ mod tests {
         let query = Query::new("test");
         let results = create_test_results();
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         for r in &reranked {
             assert!(r.score >= 0.6);
@@ -983,13 +992,13 @@ mod tests {
         let score = encoder
             .encode_pair("Rust programming", "Rust is great")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(score > 0.5); // Should have some overlap
 
         let score_no_overlap = encoder
             .encode_pair("Rust programming", "cats and dogs")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(score_no_overlap < score); // Less overlap
     }
 
@@ -999,7 +1008,10 @@ mod tests {
 
         let pairs = vec![("query1", "document1 query1"), ("query2", "unrelated text")];
 
-        let scores = encoder.encode_pairs(&pairs).await.unwrap();
+        let scores = encoder
+            .encode_pairs(&pairs)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(scores.len(), 2);
         assert!(scores[0] > scores[1]); // First pair has overlap
     }
@@ -1012,7 +1024,10 @@ mod tests {
         let query = Query::new("Rust programming language");
         let results = create_test_results();
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(reranked.len(), 3);
         // Rust-related documents should rank higher
@@ -1026,13 +1041,13 @@ mod tests {
         let score = reranker
             .score_pair("Rust programming", "Rust is a programming language")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(score > 0.0);
 
         let score_no_match = reranker
             .score_pair("Rust programming", "cats and dogs")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(score_no_match < score);
     }
 
@@ -1045,7 +1060,10 @@ mod tests {
         let query = Query::new("programming");
         let results = create_test_results();
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(reranked.len(), 3);
         // Results should be sorted by score
@@ -1065,7 +1083,10 @@ mod tests {
         let query = Query::new("Rust programming");
         let results = create_test_results();
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(reranked.len(), 3);
     }
@@ -1086,7 +1107,10 @@ mod tests {
         let query = Query::new("Rust");
         let results = create_test_results();
 
-        let reranked = pipeline.rerank(&query, results).await.unwrap();
+        let reranked = pipeline
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(reranked.len(), 3);
     }
 
@@ -1104,7 +1128,10 @@ mod tests {
         let query = Query::new("Rust");
         let results = create_test_results();
 
-        let reranked = pipeline.rerank(&query, results).await.unwrap();
+        let reranked = pipeline
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(reranked.len(), 2);
     }
 
@@ -1121,7 +1148,10 @@ mod tests {
         let query = Query::new("Rust");
         let results = create_test_results();
 
-        let reranked = pipeline.rerank(&query, results).await.unwrap();
+        let reranked = pipeline
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
         assert_eq!(reranked.len(), 3);
     }
 
@@ -1142,7 +1172,10 @@ mod tests {
         let query = Query::new("test");
         let results = create_test_results();
 
-        let reranked = pipeline.rerank(&query, results).await.unwrap();
+        let reranked = pipeline
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
         assert!(reranked.len() <= 2);
     }
 
@@ -1156,7 +1189,10 @@ mod tests {
         let query = Query::new("test");
         let results = create_test_results();
 
-        let reranked = pipeline.rerank(&query, results.clone()).await.unwrap();
+        let reranked = pipeline
+            .rerank(&query, results.clone())
+            .await
+            .expect("test operation should succeed");
         assert_eq!(reranked.len(), results.len());
     }
 
@@ -1167,7 +1203,10 @@ mod tests {
         let query = Query::new("test");
         let results: Vec<SearchResult> = vec![];
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
         assert!(reranked.is_empty());
     }
 
@@ -1195,7 +1234,10 @@ mod tests {
             SearchResult::new(Document::new("doc3"), 0.6, 2),
         ];
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         // Should be reordered by score
         assert!((reranked[0].score - 0.9).abs() < 0.001);
@@ -1216,7 +1258,10 @@ mod tests {
         let query = Query::new("test");
         let results = vec![SearchResult::new(Document::new("doc"), 0.4, 0)];
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert!((reranked[0].score - 0.8).abs() < 0.001);
     }
@@ -1234,7 +1279,10 @@ mod tests {
             SearchResult::new(Document::new("doc4"), 0.6, 3),
         ];
 
-        let reranked = reranker.rerank(&query, results).await.unwrap();
+        let reranked = reranker
+            .rerank(&query, results)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(reranked.len(), 2);
         assert!((reranked[0].score - 0.9).abs() < 0.001);
@@ -1251,7 +1299,10 @@ mod tests {
     async fn test_score_pair_mock() {
         let reranker = MockReranker::default().with_score_multiplier(1.5);
 
-        let score = reranker.score_pair("query", "document").await.unwrap();
+        let score = reranker
+            .score_pair("query", "document")
+            .await
+            .expect("test operation should succeed");
         assert!((score - 0.75).abs() < 0.001);
     }
 
@@ -1261,7 +1312,10 @@ mod tests {
         let mut pipeline = RerankerPipeline::new(config);
 
         // Empty pipeline
-        let score = pipeline.score_pair("query", "document").await.unwrap();
+        let score = pipeline
+            .score_pair("query", "document")
+            .await
+            .expect("test operation should succeed");
         assert!((score - 0.0).abs() < 0.001);
 
         // With reranker
@@ -1269,7 +1323,7 @@ mod tests {
         let score = pipeline
             .score_pair("Rust programming", "Rust is great")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(score > 0.0);
     }
 }

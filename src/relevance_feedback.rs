@@ -675,7 +675,7 @@ mod tests {
     fn test_feedback_entry_with_rating() {
         let entry = FeedbackEntry::new("query1", "doc1", true).with_rating(0.8);
         assert!(entry.rating.is_some());
-        assert!((entry.rating.unwrap() - 0.8).abs() < f32::EPSILON);
+        assert!((entry.rating.expect("test operation should succeed") - 0.8).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -883,7 +883,7 @@ mod tests {
             .map(|(_, w)| *w);
 
         assert!(rust_weight.is_some());
-        assert!(rust_weight.unwrap() > 0.0);
+        assert!(rust_weight.expect("test operation should succeed") > 0.0);
     }
 
     #[test]
@@ -922,8 +922,14 @@ mod tests {
         adjuster.adjust_scores(&mut results, &feedback);
 
         // Find the results after re-sorting
-        let d1 = results.iter().find(|r| r.document.id.0 == "d1").unwrap();
-        let d2 = results.iter().find(|r| r.document.id.0 == "d2").unwrap();
+        let d1 = results
+            .iter()
+            .find(|r| r.document.id.0 == "d1")
+            .expect("test operation should succeed");
+        let d2 = results
+            .iter()
+            .find(|r| r.document.id.0 == "d2")
+            .expect("test operation should succeed");
 
         // d1 should be boosted, d2 should be penalized
         assert!(d1.score > original_d1_score);

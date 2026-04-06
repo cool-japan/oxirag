@@ -258,7 +258,10 @@ mod tests {
         );
 
         let doc = Document::new("Rust uses LLVM for code generation.");
-        layer.index_document(&doc).await.unwrap();
+        layer
+            .index_document(&doc)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(layer.entity_count().await, 2);
         assert_eq!(layer.relationship_count().await, 1);
@@ -283,10 +286,16 @@ mod tests {
         );
 
         let doc = Document::new("A relates to B.");
-        layer.index_document(&doc).await.unwrap();
+        layer
+            .index_document(&doc)
+            .await
+            .expect("test operation should succeed");
 
         let query = GraphQuery::new(vec!["a".to_string()]).with_max_hops(1);
-        let paths = layer.query(&query).await.unwrap();
+        let paths = layer
+            .query(&query)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!paths.is_empty());
     }
@@ -310,9 +319,15 @@ mod tests {
         );
 
         let doc = Document::new("Rust uses Cargo.");
-        layer.index_document(&doc).await.unwrap();
+        layer
+            .index_document(&doc)
+            .await
+            .expect("test operation should succeed");
 
-        let paths = layer.find_related("Rust", 2).await.unwrap();
+        let paths = layer
+            .find_related("Rust", 2)
+            .await
+            .expect("test operation should succeed");
         assert!(!paths.is_empty());
     }
 
@@ -325,11 +340,11 @@ mod tests {
             .store_mut()
             .add_entity(GraphEntity::new("Test", EntityType::Concept))
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(layer.entity_count().await, 1);
 
-        layer.clear().await.unwrap();
+        layer.clear().await.expect("test operation should succeed");
         assert_eq!(layer.entity_count().await, 0);
     }
 
@@ -340,7 +355,7 @@ mod tests {
             .with_relationship_extractor(MockRelationshipExtractor::new())
             .with_store(InMemoryGraphStore::new())
             .build()
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(layer.entity_count().await, 0);
     }
@@ -378,7 +393,10 @@ mod tests {
             Document::new("Second document"),
         ];
 
-        layer.index_documents(&docs).await.unwrap();
+        layer
+            .index_documents(&docs)
+            .await
+            .expect("test operation should succeed");
 
         // Each document returns 2 entities, but same IDs get deduplicated to 2 total
         // (same entities returned for both docs, overwrite happens on second doc)
@@ -394,7 +412,10 @@ mod tests {
         );
 
         let doc = Document::new("Rust is a programming language. Rust uses LLVM for compilation.");
-        layer.index_document(&doc).await.unwrap();
+        layer
+            .index_document(&doc)
+            .await
+            .expect("test operation should succeed");
 
         // Should extract at least "Rust" as a technology entity
         assert!(layer.entity_count().await > 0);

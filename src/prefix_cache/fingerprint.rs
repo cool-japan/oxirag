@@ -383,7 +383,12 @@ mod tests {
             assert!(fps[i].prefix_length >= fps[i - 1].prefix_length);
         }
         // Last should cover full content
-        assert_eq!(fps.last().unwrap().prefix_length, 12);
+        assert_eq!(
+            fps.last()
+                .expect("test operation should succeed")
+                .prefix_length,
+            12
+        );
     }
 
     #[test]

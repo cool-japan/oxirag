@@ -1073,9 +1073,11 @@ mod tests {
             .with_difficulty(0.5);
 
         assert!(example.metadata.is_some());
-        let meta = example.metadata.unwrap();
+        let meta = example.metadata.expect("test operation should succeed");
         assert_eq!(meta.category, Some("test".to_string()));
-        assert!((meta.difficulty.unwrap() - 0.5).abs() < f32::EPSILON);
+        assert!(
+            (meta.difficulty.expect("test operation should succeed") - 0.5).abs() < f32::EPSILON
+        );
     }
 
     #[test]
@@ -1238,7 +1240,7 @@ mod tests {
 
         let best = tracker.best_epoch();
         assert!(best.is_some());
-        let (epoch, _) = best.unwrap();
+        let (epoch, _) = best.expect("test operation should succeed");
         assert_eq!(epoch, 2); // Epoch 2 has lowest val_loss
     }
 
@@ -1334,7 +1336,7 @@ mod tests {
 
         let latest = tracker.latest();
         assert!(latest.is_some());
-        assert_eq!(latest.unwrap().epoch, 2);
+        assert_eq!(latest.expect("test operation should succeed").epoch, 2);
     }
 
     #[test]
@@ -1371,7 +1373,7 @@ mod tests {
 
         let range = plot_data.loss_range();
         assert!(range.is_some());
-        let (min, max) = range.unwrap();
+        let (min, max) = range.expect("test operation should succeed");
         assert!((min - 0.3).abs() < f32::EPSILON);
         assert!((max - 0.7).abs() < f32::EPSILON);
     }

@@ -875,13 +875,22 @@ mod tests {
         let embedding = quantizer.quantize(&[0.5, 0.3, -0.2, 0.8], &config);
         let doc = QuantizedDocument::new(DocumentId::new(), embedding).with_content("test");
 
-        store.insert(doc.clone()).await.unwrap();
+        store
+            .insert(doc.clone())
+            .await
+            .expect("test operation should succeed");
         assert_eq!(store.count().await, 1);
 
-        let retrieved = store.get(&doc.id).await.unwrap();
+        let retrieved = store
+            .get(&doc.id)
+            .await
+            .expect("test operation should succeed");
         assert!(retrieved.is_some());
 
-        let deleted = store.delete(&doc.id).await.unwrap();
+        let deleted = store
+            .delete(&doc.id)
+            .await
+            .expect("test operation should succeed");
         assert!(deleted);
         assert_eq!(store.count().await, 0);
     }
@@ -903,7 +912,10 @@ mod tests {
 
         // Search
         let query = quantizer.quantize(&[0.1, 0.2, 0.3, 0.4], &config);
-        let results = store.search(&query, 3, None).await.unwrap();
+        let results = store
+            .search(&query, 3, None)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(results.len(), 3);
         // Results should be sorted by score (descending)
@@ -927,12 +939,21 @@ mod tests {
             quantizer.quantize(&[-1.0, -1.0, -1.0, -1.0], &config),
         );
 
-        store.insert(doc1).await.unwrap();
-        store.insert(doc2).await.unwrap();
+        store
+            .insert(doc1)
+            .await
+            .expect("test operation should succeed");
+        store
+            .insert(doc2)
+            .await
+            .expect("test operation should succeed");
 
         // Search with query similar to doc1
         let query = quantizer.quantize(&[1.0, 1.0, 1.0, 1.0], &config);
-        let results = store.search(&query, 10, Some(0.9)).await.unwrap();
+        let results = store
+            .search(&query, 10, Some(0.9))
+            .await
+            .expect("test operation should succeed");
 
         // Only doc1 should match with high similarity
         assert_eq!(results.len(), 1);

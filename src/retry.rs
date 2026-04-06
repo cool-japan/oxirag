@@ -442,7 +442,7 @@ mod tests {
             })
             .await;
 
-        assert_eq!(result.unwrap(), 42);
+        assert_eq!(result.expect("test operation should succeed"), 42);
         assert_eq!(attempt_count.load(Ordering::SeqCst), 1);
     }
 
@@ -471,7 +471,7 @@ mod tests {
             })
             .await;
 
-        assert_eq!(result.unwrap(), 42);
+        assert_eq!(result.expect("test operation should succeed"), 42);
         assert_eq!(attempt_count.load(Ordering::SeqCst), 3);
     }
 
@@ -557,7 +557,7 @@ mod tests {
             )
             .await;
 
-        assert_eq!(result.unwrap(), 42);
+        assert_eq!(result.expect("test operation should succeed"), 42);
         assert_eq!(attempt_count.load(Ordering::SeqCst), 3);
     }
 

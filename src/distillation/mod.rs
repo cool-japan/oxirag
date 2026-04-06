@@ -292,7 +292,7 @@ mod tests {
         tracker
             .track_query("What is Rust?", None, 0.0)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let stats = tracker.stats();
         assert_eq!(stats.total_queries_tracked, 1);
@@ -306,7 +306,7 @@ mod tests {
         tracker
             .track_query("What is Rust?", Some("A programming language."), 0.95)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let stats = tracker.stats();
         assert_eq!(stats.total_queries_tracked, 1);
@@ -317,8 +317,14 @@ mod tests {
     async fn test_get_candidates() {
         let mut tracker = InMemoryDistillationTracker::with_defaults();
 
-        tracker.track_query("query1", None, 0.0).await.unwrap();
-        tracker.track_query("query2", None, 0.0).await.unwrap();
+        tracker
+            .track_query("query1", None, 0.0)
+            .await
+            .expect("test operation should succeed");
+        tracker
+            .track_query("query2", None, 0.0)
+            .await
+            .expect("test operation should succeed");
 
         let candidates = tracker.get_candidates().await;
         assert_eq!(candidates.len(), 2);
@@ -331,11 +337,11 @@ mod tests {
         tracker
             .track_query("What is Rust?", Some("Answer 1"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         tracker
             .track_query("What is Rust?", Some("Answer 2"), 0.85)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let pattern = QueryPattern::new("What is Rust?");
         let pairs = tracker.get_qa_pairs(&pattern).await;
@@ -356,11 +362,11 @@ mod tests {
         tracker
             .track_query("test query", Some("answer 1"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         tracker
             .track_query("test query", Some("answer 2"), 0.85)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let pattern = QueryPattern::new("test query");
         assert!(tracker.is_ready_for_distillation(&pattern).await);
@@ -373,11 +379,11 @@ mod tests {
         tracker
             .track_query("query1", Some("answer"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         tracker
             .track_query("query2", Some("answer"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         tracker.clear().await;
 
@@ -393,7 +399,7 @@ mod tests {
         tracker
             .track_query("What is Rust?", Some("A programming language."), 0.95)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let pattern = QueryPattern::new("What is Rust?");
         let examples = tracker.get_training_examples(&pattern);
@@ -410,7 +416,7 @@ mod tests {
         tracker
             .track_query("test", Some("answer"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Cleanup should not error
         tracker.cleanup();
@@ -427,15 +433,15 @@ mod tests {
         tracker
             .track_query("What is Rust?", Some("A language."), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         tracker
             .track_query("What is Python?", Some("Another language."), 0.85)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         tracker
             .track_query("What is JavaScript?", Some("Yet another language."), 0.8)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let stats = tracker.stats();
         assert_eq!(stats.total_queries_tracked, 3);
@@ -456,14 +462,14 @@ mod tests {
             tracker
                 .track_query("frequent query", Some(&format!("answer {i}")), 0.9)
                 .await
-                .unwrap();
+                .expect("test operation should succeed");
         }
 
         // Track another query just once
         tracker
             .track_query("rare query", Some("answer"), 0.9)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let stats = tracker.stats();
         assert_eq!(stats.candidates_ready, 1);

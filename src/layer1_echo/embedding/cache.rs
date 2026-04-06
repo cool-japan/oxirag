@@ -295,12 +295,18 @@ mod tests {
         let cached = CachedEmbeddingProvider::with_defaults(provider);
 
         // First call - cache miss
-        let emb1 = cached.embed("test text").await.unwrap();
+        let emb1 = cached
+            .embed("test text")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().hits, 0);
         assert_eq!(cached.stats().misses, 1);
 
         // Second call - cache hit
-        let emb2 = cached.embed("test text").await.unwrap();
+        let emb2 = cached
+            .embed("test text")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().hits, 1);
         assert_eq!(cached.stats().misses, 1);
 
@@ -313,8 +319,14 @@ mod tests {
         let provider = MockEmbeddingProvider::new(64);
         let cached = CachedEmbeddingProvider::with_defaults(provider);
 
-        cached.embed("text 1").await.unwrap();
-        cached.embed("text 2").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
+        cached
+            .embed("text 2")
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(cached.stats().misses, 2);
         assert_eq!(cached.stats().entries, 2);
@@ -327,23 +339,41 @@ mod tests {
         let cached = CachedEmbeddingProvider::new(provider, config);
 
         // Fill the cache
-        cached.embed("text 1").await.unwrap();
-        cached.embed("text 2").await.unwrap();
-        cached.embed("text 3").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
+        cached
+            .embed("text 2")
+            .await
+            .expect("test operation should succeed");
+        cached
+            .embed("text 3")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().entries, 3);
         assert_eq!(cached.stats().evictions, 0);
 
         // Access text 1 to make it recently used
-        cached.embed("text 1").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
 
         // Add a new entry - should evict text 2 (LRU)
-        cached.embed("text 4").await.unwrap();
+        cached
+            .embed("text 4")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().entries, 3);
         assert_eq!(cached.stats().evictions, 1);
 
         // text 1 should still be cached (was recently accessed)
         let stats_before = cached.stats();
-        cached.embed("text 1").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().hits, stats_before.hits + 1);
     }
 
@@ -353,11 +383,17 @@ mod tests {
         let cached = CachedEmbeddingProvider::with_defaults(provider);
 
         // Pre-populate cache with some texts
-        cached.embed("cached text").await.unwrap();
+        cached
+            .embed("cached text")
+            .await
+            .expect("test operation should succeed");
 
         // Batch with mixed cached and uncached
         let texts = vec!["cached text", "new text 1", "new text 2"];
-        let embeddings = cached.embed_batch(&texts).await.unwrap();
+        let embeddings = cached
+            .embed_batch(&texts)
+            .await
+            .expect("test operation should succeed");
 
         assert_eq!(embeddings.len(), 3);
         // 1 hit for "cached text", 2 misses for new texts + 1 initial miss
@@ -371,13 +407,22 @@ mod tests {
         let cached = CachedEmbeddingProvider::with_defaults(provider);
 
         // Pre-populate cache
-        cached.embed("text 1").await.unwrap();
-        cached.embed("text 2").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
+        cached
+            .embed("text 2")
+            .await
+            .expect("test operation should succeed");
 
         let stats_before = cached.stats();
 
         // All texts are cached
-        let embeddings = cached.embed_batch(&["text 1", "text 2"]).await.unwrap();
+        let embeddings = cached
+            .embed_batch(&["text 1", "text 2"])
+            .await
+            .expect("test operation should succeed");
         assert_eq!(embeddings.len(), 2);
 
         // Should have 2 more hits, no additional misses
@@ -390,15 +435,24 @@ mod tests {
         let provider = MockEmbeddingProvider::new(32);
         let cached = CachedEmbeddingProvider::with_defaults(provider);
 
-        cached.embed("text 1").await.unwrap();
-        cached.embed("text 2").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
+        cached
+            .embed("text 2")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().entries, 2);
 
         cached.clear_cache();
         assert_eq!(cached.stats().entries, 0);
 
         // After clear, should be cache miss
-        cached.embed("text 1").await.unwrap();
+        cached
+            .embed("text 1")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(cached.stats().misses, 3); // 2 initial + 1 after clear
     }
 

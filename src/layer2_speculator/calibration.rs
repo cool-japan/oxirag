@@ -609,7 +609,7 @@ mod tests {
             (0.6, true),
         ]);
 
-        calibrator.fit().unwrap();
+        calibrator.fit().expect("test operation should succeed");
 
         let calibrated = calibrator.calibrate(0.9);
         // Should be adjusted down from overconfident predictions
@@ -621,7 +621,7 @@ mod tests {
         let mut calibrator = ConfidenceCalibrator::temperature_scaling(2.0);
         calibrator.add_sample(0.5, true);
         calibrator.add_sample(0.5, true);
-        calibrator.fit().unwrap();
+        calibrator.fit().expect("test operation should succeed");
 
         // Higher temperature should reduce confidence extremity
         let calibrated_high = calibrator.calibrate(0.9);
@@ -663,7 +663,7 @@ mod tests {
             calibrator.add_sample(conf, correct);
         }
 
-        calibrator.fit().unwrap();
+        calibrator.fit().expect("test operation should succeed");
         let stats = calibrator.get_statistics();
 
         assert_eq!(stats.num_samples, 100);
@@ -725,7 +725,7 @@ mod tests {
             (1.0, true),
         ]);
 
-        calibrator.fit().unwrap();
+        calibrator.fit().expect("test operation should succeed");
 
         // Test interpolation at various points
         let cal_0 = calibrator.calibrate(0.0);

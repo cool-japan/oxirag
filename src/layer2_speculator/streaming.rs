@@ -410,7 +410,7 @@ mod tests {
         let streaming = wrapper
             .verify_draft_streaming(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         let result = streaming.collect().await;
 
         assert!(result.confidence > 0.0);
@@ -431,7 +431,7 @@ mod tests {
         let mut streaming = wrapper
             .verify_draft_streaming(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let mut chunk_count = 0;
         while let Some(chunk) = streaming.next_chunk().await {
@@ -472,7 +472,10 @@ mod tests {
         .with_confidence(0.8);
 
         let context = create_context();
-        let result = wrapper.verify_draft(&draft, &context).await.unwrap();
+        let result = wrapper
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
 
         assert!(result.confidence > 0.0);
     }
@@ -485,11 +488,14 @@ mod tests {
         let draft = Draft::new("Paris", "What is the capital of France?");
         let context = create_context();
 
-        let speculation = wrapper.verify_draft(&draft, &context).await.unwrap();
+        let speculation = wrapper
+            .verify_draft(&draft, &context)
+            .await
+            .expect("test operation should succeed");
         let revised = wrapper
             .revise_draft(&draft, &context, &speculation)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert!(revised.content.len() > draft.content.len());
     }
@@ -515,7 +521,7 @@ mod tests {
         let mut streaming = wrapper
             .verify_draft_streaming(&draft, &context)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         // Consume some chunks
         let _ = streaming.next_chunk().await;

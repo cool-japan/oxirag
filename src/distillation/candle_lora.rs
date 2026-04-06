@@ -720,7 +720,7 @@ mod tests {
         let config = CandleLoraConfig::default();
         let dtype = config.get_dtype();
         assert!(dtype.is_ok());
-        assert_eq!(dtype.unwrap(), DType::F32);
+        assert_eq!(dtype.expect("test operation should succeed"), DType::F32);
     }
 
     #[test]
@@ -741,7 +741,7 @@ mod tests {
             return;
         }
 
-        let mut trainer = trainer_result.unwrap();
+        let mut trainer = trainer_result.expect("test operation should succeed");
         let pattern = QueryPattern::new("test query");
         let examples = vec![LoraTrainingExample::new("input", "output")];
         let config = LoraConfig::default();
@@ -757,7 +757,7 @@ mod tests {
             return;
         }
 
-        let mut trainer = trainer_result.unwrap();
+        let mut trainer = trainer_result.expect("test operation should succeed");
         let pattern = QueryPattern::new("test");
         let examples = vec![LoraTrainingExample::new("input", "output")];
         let config = LoraConfig::default();
@@ -765,7 +765,7 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let status = trainer.get_status(&job_id).await;
         assert!(status.is_some());
@@ -778,7 +778,7 @@ mod tests {
             return;
         }
 
-        let mut trainer = trainer_result.unwrap();
+        let mut trainer = trainer_result.expect("test operation should succeed");
         let pattern = QueryPattern::new("test");
         let examples = vec![LoraTrainingExample::new("input", "output")];
         let config = LoraConfig::default();
@@ -786,12 +786,15 @@ mod tests {
         let job_id = trainer
             .create_job(&pattern, examples, config)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         let result = trainer.cancel_job(&job_id).await;
         assert!(result.is_ok());
 
-        let status = trainer.get_status(&job_id).await.unwrap();
+        let status = trainer
+            .get_status(&job_id)
+            .await
+            .expect("test operation should succeed");
         assert!(matches!(status, TrainingStatus::Failed { .. }));
     }
 
@@ -802,7 +805,7 @@ mod tests {
             return;
         }
 
-        let mut trainer = trainer_result.unwrap();
+        let mut trainer = trainer_result.expect("test operation should succeed");
         let pattern = QueryPattern::new("test");
 
         for i in 0..3 {
@@ -822,7 +825,7 @@ mod tests {
             return;
         }
 
-        let mut trainer = trainer_result.unwrap();
+        let mut trainer = trainer_result.expect("test operation should succeed");
         let pattern = QueryPattern::new("test");
         let examples = vec![LoraTrainingExample::new("input", "output")];
         let config = LoraConfig {
@@ -841,7 +844,7 @@ mod tests {
             return;
         }
 
-        let mut trainer = trainer_result.unwrap();
+        let mut trainer = trainer_result.expect("test operation should succeed");
         let pattern = QueryPattern::new("test");
         let examples: Vec<LoraTrainingExample> = vec![];
 
@@ -867,7 +870,7 @@ mod tests {
         let lora_layer = LoraLayer::new(base_weight, 8, 16.0, &vb, "test_layer");
         assert!(lora_layer.is_ok());
 
-        let layer = lora_layer.unwrap();
+        let layer = lora_layer.expect("test operation should succeed");
         assert_eq!(layer.trainable_vars().len(), 2);
     }
 
@@ -897,7 +900,7 @@ mod tests {
         }
         assert!(output.is_ok());
 
-        let out_tensor = output.unwrap();
+        let out_tensor = output.expect("test operation should succeed");
         let shape = out_tensor.dims();
         assert_eq!(shape, &[2, 128]); // batch_size=2, output_dim=128
     }
@@ -909,25 +912,34 @@ mod tests {
         use candle_nn::VarMap;
 
         let device = Device::Cpu;
-        let base_weight = Tensor::ones((128, 256), DType::F32, &device).unwrap();
+        let base_weight =
+            Tensor::ones((128, 256), DType::F32, &device).expect("test operation should succeed");
 
         let varmap = VarMap::new();
         let vb = candle_nn::VarBuilder::from_varmap(&varmap, DType::F32, &device);
 
-        let mut layer = LoraLayer::new(base_weight, 8, 16.0, &vb, "test").unwrap();
+        let mut layer = LoraLayer::new(base_weight, 8, 16.0, &vb, "test")
+            .expect("test operation should succeed");
 
-        let input = Tensor::ones((2, 256), DType::F32, &device).unwrap();
+        let input =
+            Tensor::ones((2, 256), DType::F32, &device).expect("test operation should succeed");
 
         // Forward with LoRA enabled
-        let out1 = layer.forward(&input).unwrap();
+        let out1 = layer
+            .forward(&input)
+            .expect("test operation should succeed");
 
         // Disable LoRA
         layer.set_enabled(false);
-        let out2 = layer.forward(&input).unwrap();
+        let out2 = layer
+            .forward(&input)
+            .expect("test operation should succeed");
 
         // Enable again
         layer.set_enabled(true);
-        let out3 = layer.forward(&input).unwrap();
+        let out3 = layer
+            .forward(&input)
+            .expect("test operation should succeed");
 
         // out1 and out3 should be similar (LoRA enabled)
         // out2 should be different (LoRA disabled)

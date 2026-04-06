@@ -402,7 +402,7 @@ impl HiddenStateCache {
         let should_evict = self
             .entries
             .read()
-            .map_or(false, |e| e.len() >= self.config.max_entries);
+            .is_ok_and(|e| e.len() >= self.config.max_entries);
 
         if should_evict
             && self.config.use_lru
@@ -665,10 +665,14 @@ mod tests {
         let values = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
         let state = LayerHiddenState::new(0, values, [1, 2, 3]);
 
-        let pos0 = state.at_position(0, 0).unwrap();
+        let pos0 = state
+            .at_position(0, 0)
+            .expect("test operation should succeed");
         assert_eq!(pos0, &[0.1, 0.2, 0.3]);
 
-        let pos1 = state.at_position(0, 1).unwrap();
+        let pos1 = state
+            .at_position(0, 1)
+            .expect("test operation should succeed");
         assert_eq!(pos1, &[0.4, 0.5, 0.6]);
 
         assert!(state.at_position(0, 2).is_none());
@@ -794,7 +798,10 @@ mod tests {
         assert_eq!(provider.hidden_dim(), 768);
         assert_eq!(provider.num_layers(), 12);
 
-        let states = provider.get_hidden_states("test").await.unwrap();
+        let states = provider
+            .get_hidden_states("test")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(states.num_layers(), 12);
         assert!(states.pooled.is_some());
     }
@@ -807,7 +814,7 @@ mod tests {
         let states = provider
             .get_hidden_states_for_tokens(&tokens)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states.input_tokens, tokens);
         assert_eq!(states.num_layers(), 6);
@@ -828,7 +835,7 @@ mod tests {
         let (states, kv_cache) = provider
             .get_hidden_states_with_cache(&tokens, None)
             .await
-            .unwrap();
+            .expect("test operation should succeed");
 
         assert_eq!(states.input_tokens, tokens);
         assert_eq!(kv_cache.model_id, provider.model_id());
@@ -856,7 +863,12 @@ mod tests {
             LayerHiddenState::new(0, values, [1, 2, 6]).with_attention_weights(attention.clone());
 
         assert!(state.attention_weights.is_some());
-        assert_eq!(state.attention_weights.unwrap(), attention);
+        assert_eq!(
+            state
+                .attention_weights
+                .expect("test operation should succeed"),
+            attention
+        );
     }
 
     #[test]

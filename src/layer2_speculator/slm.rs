@@ -518,7 +518,7 @@ mod tests {
         let result = slm.generate("verify this text", &config).await;
         assert!(result.is_ok());
 
-        let output = result.unwrap();
+        let output = result.expect("test operation should succeed");
         assert!(!output.text.is_empty());
         assert!(output.text.contains("ACCEPT"));
     }
@@ -531,7 +531,7 @@ mod tests {
         let result = slm.generate("revise this answer", &config).await;
         assert!(result.is_ok());
 
-        let output = result.unwrap();
+        let output = result.expect("test operation should succeed");
         assert!(output.text.contains("revised"));
     }
 
@@ -542,7 +542,7 @@ mod tests {
         let result = slm.get_logprobs("test text").await;
         assert!(result.is_ok());
 
-        let logprobs = result.unwrap();
+        let logprobs = result.expect("test operation should succeed");
         assert!(!logprobs.is_empty());
         for prob in logprobs {
             assert!(prob <= 0.0); // Log probs should be negative
@@ -557,14 +557,14 @@ mod tests {
         let confidence = slm
             .verify_text("Paris is the capital", "Paris is the capital of France")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(confidence >= 0.5);
 
         // Low overlap should give lower confidence
         let confidence_low = slm
             .verify_text("xyz abc def", "Paris is the capital of France")
             .await
-            .unwrap();
+            .expect("test operation should succeed");
         assert!(confidence_low <= confidence);
     }
 
@@ -572,10 +572,16 @@ mod tests {
     async fn test_mock_slm_verify_empty() {
         let slm = MockSlm::default();
 
-        let confidence = slm.verify_text("", "context").await.unwrap();
+        let confidence = slm
+            .verify_text("", "context")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(confidence, 0.5);
 
-        let confidence2 = slm.verify_text("draft", "").await.unwrap();
+        let confidence2 = slm
+            .verify_text("draft", "")
+            .await
+            .expect("test operation should succeed");
         assert_eq!(confidence2, 0.5);
     }
 
@@ -610,11 +616,21 @@ mod tests {
         let slm = MockSlm::default();
         let config = SlmConfig::default().with_max_tokens(1000);
 
-        let result = slm.generate("test prompt", &config).await.unwrap();
+        let result = slm
+            .generate("test prompt", &config)
+            .await
+            .expect("test operation should succeed");
 
         assert!(!result.tokens.is_empty());
         assert!(result.logprobs.is_some());
-        assert_eq!(result.tokens.len(), result.logprobs.as_ref().unwrap().len());
+        assert_eq!(
+            result.tokens.len(),
+            result
+                .logprobs
+                .as_ref()
+                .expect("test operation should succeed")
+                .len()
+        );
     }
 
     #[tokio::test]
@@ -622,7 +638,10 @@ mod tests {
         let slm = MockSlm::default();
         let config = SlmConfig::default().with_max_tokens(5);
 
-        let result = slm.generate("generate long text", &config).await.unwrap();
+        let result = slm
+            .generate("generate long text", &config)
+            .await
+            .expect("test operation should succeed");
 
         // Should truncate to approximately max_tokens * 4 characters
         assert!(result.text.len() <= 20);

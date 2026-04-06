@@ -283,7 +283,9 @@ mod tests {
 
         assert_eq!(tracker.stats().qa_pairs_collected, 1);
 
-        let candidate = tracker.get_candidate(&pattern).unwrap();
+        let candidate = tracker
+            .get_candidate(&pattern)
+            .expect("test operation should succeed");
         assert_eq!(candidate.qa_pairs.len(), 1);
         assert_eq!(candidate.avg_confidence, 0.95);
     }
