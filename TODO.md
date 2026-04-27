@@ -56,6 +56,7 @@ This project implements four innovative concepts:
 - [x] **Hidden State Speculator**: HiddenStateSpeculator for verification via state comparison
 - [x] **Divergence Detection**: Identify factual inconsistencies via hidden state divergence
 - [x] **Candle Integration**: Real BERT-based `CandleHiddenStateProvider` with HuggingFace Hub model loading, full tokenisation pipeline, real forward-pass hidden state extraction (`hidden_states/candle_provider.rs`, feature `hidden-states + speculator`)
+- [x] **Hidden State Pooling**: `HiddenStatePooling` enum (CLS/MeanPool/MaxPool/MaskMean), `apply_hidden_state_pooling` free function, `extract_sentence_embedding` for pooled sentence-level vectors
 
 ### On-the-fly Distillation (Core Vision #3) - 100% Complete ✅
 
@@ -127,6 +128,7 @@ This project implements four innovative concepts:
 - [x] Shortest path and find entities within N hops
 - [x] GraphLayer with builder pattern
 - [x] HybridSearchResult for combining vector + graph search
+- [x] **Persistent Graph Store**: redb-backed `RedbGraphStore` with full `GraphStore` trait impl, atomic entity/relationship writes, BFS traversal, NAME\_IDX/TYPE\_IDX secondary indexes, 12 unit tests (`layer4_graph/redb_store.rs`, feature `graphrag-redb`)
 
 ### Pipeline
 
@@ -138,6 +140,7 @@ This project implements four innovative concepts:
 - [x] Batch query processing
 - [x] **Pipeline Debugging**: Visualization and tracing tools (`pipeline_debug.rs`)
 - [x] **Circuit Breaker**: Resilience pattern for external service failures (`circuit_breaker.rs`)
+- [x] **Observability**: `PipelineSpanContext` with RAII `LayerSpan<'_>` guard, `SpanReport` ASCII/JSON table, `record_pipeline_event` free function — zero external tracing backend required (`observability.rs`)
 
 ---
 
@@ -336,6 +339,43 @@ This project implements four innovative concepts:
 
 ---
 
+## Completed (v0.3.0)
+
+### Persistent Graph Store (`graphrag-redb`)
+- [x] `RedbGraphStore` with 6 redb tables (ENTITIES, RELATIONSHIPS, OUTGOING, INCOMING, NAME\_IDX, TYPE\_IDX)
+- [x] Full `GraphStore` trait implementation with atomic write transactions
+- [x] BFS traversal mirroring `InMemoryGraphStore` exactly
+- [x] Exact index hit + full-scan fallback for `find_entities_by_name`
+- [x] Persistence across restarts with entity/relationship count restoration
+- [x] 12 unit tests including persistence round-trip test
+- [x] Feature gate: `graphrag-redb = ["graphrag", "dep:redb"]`
+
+### Observability (`observability.rs`)
+- [x] `PipelineSpanContext` with UUID execution id, per-context attributes, elapsed timing
+- [x] `LayerSpan<'_>` RAII guard with panic-safe `Drop` (synthesises Error record on unwind)
+- [x] `SpanStatus`: Success / Error(String) / Skipped / InProgress
+- [x] `LayerSpanRecord` with duration\_ms, item\_count, arbitrary attributes
+- [x] `SpanReport` with `format_table()` (ASCII) and `to_json()` (serde\_json)
+- [x] `record_pipeline_event` free function for lightweight event logging
+- [x] Zero external dependencies (uses only `tracing` + `uuid` already in scope)
+- [x] 12 unit tests covering all commit paths and panic-safe Drop
+- [x] Re-exported from crate prelude in `lib.rs`
+
+### Hidden State Pooling
+- [x] `HiddenStatePooling` enum: `Cls` (default), `MeanPool`, `MaxPool`, `MaskMean`
+- [x] `apply_hidden_state_pooling` pure free function (testable without model loading)
+- [x] `CandleHiddenStateConfig.pooling` field + `with_pooling` builder
+- [x] `extract_sentence_embedding` method on `CandleHiddenStateProvider`
+- [x] 6 pooling unit tests verifying exact arithmetic for each strategy
+
+### Expanded Property-Based Testing
+- [x] 8 proptest tests in `prefix_cache/redb_backend.rs`: put/get roundtrip, TTL expiry, multi-key isolation, clear semantics, capacity enforcement
+- [x] 8 proptest tests in `layer1_echo/storage/redb.rs`: document roundtrip, upsert idempotence, dimension rejection, search result ordering
+- [x] 7 tests in `embedding/candle.rs`: preset field validation, URL format, max\_length ranges
+- [x] 9 tests in `hidden_states/candle_provider.rs`: config builder, sequence-length variants, pooling variant existence
+
+---
+
 ## Notes
 
 ### Dependencies to Watch
@@ -355,15 +395,16 @@ This project implements four innovative concepts:
 | v0.1.0    | **99%**         | **95%**        | **85%**      | **90%**       |
 | v0.1.1    | 100%            | 95%            | 100%         | 90%           |
 | **v0.2.0**| **100%** ✅     | **98%** ✅     | **100%** ✅  | **95%** ✅    |
-| v0.3.0    | 100%            | 99%            | 100%         | 98%           |
+| **v0.3.0**| **100%** ✅     | **99%** ✅     | **100%** ✅  | **98%** ✅    |
 | v1.0.0    | 100%            | 100%           | 100%         | 100%          |
 
-### Codebase Statistics (v0.2.0)
-- **Source Files**: 97 Rust files (+5: redb_backend.rs, storage/redb.rs, candle_provider.rs, progressive/{types,scheduler,distillation,mod}.rs replacing progressive.rs)
-- **Total Lines**: ~63,000 (Rust code)
-- **Tests**: 1,504 (+53 new: 10 RedbPrefixCache, 11 RedbVectorStore, 7 CandleHiddenStateProvider config, 4 BGE presets, 21 progressive refactor verified unchanged)
+### Codebase Statistics (v0.3.0)
+- **Source Files**: 99 Rust files (+2 from v0.2.0: `layer4_graph/redb_store.rs`, `observability.rs`)
+- **Total Lines**: ~68,000 (Rust code)
+- **Tests**: 1,569 (+65 from v0.2.0: 12 RedbGraphStore, 12 observability, 8 prefix_cache proptest, 8 echo-redb proptest, 7 embedding preset, 9 hidden-state pooling, 9 more candle_provider)
 - **Clippy Warnings**: 0
 - **Rustdoc Warnings**: 0
-- **New Features**: RedbPrefixCache (feature `prefix-cache-redb`), RedbVectorStore (feature `echo-redb`), CandleHiddenStateProvider (features `hidden-states+speculator`), BGE/MPNet embedding presets
-- **Refactored**: `distillation/progressive.rs` (1741 lines) → `distillation/progressive/` (4 files, all under 700 lines)
+- **New Features (v0.3.0)**: RedbGraphStore (feature `graphrag-redb`), HiddenStatePooling + apply\_hidden\_state\_pooling, extract\_sentence\_embedding, PipelineSpanContext / LayerSpan / SpanReport observability module
+- **New Features (v0.2.0)**: RedbPrefixCache (feature `prefix-cache-redb`), RedbVectorStore (feature `echo-redb`), CandleHiddenStateProvider (features `hidden-states+speculator`), BGE/MPNet embedding presets
+- **Refactored (v0.2.0)**: `distillation/progressive.rs` (1741 lines) → `distillation/progressive/` (4 files, all under 700 lines)
 - **Performance**: 5.6x-9.0x faster similarity computations with SIMD (unchanged)

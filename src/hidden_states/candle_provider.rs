@@ -30,6 +30,111 @@ use super::types::{
 use crate::error::HiddenStateError;
 
 // ────────────────────────────────────────────────────────────────────────────
+// Pooling strategy
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Strategy for pooling token-level hidden states into a single sentence representation.
+///
+/// After a BERT forward pass, the output has shape `[1, seq_len, hidden_dim]`. A pooling
+/// strategy collapses the `seq_len` dimension to produce a `[1, 1, hidden_dim]` tensor
+/// suitable for sentence-level similarity tasks.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum HiddenStatePooling {
+    /// Use the `[CLS]` token embedding (token index 0). Best for classification tasks
+    /// and models fine-tuned with sentence-transformers.
+    #[default]
+    Cls,
+    /// Arithmetic mean over all token positions. Robust general-purpose pooling.
+    MeanPool,
+    /// Element-wise maximum over token positions. Captures the most salient features.
+    MaxPool,
+    /// Mean pooling that ignores padding tokens (positions with id 0).
+    /// Requires the raw token IDs to identify padding.
+    MaskMean,
+}
+
+/// Apply pooling to convert `[1, seq_len, hidden_dim]` flat data into a `[hidden_dim]` vector.
+///
+/// This is a pure, free function so it can be called and tested independently of any
+/// model-loading infrastructure. It is the kernel used by
+/// [`CandleHiddenStateProvider::pool_hidden_states`].
+///
+/// # Parameters
+///
+/// - `data` – flat `f32` slice of length `seq_len * hidden_dim`, representing the
+///   `[1, seq_len, hidden_dim]` output of a BERT encoder.
+/// - `seq_len` – number of token positions in `data`.
+/// - `hidden_dim` – dimensionality of each token embedding.
+/// - `pooling` – which pooling strategy to apply.
+/// - `token_ids` – raw token IDs used for padding detection in [`HiddenStatePooling::MaskMean`].
+///   When `None`, all positions are treated as non-padding.
+///
+/// # Returns
+///
+/// A `Vec<f32>` of length `hidden_dim` containing the pooled representation.
+#[must_use]
+pub fn apply_hidden_state_pooling(
+    data: &[f32],
+    seq_len: usize,
+    hidden_dim: usize,
+    pooling: HiddenStatePooling,
+    token_ids: Option<&[u32]>,
+) -> Vec<f32> {
+    match pooling {
+        HiddenStatePooling::Cls => {
+            // Take the first hidden_dim elements: the [CLS] token at position 0.
+            data[..hidden_dim].to_vec()
+        }
+        HiddenStatePooling::MeanPool => {
+            let mut result = vec![0.0f32; hidden_dim];
+            for t in 0..seq_len {
+                let offset = t * hidden_dim;
+                for (i, r) in result.iter_mut().enumerate() {
+                    *r += data[offset + i];
+                }
+            }
+            let scale = 1.0_f32 / f32::from(u16::try_from(seq_len).unwrap_or(u16::MAX));
+            for v in &mut result {
+                *v *= scale;
+            }
+            result
+        }
+        HiddenStatePooling::MaxPool => {
+            let mut result = vec![f32::NEG_INFINITY; hidden_dim];
+            for t in 0..seq_len {
+                let offset = t * hidden_dim;
+                for (i, r) in result.iter_mut().enumerate() {
+                    *r = r.max(data[offset + i]);
+                }
+            }
+            result
+        }
+        HiddenStatePooling::MaskMean => {
+            // Count non-padding tokens (token_id != 0).
+            let mask: Vec<bool> = token_ids.map_or_else(
+                || vec![true; seq_len],
+                |ids| ids.iter().map(|&id| id != 0).collect(),
+            );
+            let valid_count = mask.iter().filter(|&&m| m).count().max(1);
+            let mut result = vec![0.0f32; hidden_dim];
+            for (t, &is_valid) in mask.iter().enumerate() {
+                if is_valid {
+                    let offset = t * hidden_dim;
+                    for (i, r) in result.iter_mut().enumerate() {
+                        *r += data[offset + i];
+                    }
+                }
+            }
+            let scale = 1.0_f32 / f32::from(u16::try_from(valid_count).unwrap_or(u16::MAX));
+            for v in &mut result {
+                *v *= scale;
+            }
+            result
+        }
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Device abstraction
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -96,6 +201,13 @@ pub struct CandleHiddenStateConfig {
     /// Maximum sequence length fed to the tokenizer / model.  Tokens beyond
     /// this limit are truncated silently.
     pub max_sequence_length: usize,
+    /// Pooling strategy applied by [`CandleHiddenStateProvider::extract_sentence_embedding`].
+    ///
+    /// Does not affect [`extract_hidden_states`], which always returns the full
+    /// `[seq_len, hidden_dim]` tensor.
+    ///
+    /// [`extract_hidden_states`]: CandleHiddenStateProvider::extract_hidden_states
+    pub pooling: HiddenStatePooling,
 }
 
 impl Default for CandleHiddenStateConfig {
@@ -106,6 +218,7 @@ impl Default for CandleHiddenStateConfig {
             device: CandleDevice::Cpu,
             capture_attention_weights: false,
             max_sequence_length: 512,
+            pooling: HiddenStatePooling::Cls,
         }
     }
 }
@@ -139,6 +252,15 @@ impl CandleHiddenStateConfig {
     #[must_use]
     pub fn with_max_sequence_length(mut self, len: usize) -> Self {
         self.max_sequence_length = len;
+        self
+    }
+
+    /// Set the hidden-state pooling strategy.
+    ///
+    /// Only affects [`CandleHiddenStateProvider::extract_sentence_embedding`].
+    #[must_use]
+    pub fn with_pooling(mut self, pooling: HiddenStatePooling) -> Self {
+        self.pooling = pooling;
         self
     }
 }
@@ -418,6 +540,95 @@ impl CandleHiddenStateProvider {
         Ok(states)
     }
 
+    /// Apply the configured pooling strategy to flatten `[1, seq_len, hidden_dim]` data.
+    ///
+    /// Delegates to the free function [`apply_hidden_state_pooling`] using
+    /// `self.hidden_dim` and `self.candle_config.pooling`.
+    fn pool_hidden_states(
+        &self,
+        data: &[f32],
+        seq_len: usize,
+        token_ids: Option<&[u32]>,
+    ) -> Vec<f32> {
+        apply_hidden_state_pooling(
+            data,
+            seq_len,
+            self.hidden_dim,
+            self.candle_config.pooling,
+            token_ids,
+        )
+    }
+
+    /// Extract a pooled sentence embedding as a flat `Vec<f32>` of length `hidden_dim`.
+    ///
+    /// Unlike [`extract_hidden_states`] which returns the full `[seq_len, hidden_dim]` tensor,
+    /// this method applies the configured [`HiddenStatePooling`] strategy to produce a
+    /// single fixed-size vector suitable for semantic similarity tasks.
+    ///
+    /// The [`HiddenStatePooling::MaskMean`] strategy uses the raw token IDs (before tensor
+    /// construction) to correctly identify and exclude padding positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HiddenStateError::ProviderError`] if tokenisation or model inference fails.
+    ///
+    /// [`extract_hidden_states`]: CandleHiddenStateProvider::extract_hidden_states
+    pub fn extract_sentence_embedding(
+        &self,
+        text: &str,
+    ) -> Result<Vec<f32>, HiddenStateError> {
+        let max_len = self.candle_config.max_sequence_length;
+
+        // Tokenise, obtaining the raw token IDs alongside the tensors.
+        let encoding = self
+            .tokenizer
+            .encode(text, true)
+            .map_err(|e| HiddenStateError::ProviderError(format!("Tokenisation failed: {e}")))?;
+
+        let raw_ids: Vec<u32> = encoding
+            .get_ids()
+            .iter()
+            .copied()
+            .take(max_len)
+            .collect();
+
+        let seq_len = raw_ids.len();
+        if seq_len == 0 {
+            return Err(HiddenStateError::ProviderError(
+                "Tokenisation produced zero tokens — input may be empty".to_string(),
+            ));
+        }
+
+        let type_ids: Vec<u32> = vec![0u32; seq_len];
+        let position_ids_raw: Vec<u32> =
+            (0u32..u32::try_from(seq_len).unwrap_or(u32::MAX)).collect();
+
+        let input_ids =
+            Tensor::from_vec(raw_ids.clone(), (1, seq_len), &self.device).map_err(|e| {
+                HiddenStateError::ProviderError(format!("Failed to build input_ids tensor: {e}"))
+            })?;
+
+        let token_type_ids =
+            Tensor::from_vec(type_ids, (1, seq_len), &self.device).map_err(|e| {
+                HiddenStateError::ProviderError(format!(
+                    "Failed to build token_type_ids tensor: {e}"
+                ))
+            })?;
+
+        let position_ids_tensor =
+            Tensor::from_vec(position_ids_raw, (1, seq_len), &self.device).map_err(|e| {
+                HiddenStateError::ProviderError(format!(
+                    "Failed to build position_ids tensor: {e}"
+                ))
+            })?;
+
+        let data =
+            self.forward_pass(&input_ids, &token_type_ids, &position_ids_tensor)?;
+
+        // Pool using raw token IDs for MaskMean padding detection.
+        Ok(self.pool_hidden_states(&data, seq_len, Some(&raw_ids)))
+    }
+
     /// Shared extraction logic used by both trait methods.
     fn extract_sync(&self, text: &str) -> Result<ModelHiddenStates, HiddenStateError> {
         let max_len = self.candle_config.max_sequence_length;
@@ -545,9 +756,11 @@ mod tests {
             device: CandleDevice::Cpu,
             capture_attention_weights: false,
             max_sequence_length: 512,
+            pooling: HiddenStatePooling::MeanPool,
         };
         assert!(config.model_id.contains("bge"));
         assert_eq!(config.revision, "main");
+        assert_eq!(config.pooling, HiddenStatePooling::MeanPool);
     }
 
     #[test]
@@ -606,5 +819,250 @@ mod tests {
         assert_eq!(short.max_sequence_length, 64);
         assert_eq!(medium.max_sequence_length, 256);
         assert_eq!(long.max_sequence_length, 512);
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Pooling unit tests (no model loading required)
+// ────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod pooling_tests {
+    use super::*;
+
+    // Helper: build a synthetic [1, seq_len, hidden_dim] flat buffer where
+    // token t has value `(t + 1) as f32` in every dimension.
+    fn synthetic_data(seq_len: usize, hidden_dim: usize) -> Vec<f32> {
+        let mut data = Vec::with_capacity(seq_len * hidden_dim);
+        for t in 0..seq_len {
+            let val = (t + 1) as f32;
+            data.extend(std::iter::repeat(val).take(hidden_dim));
+        }
+        data
+    }
+
+    #[test]
+    fn test_cls_pooling_extracts_first_token() {
+        // seq_len=3, hidden_dim=4: tokens are [1.0, 1.0, 1.0, 1.0], [2.0, ...], [3.0, ...]
+        let data = synthetic_data(3, 4);
+        let result = apply_hidden_state_pooling(&data, 3, 4, HiddenStatePooling::Cls, None);
+
+        assert_eq!(result.len(), 4);
+        // CLS (position 0) should be 1.0 in every dimension.
+        for &v in &result {
+            assert!(
+                (v - 1.0_f32).abs() < f32::EPSILON,
+                "CLS token should be 1.0, got {v}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mean_pool_averages_correctly() {
+        // seq_len=4, hidden_dim=2: token values 1.0, 2.0, 3.0, 4.0
+        // Expected mean = (1+2+3+4)/4 = 2.5
+        let data = synthetic_data(4, 2);
+        let result = apply_hidden_state_pooling(&data, 4, 2, HiddenStatePooling::MeanPool, None);
+
+        assert_eq!(result.len(), 2);
+        let expected = 2.5_f32;
+        for &v in &result {
+            assert!(
+                (v - expected).abs() < 1e-5,
+                "MeanPool should yield {expected}, got {v}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_max_pool_takes_maximum() {
+        // seq_len=5, hidden_dim=3: max token value = 5.0
+        let data = synthetic_data(5, 3);
+        let result = apply_hidden_state_pooling(&data, 5, 3, HiddenStatePooling::MaxPool, None);
+
+        assert_eq!(result.len(), 3);
+        let expected = 5.0_f32;
+        for &v in &result {
+            assert!(
+                (v - expected).abs() < f32::EPSILON,
+                "MaxPool should yield {expected}, got {v}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mask_mean_ignores_padding() {
+        // seq_len=4, hidden_dim=2.
+        // Token IDs: [101, 2022, 102, 0]  — last token is PAD (id == 0).
+        // Token values: 1.0, 2.0, 3.0, 4.0
+        // MaskMean should average only positions 0–2: (1+2+3)/3 = 2.0
+        let token_ids: Vec<u32> = vec![101, 2022, 102, 0];
+        let data = synthetic_data(4, 2);
+
+        let result = apply_hidden_state_pooling(
+            &data,
+            4,
+            2,
+            HiddenStatePooling::MaskMean,
+            Some(&token_ids),
+        );
+
+        assert_eq!(result.len(), 2);
+        let expected = 2.0_f32;
+        for &v in &result {
+            assert!(
+                (v - expected).abs() < 1e-5,
+                "MaskMean should yield {expected}, got {v}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_default_pooling_is_cls() {
+        let default_pooling = HiddenStatePooling::default();
+        assert_eq!(
+            default_pooling,
+            HiddenStatePooling::Cls,
+            "Default pooling strategy must be CLS"
+        );
+    }
+
+    #[test]
+    fn test_pooling_config_builder() {
+        // Verify the builder chain works for all pooling variants.
+        let cls_cfg = CandleHiddenStateConfig::default().with_pooling(HiddenStatePooling::Cls);
+        assert_eq!(cls_cfg.pooling, HiddenStatePooling::Cls);
+
+        let mean_cfg =
+            CandleHiddenStateConfig::default().with_pooling(HiddenStatePooling::MeanPool);
+        assert_eq!(mean_cfg.pooling, HiddenStatePooling::MeanPool);
+
+        let max_cfg = CandleHiddenStateConfig::default().with_pooling(HiddenStatePooling::MaxPool);
+        assert_eq!(max_cfg.pooling, HiddenStatePooling::MaxPool);
+
+        let mask_cfg =
+            CandleHiddenStateConfig::default().with_pooling(HiddenStatePooling::MaskMean);
+        assert_eq!(mask_cfg.pooling, HiddenStatePooling::MaskMean);
+    }
+
+    // -----------------------------------------------------------------------
+    // Additional edge-case tests
+    // -----------------------------------------------------------------------
+
+    /// `HiddenStateConfig` pooling field defaults to CLS.
+    #[test]
+    fn test_hidden_state_config_pooling_default() {
+        let config = CandleHiddenStateConfig::default();
+        assert_eq!(
+            config.pooling,
+            HiddenStatePooling::Cls,
+            "CandleHiddenStateConfig default pooling must be Cls"
+        );
+    }
+
+    /// `with_pooling` builder round-trips through all four strategies.
+    #[test]
+    fn test_config_with_pooling_builder_all_variants() {
+        let variants = [
+            HiddenStatePooling::Cls,
+            HiddenStatePooling::MeanPool,
+            HiddenStatePooling::MaxPool,
+            HiddenStatePooling::MaskMean,
+        ];
+        for variant in variants {
+            let config = CandleHiddenStateConfig::default().with_pooling(variant);
+            assert_eq!(
+                config.pooling, variant,
+                "with_pooling({variant:?}) must set config.pooling"
+            );
+        }
+    }
+
+    /// CLS pooling on a zero-vector returns zeros (not NaN/Inf).
+    #[test]
+    fn test_cls_pooling_zero_data_is_finite() {
+        let data = vec![0.0f32; 16];
+        let result =
+            apply_hidden_state_pooling(&data, 2, 8, HiddenStatePooling::Cls, None);
+        assert_eq!(result.len(), 8, "CLS pooling must return hidden_dim elements");
+        for (i, &v) in result.iter().enumerate() {
+            assert!(v.is_finite(), "CLS output[{i}] must be finite, got {v}");
+        }
+    }
+
+    /// MeanPool on a single-token sequence equals that token's values.
+    #[test]
+    fn test_mean_pool_single_token_equals_token_values() {
+        // hidden_dim=4, seq_len=1
+        let data = vec![1.0_f32, 2.0, 3.0, 4.0];
+        let result =
+            apply_hidden_state_pooling(&data, 1, 4, HiddenStatePooling::MeanPool, None);
+        assert_eq!(result, data, "MeanPool of a single token must equal that token");
+    }
+
+    /// MaxPool on identical tokens returns the same values.
+    #[test]
+    fn test_max_pool_uniform_data_returns_same_value() {
+        // 3 tokens, each [0.5, 0.5], hidden_dim=2
+        let data = vec![0.5_f32, 0.5, 0.5, 0.5, 0.5, 0.5];
+        let result =
+            apply_hidden_state_pooling(&data, 3, 2, HiddenStatePooling::MaxPool, None);
+        for &v in &result {
+            assert!(
+                (v - 0.5).abs() < f32::EPSILON,
+                "MaxPool of uniform data must yield the uniform value, got {v}"
+            );
+        }
+    }
+
+    /// MaskMean with all padding IDs (zeros) falls back to averaging all tokens.
+    #[test]
+    fn test_mask_mean_all_padding_falls_back_to_all_tokens() {
+        // All token_ids are 0 (padding) — the implementation must not produce NaN.
+        // Expected: the implementation treats valid_count = max(0_padding_count, 1)
+        // so it averages all tokens rather than dividing by zero.
+        let data = synthetic_data(3, 2);
+        let token_ids: Vec<u32> = vec![0, 0, 0]; // all padding
+        let result = apply_hidden_state_pooling(
+            &data,
+            3,
+            2,
+            HiddenStatePooling::MaskMean,
+            Some(&token_ids),
+        );
+        assert_eq!(result.len(), 2, "MaskMean must return hidden_dim elements");
+        for (i, &v) in result.iter().enumerate() {
+            assert!(v.is_finite(), "MaskMean output[{i}] must be finite, got {v}");
+        }
+    }
+
+    /// `CandleHiddenStateConfig::new` sets model_id and revision correctly.
+    #[test]
+    fn test_config_new_sets_fields() {
+        let config = CandleHiddenStateConfig::new("model/id", "v1.0");
+        assert_eq!(config.model_id, "model/id");
+        assert_eq!(config.revision, "v1.0");
+    }
+
+    /// `with_capture_attention_weights` toggles the field correctly.
+    #[test]
+    fn test_config_capture_attention_weights_toggle() {
+        let enabled = CandleHiddenStateConfig::default().with_capture_attention_weights(true);
+        assert!(enabled.capture_attention_weights);
+
+        let disabled = CandleHiddenStateConfig::default().with_capture_attention_weights(false);
+        assert!(!disabled.capture_attention_weights);
+    }
+
+    /// `with_max_sequence_length` is respected by the builder.
+    #[test]
+    fn test_config_max_sequence_length_variants() {
+        for &len in &[64_usize, 128, 256, 512] {
+            let config = CandleHiddenStateConfig::default().with_max_sequence_length(len);
+            assert_eq!(
+                config.max_sequence_length, len,
+                "with_max_sequence_length({len}) must set the field to {len}"
+            );
+        }
     }
 }

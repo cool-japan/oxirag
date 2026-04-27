@@ -940,3 +940,341 @@ mod tests {
         assert_eq!(retrieved.embedding, vec![0.5, 0.5, 0.0]);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Property-based tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::pedantic,
+)]
+mod prop_tests {
+    use proptest::prelude::*;
+    use tempfile::TempDir;
+
+    use super::*;
+    use crate::types::Document;
+
+    // -----------------------------------------------------------------------
+    // Strategies
+    // -----------------------------------------------------------------------
+
+    /// Strategy: generate an embedding of exactly `dim` f32 values in [-1, 1).
+    fn arb_embedding(dim: usize) -> impl Strategy<Value = Vec<f32>> {
+        prop::collection::vec(-1.0f32..1.0f32, dim..=dim)
+    }
+
+    /// Strategy: generate an 8–16 character alphanumeric document ID string.
+    fn arb_doc_id_str() -> impl Strategy<Value = String> {
+        "[a-z0-9]{8,16}".prop_map(|s| s)
+    }
+
+    /// Create a fresh store backed by a unique file per test invocation.
+    fn open_prop_store(dir: &TempDir, dim: usize, suffix: &str) -> RedbVectorStore {
+        RedbVectorStore::new(dir.path().join(format!("prop_{suffix}.redb")), dim)
+            .expect("RedbVectorStore::new must succeed in proptest")
+    }
+
+    fn make_indexed_doc(id_str: &str, content: &str, embedding: Vec<f32>) -> IndexedDocument {
+        let doc = Document::new(content).with_id(id_str);
+        IndexedDocument::new(doc, embedding)
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 1 – insert then get returns same content and embedding
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_insert_and_get_roundtrip(
+            id_str   in arb_doc_id_str(),
+            content  in "[a-z ]{5,40}",
+            embedding in arb_embedding(4),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "rtrip");
+
+            let doc = make_indexed_doc(&id_str, &content, embedding.clone());
+            let doc_id = doc.document.id.clone();
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                store.insert(doc).await.expect("insert must succeed");
+
+                let result = store.get(&doc_id).await.expect("get must not error");
+                prop_assert!(result.is_some(), "get must return Some after insert");
+
+                let retrieved = result.expect("checked");
+                prop_assert_eq!(
+                    &retrieved.document.content,
+                    &content,
+                    "document content must survive the insert/get round-trip"
+                );
+                prop_assert_eq!(
+                    retrieved.embedding.len(),
+                    embedding.len(),
+                    "embedding length must be preserved"
+                );
+                for (i, (got, exp)) in retrieved.embedding.iter().zip(embedding.iter()).enumerate() {
+                    prop_assert!(
+                        (got - exp).abs() < f32::EPSILON,
+                        "embedding[{i}] mismatch: {got} vs {exp}"
+                    );
+                }
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 2 – inserting the same doc_id twice returns DuplicateId
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_duplicate_id_fails(
+            id_str    in arb_doc_id_str(),
+            embedding in arb_embedding(4),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "dup");
+
+            let doc1 = make_indexed_doc(&id_str, "first", embedding.clone());
+            let mut doc2 = make_indexed_doc(&id_str, "second", embedding);
+            // Force doc2 to use the exact same DocumentId as doc1.
+            doc2.document.id = doc1.document.id.clone();
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                store.insert(doc1).await.expect("first insert must succeed");
+
+                let result = store.insert(doc2).await;
+                prop_assert!(
+                    matches!(result, Err(VectorStoreError::DuplicateId(_))),
+                    "second insert with the same id must return DuplicateId, got: {result:?}"
+                );
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 3 – inserting a doc with the wrong embedding length returns DimensionMismatch
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_dimension_mismatch_fails(
+            // Embedding shorter or longer than the configured dim (4).
+            bad_len in prop::sample::select(vec![1usize, 2, 3, 5, 8, 16]),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "dim");
+
+            // Build a bad embedding of the wrong length.
+            let bad_embedding = vec![0.5_f32; bad_len];
+            let doc = make_indexed_doc("dim_mismatch_id", "content", bad_embedding);
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                let result = store.insert(doc).await;
+                prop_assert!(
+                    matches!(
+                        result,
+                        Err(VectorStoreError::DimensionMismatch { expected: 4, actual: _ })
+                    ),
+                    "inserting embedding of wrong length must return DimensionMismatch, got: {result:?}"
+                );
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 4 – delete returns Ok(true) for an existing document
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_delete_returns_true_when_exists(
+            id_str    in arb_doc_id_str(),
+            embedding in arb_embedding(4),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "del_true");
+
+            let doc = make_indexed_doc(&id_str, "to delete", embedding);
+            let doc_id = doc.document.id.clone();
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                store.insert(doc).await.expect("insert must succeed");
+
+                let deleted = store.delete(&doc_id).await.expect("delete must not error");
+                prop_assert!(deleted, "delete must return true for an existing document");
+                prop_assert_eq!(
+                    store.count().await,
+                    0,
+                    "count must be 0 after deleting the only document"
+                );
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 5 – delete returns Ok(false) for a missing document
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_delete_returns_false_when_missing(
+            id_str in arb_doc_id_str(),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "del_false");
+
+            let absent_id = DocumentId::from_string(&id_str);
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                let deleted = store.delete(&absent_id).await.expect("delete must not error");
+                prop_assert!(!deleted, "delete must return false for a missing document");
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 6 – count() matches the number of successful inserts
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_count_matches_insertions(
+            // Generate 1..=8 distinct id strings (HashSet guarantees uniqueness).
+            id_strs in prop::collection::hash_set(arb_doc_id_str(), 1..=8usize),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "count");
+            let n = id_strs.len();
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                for (idx, id_str) in id_strs.into_iter().enumerate() {
+                    let embedding = vec![idx as f32 * 0.1; 4];
+                    let doc = make_indexed_doc(&id_str, "doc content", embedding);
+                    store.insert(doc).await.expect("each insert must succeed");
+                }
+                prop_assert_eq!(
+                    store.count().await,
+                    n,
+                    "count() must equal the number of successful inserts"
+                );
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 7 – search returns at most top_k results
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_search_returns_at_most_top_k(
+            // 2..=8 distinct id strings for documents
+            id_strs in prop::collection::hash_set(arb_doc_id_str(), 2..=8usize),
+            top_k   in 1usize..=5usize,
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "srch");
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                let mut count = 0usize;
+                for id_str in &id_strs {
+                    let embedding = vec![0.25_f32; 4];
+                    let doc = make_indexed_doc(id_str, "doc", embedding);
+                    if store.insert(doc).await.is_ok() {
+                        count += 1;
+                    }
+                }
+
+                let query = vec![1.0_f32; 4];
+                let results = store
+                    .search(&query, top_k, None)
+                    .await
+                    .expect("search must not error");
+
+                prop_assert!(
+                    results.len() <= top_k,
+                    "search must return at most top_k={top_k} results, got {}",
+                    results.len()
+                );
+                prop_assert!(
+                    results.len() <= count,
+                    "search must not return more results than documents inserted"
+                );
+                Ok(())
+            })?;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 8 – upsert returns true on new id, false on second call
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_upsert_insert_returns_true(
+            id_str    in arb_doc_id_str(),
+            embedding in arb_embedding(4),
+        ) {
+            let dir = TempDir::new().expect("tempdir must be created");
+            let mut store = open_prop_store(&dir, 4, "upsert");
+
+            let doc1 = make_indexed_doc(&id_str, "first content", embedding.clone());
+            let doc1_id = doc1.document.id.clone();
+            let mut doc2 = make_indexed_doc(&id_str, "second content", embedding);
+            doc2.document.id = doc1_id.clone();
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                // First upsert on a new id must return true (was an insert).
+                let first = store.upsert(doc1).await.expect("first upsert must succeed");
+                prop_assert!(first, "first upsert must return true (new document)");
+                prop_assert_eq!(store.count().await, 1, "count must be 1 after first upsert");
+
+                // Second upsert on the same id must return false (was an update).
+                let second = store.upsert(doc2).await.expect("second upsert must succeed");
+                prop_assert!(!second, "second upsert must return false (existing document)");
+                prop_assert_eq!(
+                    store.count().await,
+                    1,
+                    "count must remain 1 after an update upsert"
+                );
+                Ok(())
+            })?;
+        }
+    }
+}

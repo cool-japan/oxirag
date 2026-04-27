@@ -8,6 +8,8 @@
 
 pub mod extractor;
 pub mod memory;
+#[cfg(feature = "graphrag-redb")]
+pub mod redb_store;
 pub mod traits;
 pub mod traversal;
 pub mod types;
@@ -17,6 +19,8 @@ pub use extractor::{
     PatternRelationshipExtractor,
 };
 pub use memory::InMemoryGraphStore;
+#[cfg(feature = "graphrag-redb")]
+pub use redb_store::RedbGraphStore;
 pub use traits::{EntityExtractor, Graph, GraphStore, RelationshipExtractor};
 pub use traversal::{bfs_traverse, find_entities_within_hops, find_shortest_path};
 pub use types::{

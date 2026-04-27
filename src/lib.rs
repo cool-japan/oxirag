@@ -110,6 +110,7 @@ pub mod layer4_graph;
 pub mod load_testing;
 pub mod memory;
 pub mod metrics;
+pub mod observability;
 pub mod pipeline;
 pub mod pipeline_debug;
 #[cfg(feature = "prefix-cache")]
@@ -281,6 +282,11 @@ pub mod prelude {
     pub use crate::hybrid_search::{
         BM25Encoder, BM25Params, FusionStrategy as HybridFusionStrategy, HybridConfig,
         HybridResult, HybridSearcher, InMemorySparseStore, SparseVector, SparseVectorStore,
+    };
+
+    // Observability exports
+    pub use crate::observability::{
+        LayerSpanRecord, PipelineSpanContext, SpanReport, SpanStatus, record_pipeline_event,
     };
 
     // Quantization exports

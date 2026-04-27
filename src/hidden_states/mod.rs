@@ -120,7 +120,10 @@ pub use cache::{
     CachedHiddenState, HiddenStateCache, HiddenStateCacheConfig, HiddenStateCacheStats,
 };
 #[cfg(all(feature = "hidden-states", feature = "speculator"))]
-pub use candle_provider::{CandleDevice, CandleHiddenStateConfig, CandleHiddenStateProvider};
+pub use candle_provider::{
+    CandleDevice, CandleHiddenStateConfig, CandleHiddenStateProvider, HiddenStatePooling,
+    apply_hidden_state_pooling,
+};
 pub use extractor::{LayerExtractor, MockHiddenStateProvider, StatePooling, StateSimilarity};
 pub use reuse::{
     AdaptiveReuseStrategy, HybridReuseStrategy, LengthAwareReuseStrategy, PrefixReuseStrategy,

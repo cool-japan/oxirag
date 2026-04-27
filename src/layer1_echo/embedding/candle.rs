@@ -591,4 +591,130 @@ mod tests {
         assert_eq!(config.max_length, 512);
         assert!(config.normalize);
     }
+
+    // -----------------------------------------------------------------------
+    // Additional edge-case and preset-coverage tests
+    // -----------------------------------------------------------------------
+
+    /// All four presets must have a non-empty model_id and a non-zero max_length.
+    #[test]
+    fn test_all_presets_have_valid_model_ids() {
+        let presets = [
+            CandleEmbeddingConfig::bge_base_en_v15(),
+            CandleEmbeddingConfig::bge_large_en_v15(),
+            CandleEmbeddingConfig::bge_small_en_v15(),
+            CandleEmbeddingConfig::all_mpnet_base_v2(),
+        ];
+        for (i, config) in presets.iter().enumerate() {
+            assert!(
+                !config.model_id.is_empty(),
+                "preset {i}: model_id must not be empty"
+            );
+            assert!(
+                config.max_length > 0,
+                "preset {i}: max_length must be non-zero, got {}",
+                config.max_length
+            );
+        }
+    }
+
+    /// All four presets must use the "main" revision.
+    #[test]
+    fn test_presets_use_main_revision() {
+        let presets = [
+            ("bge_base", CandleEmbeddingConfig::bge_base_en_v15()),
+            ("bge_large", CandleEmbeddingConfig::bge_large_en_v15()),
+            ("bge_small", CandleEmbeddingConfig::bge_small_en_v15()),
+            ("mpnet", CandleEmbeddingConfig::all_mpnet_base_v2()),
+        ];
+        for (name, config) in &presets {
+            assert_eq!(
+                config.revision, "main",
+                "preset '{name}' must use revision 'main', got '{}'",
+                config.revision
+            );
+        }
+    }
+
+    /// The default `CandleDevice` must be `Cpu`.
+    #[test]
+    fn test_device_default_is_cpu() {
+        let device = CandleDevice::default();
+        assert!(
+            matches!(device, CandleDevice::Cpu),
+            "default CandleDevice must be Cpu"
+        );
+    }
+
+    /// Default config must use "main" revision and have reasonable max_length.
+    #[test]
+    fn test_default_config_revision_and_length() {
+        let config = CandleEmbeddingConfig::default();
+        assert_eq!(
+            config.revision, "main",
+            "default config revision must be 'main'"
+        );
+        assert!(
+            config.max_length >= 128,
+            "default max_length must be at least 128, got {}",
+            config.max_length
+        );
+        assert!(config.normalize, "default config must have normalize=true");
+    }
+
+    /// Preset model IDs must differ from each other (each preset targets a distinct model).
+    #[test]
+    fn test_preset_model_ids_are_distinct() {
+        let ids = [
+            CandleEmbeddingConfig::bge_base_en_v15().model_id,
+            CandleEmbeddingConfig::bge_large_en_v15().model_id,
+            CandleEmbeddingConfig::bge_small_en_v15().model_id,
+            CandleEmbeddingConfig::all_mpnet_base_v2().model_id,
+        ];
+        let mut seen = std::collections::HashSet::new();
+        for id in &ids {
+            assert!(
+                seen.insert(id.as_str()),
+                "model_id '{id}' appears in more than one preset"
+            );
+        }
+    }
+
+    /// MPNet preset has a shorter max_length than the BGE presets.
+    #[test]
+    fn test_mpnet_shorter_window_than_bge() {
+        let mpnet = CandleEmbeddingConfig::all_mpnet_base_v2();
+        let bge_base = CandleEmbeddingConfig::bge_base_en_v15();
+        assert!(
+            mpnet.max_length < bge_base.max_length,
+            "MPNet native window ({}) must be shorter than BGE-base window ({})",
+            mpnet.max_length,
+            bge_base.max_length
+        );
+    }
+
+    /// Mock provider: embed_batch returns one embedding per text.
+    #[tokio::test]
+    async fn test_mock_provider_batch_count_matches_input() {
+        let provider = MockEmbeddingProvider::new(16);
+        for n in [1, 3, 5, 10] {
+            let texts: Vec<&str> = (0..n).map(|_| "text").collect();
+            let embeddings = provider
+                .embed_batch(&texts)
+                .await
+                .expect("embed_batch must succeed");
+            assert_eq!(
+                embeddings.len(),
+                n,
+                "embed_batch must return exactly {n} embeddings"
+            );
+        }
+    }
+
+    /// Mock provider model_id is preserved by `with_model_id`.
+    #[test]
+    fn test_mock_provider_with_model_id() {
+        let provider = MockEmbeddingProvider::new(32).with_model_id("my-custom-model");
+        assert_eq!(provider.model_id(), "my-custom-model");
+    }
 }

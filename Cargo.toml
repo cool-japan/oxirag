@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -87,8 +87,10 @@ quantization = []
 prefix-cache-redb = ["prefix-cache", "dep:redb"]
 # Persistent redb backend for vector store (Layer 1 Echo)
 echo-redb = ["echo", "dep:redb"]
+# Persistent redb backend for graph store (Layer 4 GraphRAG)
+graphrag-redb = ["graphrag", "dep:redb"]
 # All layers (native only due to speculator)
-full = ["native", "echo", "speculator", "judge", "graphrag", "prefix-cache", "distillation", "hidden-states", "quantization", "prefix-cache-redb", "echo-redb"]
+full = ["native", "echo", "speculator", "judge", "graphrag", "prefix-cache", "distillation", "hidden-states", "quantization", "prefix-cache-redb", "echo-redb", "graphrag-redb"]
 # Hardware acceleration features (marker features - platform-conditional)
 # CUDA: Only works on x86_64 Linux/Windows where CUDA toolkit is installed
 # The cudarc dependency is target-gated, so --all-features works on all platforms
