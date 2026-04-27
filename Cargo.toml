@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -51,6 +51,9 @@ tokenizers = { version = "0.22", optional = true }
 # Layer 3: Judge
 oxiz = { version = "0.2.1", optional = true }
 
+# Persistent storage backend (pure Rust, ACID embedded DB)
+redb = { version = "2", optional = true }
+
 # CUDA support - only available on x86_64 Linux and Windows (where CUDA toolkit exists)
 # cudarc is the underlying CUDA runtime - target-gated to prevent build failures on unsupported platforms
 [target.'cfg(all(target_arch = "x86_64", any(target_os = "linux", target_os = "windows")))'.dependencies]
@@ -80,8 +83,12 @@ prefix-cache = []
 hidden-states = []
 # Quantization for vector embeddings
 quantization = []
+# Persistent redb backend for prefix cache
+prefix-cache-redb = ["prefix-cache", "dep:redb"]
+# Persistent redb backend for vector store (Layer 1 Echo)
+echo-redb = ["echo", "dep:redb"]
 # All layers (native only due to speculator)
-full = ["native", "echo", "speculator", "judge", "graphrag", "prefix-cache", "distillation", "hidden-states", "quantization"]
+full = ["native", "echo", "speculator", "judge", "graphrag", "prefix-cache", "distillation", "hidden-states", "quantization", "prefix-cache-redb", "echo-redb"]
 # Hardware acceleration features (marker features - platform-conditional)
 # CUDA: Only works on x86_64 Linux/Windows where CUDA toolkit is installed
 # The cudarc dependency is target-gated, so --all-features works on all platforms

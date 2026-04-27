@@ -129,6 +129,10 @@ pub enum VectorStoreError {
     #[error("Index error: {0}")]
     Index(String),
 
+    /// Underlying storage I/O error (e.g. redb, disk failure).
+    #[error("Storage error: {0}")]
+    StorageError(String),
+
     /// Dimension mismatch in vectors
     #[error("Vector dimension mismatch: expected {expected}, got {actual}")]
     DimensionMismatch {

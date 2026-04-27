@@ -147,6 +147,8 @@ pub mod hierarchy;
 pub mod invalidation;
 pub mod paging;
 pub mod persistent;
+#[cfg(feature = "prefix-cache-redb")]
+pub mod redb_backend;
 pub mod store;
 pub mod traits;
 pub mod types;
@@ -170,6 +172,9 @@ pub use traits::{PrefixCacheExt, PrefixCacheStore};
 pub use types::{
     CacheKey, CacheLookupResult, CacheStats, ContextFingerprint, KVCacheEntry, PrefixCacheConfig,
 };
+
+#[cfg(feature = "prefix-cache-redb")]
+pub use redb_backend::{PersistedKVEntry, RedbPrefixCache, RedbPrefixCacheConfig};
 
 #[cfg(test)]
 mod tests {

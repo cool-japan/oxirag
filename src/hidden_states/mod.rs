@@ -108,6 +108,8 @@
 //! All providers and strategies implement `Send + Sync` for concurrent use.
 
 pub mod cache;
+#[cfg(all(feature = "hidden-states", feature = "speculator"))]
+pub mod candle_provider;
 pub mod extractor;
 pub mod reuse;
 pub mod traits;
@@ -117,6 +119,8 @@ pub mod types;
 pub use cache::{
     CachedHiddenState, HiddenStateCache, HiddenStateCacheConfig, HiddenStateCacheStats,
 };
+#[cfg(all(feature = "hidden-states", feature = "speculator"))]
+pub use candle_provider::{CandleDevice, CandleHiddenStateConfig, CandleHiddenStateProvider};
 pub use extractor::{LayerExtractor, MockHiddenStateProvider, StatePooling, StateSimilarity};
 pub use reuse::{
     AdaptiveReuseStrategy, HybridReuseStrategy, LengthAwareReuseStrategy, PrefixReuseStrategy,

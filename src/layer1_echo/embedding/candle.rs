@@ -43,6 +43,66 @@ impl Default for CandleEmbeddingConfig {
     }
 }
 
+impl CandleEmbeddingConfig {
+    /// Create config for `BAAI/bge-base-en-v1.5` (768-dim, strong general-purpose performance).
+    ///
+    /// BGE-base is the recommended default for most English embedding workloads: it is
+    /// significantly more accurate than small/MiniLM models while still being fast enough
+    /// for CPU inference.
+    #[must_use]
+    pub fn bge_base_en_v15() -> Self {
+        Self {
+            model_id: "BAAI/bge-base-en-v1.5".to_string(),
+            revision: "main".to_string(),
+            max_length: 512,
+            ..Default::default()
+        }
+    }
+
+    /// Create config for `BAAI/bge-large-en-v1.5` (1024-dim, best accuracy).
+    ///
+    /// BGE-large delivers state-of-the-art retrieval quality on the MTEB benchmark.
+    /// Prefer this when accuracy is more important than throughput.
+    #[must_use]
+    pub fn bge_large_en_v15() -> Self {
+        Self {
+            model_id: "BAAI/bge-large-en-v1.5".to_string(),
+            revision: "main".to_string(),
+            max_length: 512,
+            ..Default::default()
+        }
+    }
+
+    /// Create config for `sentence-transformers/all-mpnet-base-v2` (768-dim).
+    ///
+    /// A widely-used SBERT model fine-tuned on 1 billion+ sentence pairs.
+    /// Balanced quality across semantic similarity, clustering, and retrieval tasks.
+    /// Maximum input length is 384 tokens (the model's native window).
+    #[must_use]
+    pub fn all_mpnet_base_v2() -> Self {
+        Self {
+            model_id: "sentence-transformers/all-mpnet-base-v2".to_string(),
+            revision: "main".to_string(),
+            max_length: 384,
+            ..Default::default()
+        }
+    }
+
+    /// Create config for `BAAI/bge-small-en-v1.5` (384-dim, fastest inference).
+    ///
+    /// BGE-small is the lightest BGE model: ideal for latency-sensitive paths or
+    /// edge/WASM deployments where memory footprint matters.
+    #[must_use]
+    pub fn bge_small_en_v15() -> Self {
+        Self {
+            model_id: "BAAI/bge-small-en-v1.5".to_string(),
+            revision: "main".to_string(),
+            max_length: 512,
+            ..Default::default()
+        }
+    }
+}
+
 /// Device selection for Candle.
 #[derive(Debug, Clone, Copy, Default)]
 pub enum CandleDevice {
@@ -482,5 +542,53 @@ mod tests {
         let provider = MockEmbeddingProvider::new(32);
         let result = provider.embed_batch(&[]).await;
         assert!(matches!(result, Err(EmbeddingError::EmptyInput)));
+    }
+
+    // -----------------------------------------------------------------------
+    // BGE / model preset tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_bge_base_preset() {
+        let config = CandleEmbeddingConfig::bge_base_en_v15();
+        assert!(
+            config.model_id.contains("bge-base"),
+            "model_id should contain 'bge-base'"
+        );
+        assert_eq!(config.max_length, 512);
+        assert!(config.normalize, "normalize should be true by default");
+    }
+
+    #[test]
+    fn test_bge_large_preset() {
+        let config = CandleEmbeddingConfig::bge_large_en_v15();
+        assert!(
+            config.model_id.contains("bge-large"),
+            "model_id should contain 'bge-large'"
+        );
+        assert_eq!(config.max_length, 512);
+        assert!(config.normalize);
+    }
+
+    #[test]
+    fn test_mpnet_preset() {
+        let config = CandleEmbeddingConfig::all_mpnet_base_v2();
+        assert!(
+            config.model_id.contains("mpnet"),
+            "model_id should contain 'mpnet'"
+        );
+        assert_eq!(config.max_length, 384, "mpnet native window is 384 tokens");
+        assert!(config.normalize);
+    }
+
+    #[test]
+    fn test_bge_small_preset() {
+        let config = CandleEmbeddingConfig::bge_small_en_v15();
+        assert!(
+            config.model_id.contains("bge-small"),
+            "model_id should contain 'bge-small'"
+        );
+        assert_eq!(config.max_length, 512);
+        assert!(config.normalize);
     }
 }
