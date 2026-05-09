@@ -153,3 +153,5 @@ result
 
 # Rustc ICE dumps
 rustc-ice-*.txt
+
+target
