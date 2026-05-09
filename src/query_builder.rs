@@ -853,7 +853,7 @@ mod tests {
             .with_top_k(20)
             .with_min_score(0.5)
             .with_metadata(MetadataFilter::eq("key", "value"))
-            .with_timeout(Duration::from_secs(60))
+            .with_timeout(Duration::from_mins(1))
             .with_cache_key("cache-key")
             .with_layer_hints(LayerHints::all())
             .build_extended()
@@ -866,7 +866,7 @@ mod tests {
                 < f32::EPSILON
         );
         assert!(extended.metadata_filter().is_some());
-        assert_eq!(extended.timeout(), Some(Duration::from_secs(60)));
+        assert_eq!(extended.timeout(), Some(Duration::from_mins(1)));
         assert_eq!(extended.cache_key(), Some("cache-key"));
         assert!(extended.layer_hints().is_some());
     }

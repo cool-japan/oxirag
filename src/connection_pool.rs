@@ -1162,16 +1162,16 @@ mod tests {
         let config = PoolConfig::new()
             .min_connections(2)
             .max_connections(20)
-            .connection_timeout(Duration::from_secs(60))
-            .idle_timeout(Duration::from_secs(300))
-            .max_lifetime(Duration::from_secs(1800))
+            .connection_timeout(Duration::from_mins(1))
+            .idle_timeout(Duration::from_mins(5))
+            .max_lifetime(Duration::from_mins(30))
             .test_on_acquire(false);
 
         assert_eq!(config.min_connections, 2);
         assert_eq!(config.max_connections, 20);
-        assert_eq!(config.connection_timeout, Duration::from_secs(60));
-        assert_eq!(config.idle_timeout, Duration::from_secs(300));
-        assert_eq!(config.max_lifetime, Duration::from_secs(1800));
+        assert_eq!(config.connection_timeout, Duration::from_mins(1));
+        assert_eq!(config.idle_timeout, Duration::from_mins(5));
+        assert_eq!(config.max_lifetime, Duration::from_mins(30));
         assert!(!config.test_on_acquire);
     }
 

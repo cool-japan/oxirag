@@ -709,7 +709,7 @@ mod tests {
     #[test]
     fn test_invalidation_policy_ttl_secs() {
         let policy = InvalidationPolicy::ttl_secs(300);
-        assert_eq!(policy.ttl_duration(), Some(Duration::from_secs(300)));
+        assert_eq!(policy.ttl_duration(), Some(Duration::from_mins(5)));
         assert!(policy.is_ttl_based());
     }
 
@@ -746,7 +746,7 @@ mod tests {
 
     #[test]
     fn test_invalidation_manager_should_not_invalidate_ttl() {
-        let manager = InvalidationManager::new(InvalidationPolicy::Ttl(Duration::from_secs(3600)));
+        let manager = InvalidationManager::new(InvalidationPolicy::Ttl(Duration::from_hours(1)));
         let entry = create_test_entry("test1", 12345);
 
         assert!(!manager.should_invalidate(&entry));
@@ -1019,7 +1019,7 @@ mod tests {
     #[test]
     fn test_invalidation_manager_combined_policy() {
         let policy = InvalidationPolicy::Combined(vec![
-            InvalidationPolicy::Ttl(Duration::from_secs(3600)),
+            InvalidationPolicy::Ttl(Duration::from_hours(1)),
             InvalidationPolicy::MaxStale(Duration::from_secs(0)),
         ]);
         let manager = InvalidationManager::new(policy);

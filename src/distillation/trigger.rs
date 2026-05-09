@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn test_distillation_trigger_with_cooldown() {
-        let trigger = DistillationTrigger::with_defaults().with_cooldown(Duration::from_secs(1800));
+        let trigger = DistillationTrigger::with_defaults().with_cooldown(Duration::from_mins(30));
 
         assert_eq!(trigger.cooldown().as_secs(), 1800);
     }
@@ -542,7 +542,7 @@ mod tests {
     #[test]
     fn test_distillation_trigger_cooldown() {
         let mut trigger = DistillationTrigger::new(vec![TriggerCondition::frequency(3)])
-            .with_cooldown(Duration::from_secs(3600));
+            .with_cooldown(Duration::from_hours(1));
 
         let candidate = create_test_candidate("test", 5, 1, 0.9);
 
@@ -560,7 +560,7 @@ mod tests {
     #[test]
     fn test_distillation_trigger_clear_triggered() {
         let mut trigger = DistillationTrigger::new(vec![TriggerCondition::frequency(3)])
-            .with_cooldown(Duration::from_secs(3600));
+            .with_cooldown(Duration::from_hours(1));
 
         let candidate = create_test_candidate("test", 5, 1, 0.9);
 
@@ -620,7 +620,7 @@ mod tests {
             TriggerCondition::frequency(3),
             TriggerCondition::min_qa_pairs(2),
         ])
-        .with_cooldown(Duration::from_secs(3600));
+        .with_cooldown(Duration::from_hours(1));
 
         let candidate1 = create_test_candidate("test1", 5, 1, 0.9);
         let candidate2 = create_test_candidate("test2", 5, 1, 0.9);
@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_remaining_cooldown() {
         let mut trigger =
-            DistillationTrigger::with_defaults().with_cooldown(Duration::from_secs(3600));
+            DistillationTrigger::with_defaults().with_cooldown(Duration::from_hours(1));
 
         let candidate = create_test_candidate("test", 5, 1, 0.9);
 

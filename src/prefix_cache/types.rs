@@ -423,7 +423,7 @@ mod tests {
         assert!(entry.ttl.is_some());
         assert_eq!(
             entry.ttl.expect("test operation should succeed"),
-            Duration::from_secs(60)
+            Duration::from_mins(1)
         );
     }
 
@@ -437,7 +437,7 @@ mod tests {
 
         // Entry with very long TTL is not expired
         let entry_long =
-            KVCacheEntry::new("key2", fp.clone(), vec![], 10).with_ttl(Duration::from_secs(3600));
+            KVCacheEntry::new("key2", fp.clone(), vec![], 10).with_ttl(Duration::from_hours(1));
         assert!(!entry_long.is_expired());
 
         // Entry with zero TTL is immediately expired

@@ -751,7 +751,7 @@ mod tests {
         let config = LoadTestConfig::default();
         assert_eq!(config.concurrent_users, 1);
         assert_eq!(config.total_requests, 100);
-        assert_eq!(config.duration, Duration::from_secs(60));
+        assert_eq!(config.duration, Duration::from_mins(1));
     }
 
     #[test]
@@ -759,14 +759,14 @@ mod tests {
         let config = LoadTestConfig::new()
             .with_concurrent_users(10)
             .with_total_requests(1000)
-            .with_duration(Duration::from_secs(120))
+            .with_duration(Duration::from_mins(2))
             .with_ramp_up_time(Duration::from_secs(10))
             .with_ramp_down_time(Duration::from_secs(5))
             .with_think_time_ms(100);
 
         assert_eq!(config.concurrent_users, 10);
         assert_eq!(config.total_requests, 1000);
-        assert_eq!(config.duration, Duration::from_secs(120));
+        assert_eq!(config.duration, Duration::from_mins(2));
         assert_eq!(config.ramp_up_time, Duration::from_secs(10));
         assert_eq!(config.ramp_down_time, Duration::from_secs(5));
         assert_eq!(config.think_time_ms, 100);
