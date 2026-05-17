@@ -23,8 +23,9 @@ pub enum SimilarityMetric {
 }
 
 /// Provider for generating embeddings from text.
-#[async_trait]
-pub trait EmbeddingProvider: Send + Sync {
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait EmbeddingProvider {
     /// Generate an embedding for a single text.
     async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError>;
 
@@ -59,8 +60,9 @@ impl IndexedDocument {
 }
 
 /// Storage for document embeddings with similarity search.
-#[async_trait]
-pub trait VectorStore: Send + Sync {
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait VectorStore {
     /// Insert a document with its embedding.
     async fn insert(&mut self, doc: IndexedDocument) -> Result<(), VectorStoreError>;
 
@@ -129,10 +131,19 @@ pub trait VectorStore: Send + Sync {
     fn similarity_metric(&self) -> SimilarityMetric;
 }
 
-/// The Echo layer: combines embedding and vector search.
-#[async_trait]
-pub trait Echo: Send + Sync {
-    /// Index a document.
+/// The Echo layer: combines text embedding with vector similarity search.
+///
+/// On native targets, implementors must be `Send + Sync` to support concurrent
+/// access from multiple threads and async tasks. On WASM, the `?Send` bound is
+/// used to allow `JsValue`-based implementations.
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait Echo {
+    /// Embed and index a single document, returning its assigned [`DocumentId`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EmbeddingError`] if embedding generation or storage insertion fails.
     async fn index(&mut self, document: Document) -> Result<DocumentId, EmbeddingError>;
 
     /// Index multiple documents.
@@ -141,7 +152,16 @@ pub trait Echo: Send + Sync {
         documents: Vec<Document>,
     ) -> Result<Vec<DocumentId>, EmbeddingError>;
 
-    /// Search for documents similar to the query.
+    /// Embed `query` and return the `top_k` most similar documents from the index.
+    ///
+    /// Results are sorted by descending similarity score. If `min_score` is set,
+    /// only documents whose score meets the threshold are returned (the result
+    /// vector may therefore be shorter than `top_k`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EmbeddingError`] if the embedding provider fails or the vector
+    /// store returns an error during search.
     async fn search(
         &self,
         query: &str,
@@ -160,6 +180,97 @@ pub trait Echo: Send + Sync {
 
     /// Clear all indexed documents.
     async fn clear(&mut self) -> Result<(), EmbeddingError>;
+}
+
+/// Input variants for multi-modal embedding providers.
+#[derive(Debug, Clone)]
+pub enum EmbeddingInput<'a> {
+    /// Plain text input.
+    Text(&'a str),
+    /// Raw image bytes (JPEG, PNG, or other formats supported by the `image` crate).
+    Image(&'a [u8]),
+    /// Joint text + image input for combined embedding (e.g., CLIP joint encoding).
+    TextAndImage {
+        /// The text component of the joint input.
+        text: &'a str,
+        /// The image bytes component of the joint input.
+        image: &'a [u8],
+    },
+}
+
+/// A multi-modal embedding provider that can embed text, images, or text+image pairs.
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait MultiModalEmbeddingProvider {
+    /// Embed any supported input into a dense vector.
+    async fn embed_multi(&self, input: EmbeddingInput<'_>) -> Result<Vec<f32>, EmbeddingError>;
+
+    /// Embed a batch of inputs.
+    async fn embed_multi_batch(
+        &self,
+        inputs: &[EmbeddingInput<'_>],
+    ) -> Result<Vec<Vec<f32>>, EmbeddingError> {
+        let mut results = Vec::with_capacity(inputs.len());
+        for input in inputs {
+            results.push(self.embed_multi(input.clone()).await?);
+        }
+        Ok(results)
+    }
+
+    /// Dimensionality of the output vector.
+    fn dimension(&self) -> usize;
+
+    /// Model identifier.
+    fn model_id(&self) -> &str;
+}
+
+/// Blanket impl: any `MultiModalEmbeddingProvider` is also an `EmbeddingProvider` (text-only).
+///
+/// On native targets, the impl requires `Send + Sync` to satisfy async executor constraints.
+/// On WASM, the `?Send` relaxation allows `JsValue`-carrying providers.
+#[cfg(not(target_arch = "wasm32"))]
+#[async_trait]
+impl<T: MultiModalEmbeddingProvider + Send + Sync> EmbeddingProvider for T {
+    async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError> {
+        self.embed_multi(EmbeddingInput::Text(text)).await
+    }
+
+    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>, EmbeddingError> {
+        let inputs: Vec<EmbeddingInput<'_>> =
+            texts.iter().map(|t| EmbeddingInput::Text(t)).collect();
+        self.embed_multi_batch(&inputs).await
+    }
+
+    fn dimension(&self) -> usize {
+        MultiModalEmbeddingProvider::dimension(self)
+    }
+
+    fn model_id(&self) -> &str {
+        MultiModalEmbeddingProvider::model_id(self)
+    }
+}
+
+/// Blanket impl for WASM targets (no `Send + Sync` requirement).
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
+impl<T: MultiModalEmbeddingProvider> EmbeddingProvider for T {
+    async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError> {
+        self.embed_multi(EmbeddingInput::Text(text)).await
+    }
+
+    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>, EmbeddingError> {
+        let inputs: Vec<EmbeddingInput<'_>> =
+            texts.iter().map(|t| EmbeddingInput::Text(t)).collect();
+        self.embed_multi_batch(&inputs).await
+    }
+
+    fn dimension(&self) -> usize {
+        MultiModalEmbeddingProvider::dimension(self)
+    }
+
+    fn model_id(&self) -> &str {
+        MultiModalEmbeddingProvider::model_id(self)
+    }
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ use std::path::Path;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{Deserialize, Serialize};
 
 use crate::error::VectorStoreError;

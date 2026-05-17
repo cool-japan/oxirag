@@ -34,12 +34,110 @@
 //! println!("{}", report.format_table());
 //! ```
 
+#[cfg(feature = "otel")]
+pub mod otel;
+#[cfg(feature = "otel")]
+pub use otel::OtelSpanObserver;
+
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 use uuid::Uuid;
+
+// ────────────────────────────────────────────────────────────────────────────
+// SpanObserver trait
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Callback sink for pipeline span events.
+///
+/// Implementations can export span data to external systems (e.g. OpenTelemetry,
+/// Prometheus, Datadog). Multiple observers may be registered on a single
+/// [`PipelineSpanContext`] — they all receive every event.
+pub trait SpanObserver: Send + Sync {
+    /// Called when a layer span is finalised (success, error, or skip).
+    fn on_layer_complete(&self, record: &LayerSpanRecord);
+    /// Called once after all layers have completed for a single pipeline query.
+    fn on_pipeline_complete(&self, ctx: &PipelineSpanContext);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// MemoryObserver
+// ────────────────────────────────────────────────────────────────────────────
+
+/// A [`SpanObserver`] that collects all records in memory (thread-safe).
+///
+/// Useful for tests and the REST server metrics endpoint.
+#[derive(Debug, Default)]
+pub struct MemoryObserver {
+    records: std::sync::Mutex<Vec<LayerSpanRecord>>,
+    pipeline_snapshots: std::sync::Mutex<Vec<SpanReport>>,
+}
+
+impl MemoryObserver {
+    /// Create a new empty [`MemoryObserver`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Return a clone of all collected [`LayerSpanRecord`]s.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal mutex is poisoned (only possible if a thread panicked
+    /// while holding the lock, which should not occur in normal usage).
+    #[must_use]
+    pub fn records(&self) -> Vec<LayerSpanRecord> {
+        self.records.lock().expect("records lock poisoned").clone()
+    }
+
+    /// Return a clone of all collected pipeline [`SpanReport`] snapshots.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal mutex is poisoned (only possible if a thread panicked
+    /// while holding the lock, which should not occur in normal usage).
+    #[must_use]
+    pub fn pipeline_snapshots(&self) -> Vec<SpanReport> {
+        self.pipeline_snapshots
+            .lock()
+            .expect("snapshots lock poisoned")
+            .clone()
+    }
+
+    /// Clear all collected records and snapshots.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an internal mutex is poisoned (only possible if a thread panicked
+    /// while holding the lock, which should not occur in normal usage).
+    pub fn clear(&self) {
+        *self.records.lock().expect("records lock poisoned") = vec![];
+        *self
+            .pipeline_snapshots
+            .lock()
+            .expect("snapshots lock poisoned") = vec![];
+    }
+}
+
+impl SpanObserver for MemoryObserver {
+    fn on_layer_complete(&self, record: &LayerSpanRecord) {
+        self.records
+            .lock()
+            .expect("records lock poisoned")
+            .push(record.clone());
+    }
+
+    fn on_pipeline_complete(&self, ctx: &PipelineSpanContext) {
+        self.pipeline_snapshots
+            .lock()
+            .expect("snapshots lock poisoned")
+            .push(ctx.report());
+    }
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // SpanStatus
@@ -147,19 +245,21 @@ impl LayerSpanRecord {
 /// - The wall-clock start time of the execution.
 /// - An ordered list of completed [`LayerSpanRecord`]s.
 /// - Arbitrary top-level attributes (e.g. `"query"`, `"user_id"`).
+/// - A list of registered [`SpanObserver`]s that are notified on each event.
 ///
 /// Typical usage:
 /// 1. Call [`PipelineSpanContext::new`] at the start of a pipeline invocation.
 /// 2. Use [`begin_layer`] to obtain a [`LayerSpan`] guard for each pipeline step.
 /// 3. Commit the guard with [`LayerSpan::success`], [`LayerSpan::error`], or
 ///    [`LayerSpan::skip`].
-/// 4. After all steps, call [`report`] to obtain a [`SpanReport`] and
-///    [`emit_traces`] to flush all events to the `tracing` subscriber.
+/// 4. After all steps, call [`finalize`] to notify all observers, then call
+///    [`report`] to obtain a [`SpanReport`] and [`emit_traces`] to flush all
+///    events to the `tracing` subscriber.
 ///
 /// [`begin_layer`]: PipelineSpanContext::begin_layer
+/// [`finalize`]: PipelineSpanContext::finalize
 /// [`report`]: PipelineSpanContext::report
 /// [`emit_traces`]: PipelineSpanContext::emit_traces
-#[derive(Debug)]
 pub struct PipelineSpanContext {
     /// UUID v4 identifying this pipeline execution instance.
     pub execution_id: String,
@@ -171,6 +271,8 @@ pub struct PipelineSpanContext {
     pub layer_spans: Vec<LayerSpanRecord>,
     /// Top-level key-value attributes for the entire execution.
     pub attributes: HashMap<String, String>,
+    /// Registered observers that are notified for every span event.
+    pub observers: Vec<Arc<dyn SpanObserver>>,
 }
 
 impl PipelineSpanContext {
@@ -187,6 +289,24 @@ impl PipelineSpanContext {
             start_time: Instant::now(),
             layer_spans: Vec::new(),
             attributes: HashMap::new(),
+            observers: Vec::new(),
+        }
+    }
+
+    /// Register a [`SpanObserver`] that will be notified for all future span events.
+    ///
+    /// Multiple observers can be registered; they all receive every event.
+    pub fn add_observer(&mut self, obs: Arc<dyn SpanObserver>) {
+        self.observers.push(obs);
+    }
+
+    /// Notify all registered observers that the pipeline execution has completed.
+    ///
+    /// Call this once after all layer spans have been committed. Each observer's
+    /// [`SpanObserver::on_pipeline_complete`] is called with `self` as the context.
+    pub fn finalize(&self) {
+        for obs in &self.observers {
+            obs.on_pipeline_complete(self);
         }
     }
 
@@ -311,6 +431,20 @@ impl Default for PipelineSpanContext {
     }
 }
 
+impl std::fmt::Debug for PipelineSpanContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PipelineSpanContext")
+            .field("execution_id", &self.execution_id)
+            .field("elapsed_ms", &self.elapsed_ms())
+            .field("layer_spans", &self.layer_spans)
+            .field("attributes", &self.attributes)
+            .field("observer_count", &self.observers.len())
+            // `start_time: Instant` is intentionally omitted — it is not directly
+            // printable in a meaningful way; elapsed_ms captures the same intent.
+            .finish_non_exhaustive()
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // LayerSpan  (RAII guard)
 // ────────────────────────────────────────────────────────────────────────────
@@ -366,6 +500,9 @@ impl LayerSpan<'_> {
             "layer span succeeded"
         );
         self.context.layer_spans.push(self.record.clone());
+        for obs in &self.context.observers {
+            obs.on_layer_complete(&self.record);
+        }
     }
 
     /// Commit this span as **errored** and record it in the parent context.
@@ -384,6 +521,9 @@ impl LayerSpan<'_> {
             "layer span errored"
         );
         self.context.layer_spans.push(self.record.clone());
+        for obs in &self.context.observers {
+            obs.on_layer_complete(&self.record);
+        }
     }
 
     /// Commit this span as **skipped** and record it in the parent context.
@@ -400,6 +540,9 @@ impl LayerSpan<'_> {
             "layer span skipped"
         );
         self.context.layer_spans.push(self.record.clone());
+        for obs in &self.context.observers {
+            obs.on_layer_complete(&self.record);
+        }
     }
 }
 
@@ -422,6 +565,11 @@ impl Drop for LayerSpan<'_> {
                 u64::try_from(self.start.elapsed().as_millis()).unwrap_or(u64::MAX);
             // Push without panicking: Vec::push is infallible.
             self.context.layer_spans.push(self.record.clone());
+            // Notify observers — clone the Arc list to avoid borrowing issues.
+            let observers: Vec<Arc<dyn SpanObserver>> = self.context.observers.clone();
+            for obs in &observers {
+                obs.on_layer_complete(&self.record);
+            }
         }
     }
 }
@@ -730,14 +878,12 @@ mod tests {
             .layer_spans
             .iter()
             .find(|s| s.layer_name == "judge")
-            .map(|s| s.duration_ms)
-            .unwrap_or(0);
+            .map_or(0, |s| s.duration_ms);
         let echo_duration = report
             .layer_spans
             .iter()
             .find(|s| s.layer_name == "echo")
-            .map(|s| s.duration_ms)
-            .unwrap_or(0);
+            .map_or(0, |s| s.duration_ms);
 
         assert!(
             judge_duration >= echo_duration,
@@ -854,5 +1000,108 @@ mod tests {
         assert_eq!(SpanStatus::Error("y".into()).label(), "ERROR");
         assert_eq!(SpanStatus::Skipped.label(), "SKIPPED");
         assert_eq!(SpanStatus::InProgress.label(), "IN_PROGRESS");
+    }
+
+    // ── SpanObserver / MemoryObserver ─────────────────────────────────────
+
+    #[test]
+    fn test_memory_observer_collects_layer_records() {
+        let obs = Arc::new(MemoryObserver::new());
+        let mut ctx = PipelineSpanContext::new();
+        ctx.add_observer(obs.clone());
+
+        ctx.begin_layer("echo").success();
+        ctx.begin_layer("speculator").success();
+        ctx.finalize();
+
+        let records = obs.records();
+        assert_eq!(records.len(), 2, "observer should have 2 layer records");
+        assert_eq!(records[0].layer_name, "echo");
+        assert_eq!(records[1].layer_name, "speculator");
+
+        let snapshots = obs.pipeline_snapshots();
+        assert_eq!(
+            snapshots.len(),
+            1,
+            "observer should have exactly 1 pipeline snapshot after finalize"
+        );
+    }
+
+    #[test]
+    fn test_memory_observer_error_path() {
+        let obs = Arc::new(MemoryObserver::new());
+        let mut ctx = PipelineSpanContext::new();
+        ctx.add_observer(obs.clone());
+
+        ctx.begin_layer("judge").error("boom");
+
+        let records = obs.records();
+        assert_eq!(records.len(), 1, "observer should have 1 record");
+        assert!(records[0].status.is_error(), "record status must be Error");
+        if let SpanStatus::Error(ref msg) = records[0].status {
+            assert_eq!(msg, "boom", "error message must match");
+        }
+    }
+
+    #[test]
+    fn test_memory_observer_skip_path() {
+        let obs = Arc::new(MemoryObserver::new());
+        let mut ctx = PipelineSpanContext::new();
+        ctx.add_observer(obs.clone());
+
+        ctx.begin_layer("graph").skip();
+
+        let records = obs.records();
+        assert_eq!(records.len(), 1, "observer should have 1 record");
+        assert_eq!(
+            records[0].status,
+            SpanStatus::Skipped,
+            "record status must be Skipped"
+        );
+    }
+
+    #[test]
+    fn test_multiple_observers_all_notified() {
+        let obs1 = Arc::new(MemoryObserver::new());
+        let obs2 = Arc::new(MemoryObserver::new());
+        let mut ctx = PipelineSpanContext::new();
+        ctx.add_observer(obs1.clone());
+        ctx.add_observer(obs2.clone());
+
+        ctx.begin_layer("echo").success();
+
+        assert_eq!(
+            obs1.records().len(),
+            1,
+            "first observer must receive the record"
+        );
+        assert_eq!(
+            obs2.records().len(),
+            1,
+            "second observer must receive the record"
+        );
+        assert_eq!(obs1.records()[0].layer_name, "echo");
+        assert_eq!(obs2.records()[0].layer_name, "echo");
+    }
+
+    #[test]
+    fn test_finalize_calls_on_pipeline_complete() {
+        let obs = Arc::new(MemoryObserver::new());
+        let mut ctx = PipelineSpanContext::new();
+        ctx.add_observer(obs.clone());
+
+        ctx.begin_layer("echo").success();
+        ctx.finalize();
+
+        let snapshots = obs.pipeline_snapshots();
+        assert_eq!(
+            snapshots.len(),
+            1,
+            "finalize must produce exactly 1 pipeline snapshot"
+        );
+        assert_eq!(
+            snapshots[0].success_count, 1,
+            "snapshot must reflect 1 successful layer"
+        );
     }
 }

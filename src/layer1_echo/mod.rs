@@ -30,17 +30,48 @@ pub use similarity::{
     euclidean_to_similarity, normalize, top_k_similar,
 };
 pub use storage::InMemoryVectorStore;
-pub use traits::{Echo, EmbeddingProvider, IndexedDocument, SimilarityMetric, VectorStore};
+pub use traits::{
+    Echo, EmbeddingInput, EmbeddingProvider, IndexedDocument, MultiModalEmbeddingProvider,
+    SimilarityMetric, VectorStore,
+};
 
 #[cfg(feature = "speculator")]
 pub use embedding::CandleEmbeddingProvider;
+
+#[cfg(all(feature = "multimodal", not(target_arch = "wasm32")))]
+pub use embedding::{CandleClipProvider, ClipPreset};
 
 use async_trait::async_trait;
 
 use crate::error::EmbeddingError;
 use crate::types::{Document, DocumentId, SearchResult};
 
-/// The default Echo implementation combining an embedding provider and vector store.
+/// The default Echo (Layer 1) implementation, combining an embedding provider with a vector store.
+///
+/// `EchoLayer` converts query and document text to dense vectors via the `E` provider, then
+/// delegates similarity search to the `V` store. Both components are fully swappable: use
+/// [`MockEmbeddingProvider`] + [`InMemoryVectorStore`] for tests, or a Candle-backed provider
+/// + a `redb` store for production.
+///
+/// # Example
+///
+/// ```rust
+/// use oxirag::layer1_echo::{EchoLayer, InMemoryVectorStore, MockEmbeddingProvider};
+/// use oxirag::layer1_echo::Echo;
+/// use oxirag::types::Document;
+///
+/// # #[tokio::main]
+/// # async fn main() {
+/// let mut echo = EchoLayer::new(
+///     MockEmbeddingProvider::new(64),
+///     InMemoryVectorStore::new(64),
+/// );
+///
+/// echo.index(Document::new("The sky is blue.")).await.unwrap();
+/// let results = echo.search("sky colour", 5, None).await.unwrap();
+/// assert!(!results.is_empty());
+/// # }
+/// ```
 pub struct EchoLayer<E: EmbeddingProvider, V: VectorStore> {
     embedding_provider: E,
     vector_store: V,
@@ -138,8 +169,9 @@ impl<E: EmbeddingProvider, V: VectorStore> EchoLayer<E, V> {
     }
 }
 
-#[async_trait]
-impl<E: EmbeddingProvider, V: VectorStore> Echo for EchoLayer<E, V> {
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+impl<E: EmbeddingProvider + Send + Sync, V: VectorStore + Send + Sync> Echo for EchoLayer<E, V> {
     async fn index(&mut self, document: Document) -> Result<DocumentId, EmbeddingError> {
         let embedding = self.embedding_provider.embed(&document.content).await?;
         let id = document.id.clone();

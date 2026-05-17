@@ -126,8 +126,23 @@ pub mod simd_similarity;
 pub mod streaming;
 pub mod types;
 
+#[cfg(feature = "rest-server")]
+pub mod rest_server;
+
 #[cfg(feature = "wasm")]
 pub mod wasm;
+
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+pub mod wasm_worker;
+
+#[cfg(feature = "python")]
+pub mod python;
+
+// Gate nodejs out of test builds: napi symbols come from the Node.js runtime
+// (loaded as a .node cdylib), not from cargo test executables.
+// Node.js integration tests run via `npm test` / `napi test`.
+#[cfg(all(feature = "nodejs", not(test)))]
+pub mod nodejs;
 
 /// Convenient re-exports for common usage.
 pub mod prelude {
@@ -148,8 +163,9 @@ pub mod prelude {
         EmbeddingError, JudgeError, OxiRagError, PipelineError, SpeculatorError, VectorStoreError,
     };
     pub use crate::layer1_echo::{
-        Echo, EchoLayer, EmbeddingProvider, InMemoryVectorStore, IndexedDocument, MetadataFilter,
-        MockEmbeddingProvider, SimilarityMetric, VectorStore,
+        Echo, EchoLayer, EmbeddingInput, EmbeddingProvider, InMemoryVectorStore, IndexedDocument,
+        MetadataFilter, MockEmbeddingProvider, MultiModalEmbeddingProvider, SimilarityMetric,
+        VectorStore,
     };
     pub use crate::layer2_speculator::{RuleBasedSpeculator, Speculator, SpeculatorConfig};
     pub use crate::layer3_judge::{
@@ -192,6 +208,10 @@ pub mod prelude {
     pub use crate::layer1_echo::CandleEmbeddingProvider;
     #[cfg(feature = "speculator")]
     pub use crate::layer2_speculator::CandleSlmSpeculator;
+
+    // Multi-modal (CLIP) exports
+    #[cfg(all(feature = "multimodal", not(target_arch = "wasm32")))]
+    pub use crate::layer1_echo::{CandleClipProvider, ClipPreset};
     #[cfg(feature = "judge")]
     pub use crate::layer3_judge::OxizVerifier;
 
@@ -286,8 +306,16 @@ pub mod prelude {
 
     // Observability exports
     pub use crate::observability::{
-        LayerSpanRecord, PipelineSpanContext, SpanReport, SpanStatus, record_pipeline_event,
+        LayerSpanRecord, MemoryObserver, PipelineSpanContext, SpanObserver, SpanReport, SpanStatus,
+        record_pipeline_event,
     };
+
+    // WASM IndexedDB exports
+    #[cfg(all(target_arch = "wasm32", feature = "wasm-indexeddb"))]
+    pub use crate::layer1_echo::IndexedDbVectorStore;
+
+    #[cfg(all(target_arch = "wasm32", feature = "wasm-prefix-indexeddb"))]
+    pub use crate::prefix_cache::IndexedDbPrefixCache;
 
     // Quantization exports
     #[cfg(feature = "quantization")]
@@ -300,6 +328,15 @@ pub mod prelude {
 }
 
 pub use error::{OxiRagError, Result};
+
+#[cfg(feature = "otel")]
+pub use observability::otel::OtelSpanObserver;
+
+// Node.js napi-rs re-exports (not available in test builds — see nodejs module gate above)
+#[cfg(all(feature = "nodejs", not(test)))]
+pub use crate::nodejs::{
+    NapiDocument, NapiPipeline, NapiPipelineBuilder, NapiQuery, NapiSearchResult,
+};
 
 #[cfg(test)]
 mod tests {

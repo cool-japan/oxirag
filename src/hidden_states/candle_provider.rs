@@ -57,7 +57,7 @@ pub enum HiddenStatePooling {
 ///
 /// This is a pure, free function so it can be called and tested independently of any
 /// model-loading infrastructure. It is the kernel used by
-/// [`CandleHiddenStateProvider::pool_hidden_states`].
+/// `CandleHiddenStateProvider::pool_hidden_states`.
 ///
 /// # Parameters
 ///
@@ -798,8 +798,9 @@ mod pooling_tests {
     fn synthetic_data(seq_len: usize, hidden_dim: usize) -> Vec<f32> {
         let mut data = Vec::with_capacity(seq_len * hidden_dim);
         for t in 0..seq_len {
+            #[allow(clippy::cast_precision_loss)]
             let val = (t + 1) as f32;
-            data.extend(std::iter::repeat(val).take(hidden_dim));
+            data.extend(std::iter::repeat_n(val, hidden_dim));
         }
         data
     }
@@ -951,7 +952,7 @@ mod pooling_tests {
         }
     }
 
-    /// MeanPool on a single-token sequence equals that token's values.
+    /// `MeanPool` on a single-token sequence equals that token's values.
     #[test]
     fn test_mean_pool_single_token_equals_token_values() {
         // hidden_dim=4, seq_len=1
@@ -963,7 +964,7 @@ mod pooling_tests {
         );
     }
 
-    /// MaxPool on identical tokens returns the same values.
+    /// `MaxPool` on identical tokens returns the same values.
     #[test]
     fn test_max_pool_uniform_data_returns_same_value() {
         // 3 tokens, each [0.5, 0.5], hidden_dim=2
@@ -977,7 +978,7 @@ mod pooling_tests {
         }
     }
 
-    /// MaskMean with all padding IDs (zeros) falls back to averaging all tokens.
+    /// `MaskMean` with all padding IDs (zeros) falls back to averaging all tokens.
     #[test]
     fn test_mask_mean_all_padding_falls_back_to_all_tokens() {
         // All token_ids are 0 (padding) — the implementation must not produce NaN.
@@ -996,7 +997,7 @@ mod pooling_tests {
         }
     }
 
-    /// `CandleHiddenStateConfig::new` sets model_id and revision correctly.
+    /// [`CandleHiddenStateConfig::new`] sets `model_id` and `revision` correctly.
     #[test]
     fn test_config_new_sets_fields() {
         let config = CandleHiddenStateConfig::new("model/id", "v1.0");

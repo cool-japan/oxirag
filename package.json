@@ -1,0 +1,22 @@
+{
+  "name": "@cool-japan/oxirag",
+  "version": "0.6.0",
+  "description": "OxiRAG — four-layer RAG engine Node.js bindings",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "napi build --platform --release --features nodejs",
+    "build:debug": "napi build --platform --features nodejs",
+    "test": "node examples/nodejs/quickstart.js"
+  },
+  "napi": {
+    "name": "oxirag",
+    "triples": {
+      "defaults": true
+    }
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.0.0"
+  }
+}

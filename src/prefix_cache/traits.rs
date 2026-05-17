@@ -37,8 +37,9 @@ use crate::error::OxiRagError;
 ///     }
 /// }
 /// ```
-#[async_trait]
-pub trait PrefixCacheStore: Send + Sync {
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait PrefixCacheStore {
     /// Retrieve a cached entry by its fingerprint.
     ///
     /// Returns `Some(entry)` if found and not expired, `None` otherwise.
@@ -98,7 +99,8 @@ pub trait PrefixCacheStore: Send + Sync {
 }
 
 /// Extension trait for prefix cache operations with better ergonomics.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait PrefixCacheExt: PrefixCacheStore {
     /// Get or compute a cache entry.
     ///
@@ -113,8 +115,30 @@ pub trait PrefixCacheExt: PrefixCacheStore {
         F: FnOnce() -> Result<KVCacheEntry, OxiRagError> + Send;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 impl<T: PrefixCacheStore + Send> PrefixCacheExt for T {
+    async fn get_or_compute<F>(
+        &mut self,
+        fingerprint: &ContextFingerprint,
+        compute: F,
+    ) -> Result<KVCacheEntry, OxiRagError>
+    where
+        F: FnOnce() -> Result<KVCacheEntry, OxiRagError> + Send,
+    {
+        if let Some(entry) = self.get(fingerprint).await {
+            return Ok(entry);
+        }
+
+        let entry = compute()?;
+        self.put(entry.clone()).await?;
+        Ok(entry)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
+impl<T: PrefixCacheStore> PrefixCacheExt for T {
     async fn get_or_compute<F>(
         &mut self,
         fingerprint: &ContextFingerprint,

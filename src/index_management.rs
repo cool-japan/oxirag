@@ -526,7 +526,7 @@ impl<V: VectorStore> IndexManager<V> {
 }
 
 #[async_trait]
-impl<V: VectorStore + 'static> IndexManagement for IndexManager<V> {
+impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V> {
     async fn rebuild_index(&mut self) -> Result<IndexStats, OxiRagError> {
         let store = self.store.write().await;
         let count = store.count().await;

@@ -21,7 +21,7 @@ use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 
 use async_trait::async_trait;
-use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 
 use crate::error::GraphError;
 use crate::layer4_graph::traits::GraphStore;
@@ -615,7 +615,7 @@ impl GraphStore for RedbGraphStore {
     /// - `relationship_filter` — optional whitelist of allowed relationship types.
     /// - `direction` — traversal direction.
     ///
-    /// At most [`MAX_TRAVERSE_PATHS`] paths are returned, sorted by descending
+    /// At most `MAX_TRAVERSE_PATHS` paths are returned, sorted by descending
     /// total confidence.
     ///
     /// # Errors

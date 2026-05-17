@@ -24,7 +24,16 @@
 //! println!("Backend used: {:?}", engine.backend());
 //! ```
 
+mod generic;
+mod neon;
+mod x86;
+
 use std::fmt;
+
+// Pull scalar helpers into this scope so dispatch functions can call them.
+use generic::{
+    scalar_cosine_similarity, scalar_dot_product, scalar_euclidean_distance, scalar_l2_norm,
+};
 
 // ============================================================================
 // SIMD Backend Detection and Selection
@@ -86,617 +95,6 @@ pub fn detect_backend() -> SimdBackend {
 }
 
 // ============================================================================
-// Scalar Implementations (Fallback)
-// ============================================================================
-
-/// Scalar dot product computation.
-#[inline]
-fn scalar_dot_product(a: &[f32], b: &[f32]) -> f32 {
-    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
-}
-
-/// Scalar L2 norm computation.
-#[inline]
-fn scalar_l2_norm(v: &[f32]) -> f32 {
-    v.iter().map(|x| x * x).sum::<f32>().sqrt()
-}
-
-/// Scalar Euclidean distance computation.
-#[inline]
-fn scalar_euclidean_distance(a: &[f32], b: &[f32]) -> f32 {
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y).powi(2))
-        .sum::<f32>()
-        .sqrt()
-}
-
-/// Scalar cosine similarity computation.
-#[inline]
-fn scalar_cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    let dot = scalar_dot_product(a, b);
-    let norm_a = scalar_l2_norm(a);
-    let norm_b = scalar_l2_norm(b);
-
-    if norm_a == 0.0 || norm_b == 0.0 {
-        return 0.0;
-    }
-
-    dot / (norm_a * norm_b)
-}
-
-// ============================================================================
-// x86_64 AVX2 Implementations
-// ============================================================================
-
-#[cfg(target_arch = "x86_64")]
-mod avx2 {
-    #[cfg(target_arch = "x86_64")]
-    #[allow(clippy::wildcard_imports)]
-    use std::arch::x86_64::*;
-
-    /// AVX2 dot product for aligned chunks of 8 floats.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure AVX2 and FMA are available.
-    #[target_feature(enable = "avx2", enable = "fma")]
-    pub unsafe fn dot_product_avx2(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 8;
-            let remainder = len % 8;
-
-            let mut sum = _mm256_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-                sum = _mm256_fmadd_ps(va, vb, sum);
-            }
-
-            // Horizontal sum of 256-bit register
-            let high = _mm256_extractf128_ps(sum, 1);
-            let low = _mm256_castps256_ps128(sum);
-            let sum128 = _mm_add_ps(high, low);
-            let sum64 = _mm_add_ps(sum128, _mm_movehl_ps(sum128, sum128));
-            let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-            let mut result = _mm_cvtss_f32(sum32);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 8 + i;
-                result += a[idx] * b[idx];
-            }
-
-            result
-        }
-    }
-
-    /// AVX2 L2 norm computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure AVX2 and FMA are available.
-    #[target_feature(enable = "avx2", enable = "fma")]
-    pub unsafe fn l2_norm_avx2(v: &[f32]) -> f32 {
-        unsafe {
-            let len = v.len();
-            let chunks = len / 8;
-            let remainder = len % 8;
-
-            let mut sum = _mm256_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(v.as_ptr().add(offset));
-                sum = _mm256_fmadd_ps(va, va, sum);
-            }
-
-            // Horizontal sum
-            let high = _mm256_extractf128_ps(sum, 1);
-            let low = _mm256_castps256_ps128(sum);
-            let sum128 = _mm_add_ps(high, low);
-            let sum64 = _mm_add_ps(sum128, _mm_movehl_ps(sum128, sum128));
-            let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-            let mut result = _mm_cvtss_f32(sum32);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 8 + i;
-                result += v[idx] * v[idx];
-            }
-
-            result.sqrt()
-        }
-    }
-
-    /// AVX2 Euclidean distance computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure AVX2 and FMA are available.
-    #[target_feature(enable = "avx2", enable = "fma")]
-    pub unsafe fn euclidean_distance_avx2(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 8;
-            let remainder = len % 8;
-
-            let mut sum = _mm256_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-                let diff = _mm256_sub_ps(va, vb);
-                sum = _mm256_fmadd_ps(diff, diff, sum);
-            }
-
-            // Horizontal sum
-            let high = _mm256_extractf128_ps(sum, 1);
-            let low = _mm256_castps256_ps128(sum);
-            let sum128 = _mm_add_ps(high, low);
-            let sum64 = _mm_add_ps(sum128, _mm_movehl_ps(sum128, sum128));
-            let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-            let mut result = _mm_cvtss_f32(sum32);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 8 + i;
-                let diff = a[idx] - b[idx];
-                result += diff * diff;
-            }
-
-            result.sqrt()
-        }
-    }
-
-    /// AVX2 cosine similarity computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure AVX2 and FMA are available.
-    #[target_feature(enable = "avx2", enable = "fma")]
-    #[allow(clippy::similar_names)]
-    pub unsafe fn cosine_similarity_avx2(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 8;
-            let remainder = len % 8;
-
-            let mut dot_sum = _mm256_setzero_ps();
-            let mut norm_a_sum = _mm256_setzero_ps();
-            let mut norm_b_sum = _mm256_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-
-                dot_sum = _mm256_fmadd_ps(va, vb, dot_sum);
-                norm_a_sum = _mm256_fmadd_ps(va, va, norm_a_sum);
-                norm_b_sum = _mm256_fmadd_ps(vb, vb, norm_b_sum);
-            }
-
-            // Horizontal sums
-            let dot = horizontal_sum_avx2(dot_sum);
-            let norm_a_sq = horizontal_sum_avx2(norm_a_sum);
-            let norm_b_sq = horizontal_sum_avx2(norm_b_sum);
-
-            // Handle remainder
-            let mut dot_rem = 0.0f32;
-            let mut norm_a_rem = 0.0f32;
-            let mut norm_b_rem = 0.0f32;
-
-            for i in 0..remainder {
-                let idx = chunks * 8 + i;
-                dot_rem += a[idx] * b[idx];
-                norm_a_rem += a[idx] * a[idx];
-                norm_b_rem += b[idx] * b[idx];
-            }
-
-            let dot_total = dot + dot_rem;
-            let norm_a_total = (norm_a_sq + norm_a_rem).sqrt();
-            let norm_b_total = (norm_b_sq + norm_b_rem).sqrt();
-
-            if norm_a_total == 0.0 || norm_b_total == 0.0 {
-                return 0.0;
-            }
-
-            dot_total / (norm_a_total * norm_b_total)
-        }
-    }
-
-    /// Helper: horizontal sum of 256-bit register.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure AVX2 is available.
-    #[target_feature(enable = "avx2")]
-    #[inline]
-    #[allow(unused_unsafe)]
-    unsafe fn horizontal_sum_avx2(v: __m256) -> f32 {
-        // In Rust 2024+, target_feature functions may require explicit unsafe blocks
-        // Allow unused_unsafe to handle both old and new behavior
-        let high = _mm256_extractf128_ps(v, 1);
-        let low = _mm256_castps256_ps128(v);
-        let sum128 = _mm_add_ps(high, low);
-        let sum64 = _mm_add_ps(sum128, _mm_movehl_ps(sum128, sum128));
-        let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-        _mm_cvtss_f32(sum32)
-    }
-}
-
-// ============================================================================
-// x86/x86_64 SSE4.1 Implementations
-// ============================================================================
-
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-mod sse4 {
-    #[cfg(target_arch = "x86")]
-    #[allow(clippy::wildcard_imports)]
-    use std::arch::x86::*;
-    #[cfg(target_arch = "x86_64")]
-    #[allow(clippy::wildcard_imports)]
-    use std::arch::x86_64::*;
-
-    /// SSE4.1 dot product for aligned chunks of 4 floats.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure SSE4.1 is available.
-    #[target_feature(enable = "sse4.1")]
-    pub unsafe fn dot_product_sse4(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut sum = _mm_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = _mm_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm_loadu_ps(b.as_ptr().add(offset));
-                let prod = _mm_mul_ps(va, vb);
-                sum = _mm_add_ps(sum, prod);
-            }
-
-            // Horizontal sum
-            let sum64 = _mm_add_ps(sum, _mm_movehl_ps(sum, sum));
-            let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-            let mut result = _mm_cvtss_f32(sum32);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                result += a[idx] * b[idx];
-            }
-
-            result
-        }
-    }
-
-    /// SSE4.1 L2 norm computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure SSE4.1 is available.
-    #[target_feature(enable = "sse4.1")]
-    pub unsafe fn l2_norm_sse4(v: &[f32]) -> f32 {
-        unsafe {
-            let len = v.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut sum = _mm_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = _mm_loadu_ps(v.as_ptr().add(offset));
-                let sq = _mm_mul_ps(va, va);
-                sum = _mm_add_ps(sum, sq);
-            }
-
-            // Horizontal sum
-            let sum64 = _mm_add_ps(sum, _mm_movehl_ps(sum, sum));
-            let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-            let mut result = _mm_cvtss_f32(sum32);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                result += v[idx] * v[idx];
-            }
-
-            result.sqrt()
-        }
-    }
-
-    /// SSE4.1 Euclidean distance computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure SSE4.1 is available.
-    #[target_feature(enable = "sse4.1")]
-    pub unsafe fn euclidean_distance_sse4(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut sum = _mm_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = _mm_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm_loadu_ps(b.as_ptr().add(offset));
-                let diff = _mm_sub_ps(va, vb);
-                let sq = _mm_mul_ps(diff, diff);
-                sum = _mm_add_ps(sum, sq);
-            }
-
-            // Horizontal sum
-            let sum64 = _mm_add_ps(sum, _mm_movehl_ps(sum, sum));
-            let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-            let mut result = _mm_cvtss_f32(sum32);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                let diff = a[idx] - b[idx];
-                result += diff * diff;
-            }
-
-            result.sqrt()
-        }
-    }
-
-    /// SSE4.1 cosine similarity computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure SSE4.1 is available.
-    #[target_feature(enable = "sse4.1")]
-    #[allow(clippy::similar_names)]
-    pub unsafe fn cosine_similarity_sse4(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut dot_sum = _mm_setzero_ps();
-            let mut norm_a_sum = _mm_setzero_ps();
-            let mut norm_b_sum = _mm_setzero_ps();
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = _mm_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm_loadu_ps(b.as_ptr().add(offset));
-
-                dot_sum = _mm_add_ps(dot_sum, _mm_mul_ps(va, vb));
-                norm_a_sum = _mm_add_ps(norm_a_sum, _mm_mul_ps(va, va));
-                norm_b_sum = _mm_add_ps(norm_b_sum, _mm_mul_ps(vb, vb));
-            }
-
-            // Horizontal sums
-            let dot = horizontal_sum_sse4(dot_sum);
-            let norm_a_sq = horizontal_sum_sse4(norm_a_sum);
-            let norm_b_sq = horizontal_sum_sse4(norm_b_sum);
-
-            // Handle remainder
-            let mut dot_rem = 0.0f32;
-            let mut norm_a_rem = 0.0f32;
-            let mut norm_b_rem = 0.0f32;
-
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                dot_rem += a[idx] * b[idx];
-                norm_a_rem += a[idx] * a[idx];
-                norm_b_rem += b[idx] * b[idx];
-            }
-
-            let dot_total = dot + dot_rem;
-            let norm_a_total = (norm_a_sq + norm_a_rem).sqrt();
-            let norm_b_total = (norm_b_sq + norm_b_rem).sqrt();
-
-            if norm_a_total == 0.0 || norm_b_total == 0.0 {
-                return 0.0;
-            }
-
-            dot_total / (norm_a_total * norm_b_total)
-        }
-    }
-
-    /// Helper: horizontal sum of 128-bit register.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure SSE4.1 is available.
-    #[target_feature(enable = "sse4.1")]
-    #[inline]
-    #[allow(unused_unsafe)]
-    unsafe fn horizontal_sum_sse4(v: __m128) -> f32 {
-        // In Rust 2024+, target_feature functions may require explicit unsafe blocks
-        // Allow unused_unsafe to handle both old and new behavior
-        let sum64 = _mm_add_ps(v, _mm_movehl_ps(v, v));
-        let sum32 = _mm_add_ss(sum64, _mm_shuffle_ps(sum64, sum64, 1));
-        _mm_cvtss_f32(sum32)
-    }
-}
-
-// ============================================================================
-// aarch64 NEON Implementations
-// ============================================================================
-
-#[cfg(target_arch = "aarch64")]
-#[allow(clippy::wildcard_imports)]
-mod neon {
-    use std::arch::aarch64::*;
-
-    /// NEON dot product for aligned chunks of 4 floats.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure NEON is available (always true on aarch64).
-    #[inline]
-    pub unsafe fn dot_product_neon(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut sum = vdupq_n_f32(0.0);
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = vld1q_f32(a.as_ptr().add(offset));
-                let vb = vld1q_f32(b.as_ptr().add(offset));
-                sum = vfmaq_f32(sum, va, vb);
-            }
-
-            // Horizontal sum
-            let mut result = vaddvq_f32(sum);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                result += a[idx] * b[idx];
-            }
-
-            result
-        }
-    }
-
-    /// NEON L2 norm computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure NEON is available (always true on aarch64).
-    #[inline]
-    pub unsafe fn l2_norm_neon(v: &[f32]) -> f32 {
-        unsafe {
-            let len = v.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut sum = vdupq_n_f32(0.0);
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = vld1q_f32(v.as_ptr().add(offset));
-                sum = vfmaq_f32(sum, va, va);
-            }
-
-            // Horizontal sum
-            let mut result = vaddvq_f32(sum);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                result += v[idx] * v[idx];
-            }
-
-            result.sqrt()
-        }
-    }
-
-    /// NEON Euclidean distance computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure NEON is available (always true on aarch64).
-    #[inline]
-    pub unsafe fn euclidean_distance_neon(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut sum = vdupq_n_f32(0.0);
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = vld1q_f32(a.as_ptr().add(offset));
-                let vb = vld1q_f32(b.as_ptr().add(offset));
-                let diff = vsubq_f32(va, vb);
-                sum = vfmaq_f32(sum, diff, diff);
-            }
-
-            // Horizontal sum
-            let mut result = vaddvq_f32(sum);
-
-            // Handle remainder
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                let diff = a[idx] - b[idx];
-                result += diff * diff;
-            }
-
-            result.sqrt()
-        }
-    }
-
-    /// NEON cosine similarity computation.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure NEON is available (always true on aarch64).
-    #[inline]
-    #[allow(clippy::similar_names)]
-    pub unsafe fn cosine_similarity_neon(a: &[f32], b: &[f32]) -> f32 {
-        unsafe {
-            let len = a.len();
-            let chunks = len / 4;
-            let remainder = len % 4;
-
-            let mut dot_sum = vdupq_n_f32(0.0);
-            let mut norm_a_sum = vdupq_n_f32(0.0);
-            let mut norm_b_sum = vdupq_n_f32(0.0);
-
-            for i in 0..chunks {
-                let offset = i * 4;
-                let va = vld1q_f32(a.as_ptr().add(offset));
-                let vb = vld1q_f32(b.as_ptr().add(offset));
-
-                dot_sum = vfmaq_f32(dot_sum, va, vb);
-                norm_a_sum = vfmaq_f32(norm_a_sum, va, va);
-                norm_b_sum = vfmaq_f32(norm_b_sum, vb, vb);
-            }
-
-            // Horizontal sums
-            let dot = vaddvq_f32(dot_sum);
-            let norm_a_sq = vaddvq_f32(norm_a_sum);
-            let norm_b_sq = vaddvq_f32(norm_b_sum);
-
-            // Handle remainder
-            let mut dot_rem = 0.0f32;
-            let mut norm_a_rem = 0.0f32;
-            let mut norm_b_rem = 0.0f32;
-
-            for i in 0..remainder {
-                let idx = chunks * 4 + i;
-                dot_rem += a[idx] * b[idx];
-                norm_a_rem += a[idx] * a[idx];
-                norm_b_rem += b[idx] * b[idx];
-            }
-
-            let dot_total = dot + dot_rem;
-            let norm_a_total = (norm_a_sq + norm_a_rem).sqrt();
-            let norm_b_total = (norm_b_sq + norm_b_rem).sqrt();
-
-            if norm_a_total == 0.0 || norm_b_total == 0.0 {
-                return 0.0;
-            }
-
-            dot_total / (norm_a_total * norm_b_total)
-        }
-    }
-}
-
-// ============================================================================
 // Public SIMD Functions
 // ============================================================================
 
@@ -726,11 +124,11 @@ pub fn simd_dot_product(a: &[f32], b: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
             // SAFETY: We verified AVX2 and FMA are available
-            return unsafe { avx2::dot_product_avx2(a, b) };
+            return unsafe { x86::avx2::dot_product_avx2(a, b) };
         }
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::dot_product_sse4(a, b) };
+            return unsafe { x86::sse4::dot_product_sse4(a, b) };
         }
     }
 
@@ -738,14 +136,14 @@ pub fn simd_dot_product(a: &[f32], b: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::dot_product_sse4(a, b) };
+            return unsafe { x86::sse4::dot_product_sse4(a, b) };
         }
     }
 
     #[cfg(target_arch = "aarch64")]
     {
         // SAFETY: NEON is always available on aarch64
-        return unsafe { neon::dot_product_neon(a, b) };
+        return unsafe { neon::neon_impl::dot_product_neon(a, b) };
     }
 
     #[allow(unreachable_code)]
@@ -771,11 +169,11 @@ pub fn simd_l2_norm(v: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
             // SAFETY: We verified AVX2 and FMA are available
-            return unsafe { avx2::l2_norm_avx2(v) };
+            return unsafe { x86::avx2::l2_norm_avx2(v) };
         }
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::l2_norm_sse4(v) };
+            return unsafe { x86::sse4::l2_norm_sse4(v) };
         }
     }
 
@@ -783,14 +181,14 @@ pub fn simd_l2_norm(v: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::l2_norm_sse4(v) };
+            return unsafe { x86::sse4::l2_norm_sse4(v) };
         }
     }
 
     #[cfg(target_arch = "aarch64")]
     {
         // SAFETY: NEON is always available on aarch64
-        return unsafe { neon::l2_norm_neon(v) };
+        return unsafe { neon::neon_impl::l2_norm_neon(v) };
     }
 
     #[allow(unreachable_code)]
@@ -823,11 +221,11 @@ pub fn simd_euclidean_distance(a: &[f32], b: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
             // SAFETY: We verified AVX2 and FMA are available
-            return unsafe { avx2::euclidean_distance_avx2(a, b) };
+            return unsafe { x86::avx2::euclidean_distance_avx2(a, b) };
         }
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::euclidean_distance_sse4(a, b) };
+            return unsafe { x86::sse4::euclidean_distance_sse4(a, b) };
         }
     }
 
@@ -835,14 +233,14 @@ pub fn simd_euclidean_distance(a: &[f32], b: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::euclidean_distance_sse4(a, b) };
+            return unsafe { x86::sse4::euclidean_distance_sse4(a, b) };
         }
     }
 
     #[cfg(target_arch = "aarch64")]
     {
         // SAFETY: NEON is always available on aarch64
-        return unsafe { neon::euclidean_distance_neon(a, b) };
+        return unsafe { neon::neon_impl::euclidean_distance_neon(a, b) };
     }
 
     #[allow(unreachable_code)]
@@ -876,11 +274,11 @@ pub fn simd_cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
             // SAFETY: We verified AVX2 and FMA are available
-            return unsafe { avx2::cosine_similarity_avx2(a, b) };
+            return unsafe { x86::avx2::cosine_similarity_avx2(a, b) };
         }
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::cosine_similarity_sse4(a, b) };
+            return unsafe { x86::sse4::cosine_similarity_sse4(a, b) };
         }
     }
 
@@ -888,14 +286,14 @@ pub fn simd_cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     {
         if is_x86_feature_detected!("sse4.1") {
             // SAFETY: We verified SSE4.1 is available
-            return unsafe { sse4::cosine_similarity_sse4(a, b) };
+            return unsafe { x86::sse4::cosine_similarity_sse4(a, b) };
         }
     }
 
     #[cfg(target_arch = "aarch64")]
     {
         // SAFETY: NEON is always available on aarch64
-        return unsafe { neon::cosine_similarity_neon(a, b) };
+        return unsafe { neon::neon_impl::cosine_similarity_neon(a, b) };
     }
 
     #[allow(unreachable_code)]
@@ -985,7 +383,7 @@ impl SimilarityEngine {
             SimdBackend::Avx2 => {
                 if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
                     // SAFETY: We verified AVX2 and FMA are available
-                    return unsafe { avx2::dot_product_avx2(a, b) };
+                    return unsafe { x86::avx2::dot_product_avx2(a, b) };
                 }
                 scalar_dot_product(a, b)
             }
@@ -993,14 +391,14 @@ impl SimilarityEngine {
             SimdBackend::Sse4 => {
                 if is_x86_feature_detected!("sse4.1") {
                     // SAFETY: We verified SSE4.1 is available
-                    return unsafe { sse4::dot_product_sse4(a, b) };
+                    return unsafe { x86::sse4::dot_product_sse4(a, b) };
                 }
                 scalar_dot_product(a, b)
             }
             #[cfg(target_arch = "aarch64")]
             SimdBackend::Neon => {
                 // SAFETY: NEON is always available on aarch64
-                unsafe { neon::dot_product_neon(a, b) }
+                unsafe { neon::neon_impl::dot_product_neon(a, b) }
             }
             _ => scalar_dot_product(a, b),
         }
@@ -1018,7 +416,7 @@ impl SimilarityEngine {
             SimdBackend::Avx2 => {
                 if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
                     // SAFETY: We verified AVX2 and FMA are available
-                    return unsafe { avx2::l2_norm_avx2(v) };
+                    return unsafe { x86::avx2::l2_norm_avx2(v) };
                 }
                 scalar_l2_norm(v)
             }
@@ -1026,14 +424,14 @@ impl SimilarityEngine {
             SimdBackend::Sse4 => {
                 if is_x86_feature_detected!("sse4.1") {
                     // SAFETY: We verified SSE4.1 is available
-                    return unsafe { sse4::l2_norm_sse4(v) };
+                    return unsafe { x86::sse4::l2_norm_sse4(v) };
                 }
                 scalar_l2_norm(v)
             }
             #[cfg(target_arch = "aarch64")]
             SimdBackend::Neon => {
                 // SAFETY: NEON is always available on aarch64
-                unsafe { neon::l2_norm_neon(v) }
+                unsafe { neon::neon_impl::l2_norm_neon(v) }
             }
             _ => scalar_l2_norm(v),
         }
@@ -1057,7 +455,7 @@ impl SimilarityEngine {
             SimdBackend::Avx2 => {
                 if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
                     // SAFETY: We verified AVX2 and FMA are available
-                    return unsafe { avx2::euclidean_distance_avx2(a, b) };
+                    return unsafe { x86::avx2::euclidean_distance_avx2(a, b) };
                 }
                 scalar_euclidean_distance(a, b)
             }
@@ -1065,14 +463,14 @@ impl SimilarityEngine {
             SimdBackend::Sse4 => {
                 if is_x86_feature_detected!("sse4.1") {
                     // SAFETY: We verified SSE4.1 is available
-                    return unsafe { sse4::euclidean_distance_sse4(a, b) };
+                    return unsafe { x86::sse4::euclidean_distance_sse4(a, b) };
                 }
                 scalar_euclidean_distance(a, b)
             }
             #[cfg(target_arch = "aarch64")]
             SimdBackend::Neon => {
                 // SAFETY: NEON is always available on aarch64
-                unsafe { neon::euclidean_distance_neon(a, b) }
+                unsafe { neon::neon_impl::euclidean_distance_neon(a, b) }
             }
             _ => scalar_euclidean_distance(a, b),
         }
@@ -1096,7 +494,7 @@ impl SimilarityEngine {
             SimdBackend::Avx2 => {
                 if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
                     // SAFETY: We verified AVX2 and FMA are available
-                    return unsafe { avx2::cosine_similarity_avx2(a, b) };
+                    return unsafe { x86::avx2::cosine_similarity_avx2(a, b) };
                 }
                 scalar_cosine_similarity(a, b)
             }
@@ -1104,14 +502,14 @@ impl SimilarityEngine {
             SimdBackend::Sse4 => {
                 if is_x86_feature_detected!("sse4.1") {
                     // SAFETY: We verified SSE4.1 is available
-                    return unsafe { sse4::cosine_similarity_sse4(a, b) };
+                    return unsafe { x86::sse4::cosine_similarity_sse4(a, b) };
                 }
                 scalar_cosine_similarity(a, b)
             }
             #[cfg(target_arch = "aarch64")]
             SimdBackend::Neon => {
                 // SAFETY: NEON is always available on aarch64
-                unsafe { neon::cosine_similarity_neon(a, b) }
+                unsafe { neon::neon_impl::cosine_similarity_neon(a, b) }
             }
             _ => scalar_cosine_similarity(a, b),
         }
@@ -1159,6 +557,9 @@ impl SimilarityEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use generic::{
+        scalar_cosine_similarity, scalar_dot_product, scalar_euclidean_distance, scalar_l2_norm,
+    };
 
     const EPSILON: f32 = 1e-5;
 

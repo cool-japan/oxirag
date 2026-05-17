@@ -1,6 +1,7 @@
 //! Unified RAG pipeline combining all three layers.
 
 use async_trait::async_trait;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::config::RetryConfig;
@@ -8,6 +9,7 @@ use crate::error::{OxiRagError, PipelineError};
 use crate::layer1_echo::Echo;
 use crate::layer2_speculator::Speculator;
 use crate::layer3_judge::Judge;
+use crate::observability::{PipelineSpanContext, SpanObserver};
 use crate::retry::RetryPolicy;
 use crate::types::{
     Document, Draft, PipelineOutput, Query, SpeculationDecision, VerificationResult,
@@ -42,7 +44,24 @@ async fn sleep_duration(_duration: Duration) {
     std::hint::spin_loop();
 }
 
-/// Configuration for the unified pipeline.
+/// Configuration for the unified three-layer RAG pipeline.
+///
+/// Controls fast-path thresholds, parallelism, retry behaviour, and how many
+/// results the Echo layer retrieves before feeding them into the Speculator and
+/// Judge layers.
+///
+/// # Example
+///
+/// ```
+/// use oxirag::pipeline::PipelineConfig;
+///
+/// let config = PipelineConfig {
+///     fast_path_threshold: 0.98,
+///     enable_fast_path: true,
+///     max_search_results: 10,
+///     ..PipelineConfig::default()
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct PipelineConfig {
     /// Threshold for fast-path (skip speculation if Echo confidence is high).
@@ -76,9 +95,31 @@ impl Default for PipelineConfig {
 }
 
 /// The unified RAG pipeline trait.
+///
+/// Implementors drive a query through Echo → Speculator → Judge (and optionally
+/// Graph), returning a [`PipelineOutput`] that contains the final answer together
+/// with per-layer diagnostics.
 #[async_trait]
 pub trait RagPipeline: Send + Sync {
-    /// Process a query through the full pipeline.
+    /// Run a query through all active pipeline layers and return the result.
+    ///
+    /// The concrete execution order is Echo (Layer 1) → Speculator (Layer 2) →
+    /// Judge (Layer 3). A *fast-path* short-circuit skips Layers 2 and 3 when the
+    /// Echo top-1 score exceeds [`PipelineConfig::fast_path_threshold`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OxiRagError`] if any layer fails and the retry budget is exhausted.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use oxirag::prelude::*;
+    ///
+    /// let result = pipeline.process(Query::new("What is Rust?")).await?;
+    /// println!("Answer: {}", result.final_answer);
+    /// println!("Confidence: {:.2}", result.confidence);
+    /// ```
     async fn process(&self, query: Query) -> Result<PipelineOutput, OxiRagError>;
 
     /// Process multiple queries through the pipeline concurrently.
@@ -118,6 +159,8 @@ where
     judge: J,
     config: PipelineConfig,
     retry_policy: RetryPolicy,
+    /// Observers seeded into every [`PipelineSpanContext`] created during `process`.
+    observers: Vec<Arc<dyn SpanObserver>>,
 }
 
 impl<E, S, J> Pipeline<E, S, J>
@@ -140,6 +183,31 @@ where
             judge,
             config,
             retry_policy,
+            observers: Vec::new(),
+        }
+    }
+
+    /// Create a new pipeline seeded with span observers.
+    #[must_use]
+    pub fn new_with_observers(
+        echo: E,
+        speculator: S,
+        judge: J,
+        config: PipelineConfig,
+        observers: Vec<Arc<dyn SpanObserver>>,
+    ) -> Self {
+        let retry_policy = config
+            .retry_config
+            .as_ref()
+            .map_or_else(RetryPolicy::no_retry, |rc| RetryPolicy::new(rc.clone()));
+
+        Self {
+            echo,
+            speculator,
+            judge,
+            config,
+            retry_policy,
+            observers,
         }
     }
 
@@ -413,16 +481,37 @@ where
         let start = Instant::now();
         let layers_used = vec!["Echo".to_string()];
 
+        // Build a span context and seed it with all registered observers.
+        let mut span_ctx = PipelineSpanContext::new();
+        span_ctx.set_attribute("query", query.text.clone());
+        for obs in &self.observers {
+            span_ctx.add_observer(obs.clone());
+        }
+
         // Layer 1: Echo - Semantic Search (with retry)
-        let search_results = self
-            .retry_policy
-            .retry(|| async {
-                self.echo
-                    .search(&query.text, self.config.max_search_results, query.min_score)
-                    .await
-            })
-            .await
-            .map_err(OxiRagError::Embedding)?;
+        let search_results = {
+            let mut echo_span = span_ctx.begin_layer("echo");
+            let result = self
+                .retry_policy
+                .retry(|| async {
+                    self.echo
+                        .search(&query.text, self.config.max_search_results, query.min_score)
+                        .await
+                })
+                .await;
+            match result {
+                Ok(results) => {
+                    echo_span.set_item_count(results.len());
+                    echo_span.success();
+                    results
+                }
+                Err(e) => {
+                    echo_span.error(e.to_string());
+                    span_ctx.finalize();
+                    return Err(OxiRagError::Embedding(e));
+                }
+            }
+        };
 
         // Generate draft from search results
         let draft = self.generate_draft(&query, &search_results);
@@ -437,6 +526,9 @@ where
                 top_score,
                 self.config.fast_path_threshold
             );
+            span_ctx.begin_layer("speculator").skip();
+            span_ctx.begin_layer("judge").skip();
+            span_ctx.finalize();
 
             return Ok(PipelineOutput {
                 query,
@@ -454,14 +546,24 @@ where
         // Parallel or sequential execution of Speculator and Judge
         #[cfg(feature = "native")]
         if self.config.parallel_execution {
-            return self
+            // For parallel execution we finalize the context after the call returns.
+            let output = self
                 .process_parallel(query, search_results, draft, layers_used, start)
                 .await;
+            span_ctx.begin_layer("speculator").success();
+            span_ctx.begin_layer("judge").success();
+            span_ctx.finalize();
+            return output;
         }
 
         // Sequential execution (default)
-        self.process_sequential(query, search_results, draft, layers_used, start)
-            .await
+        let output = self
+            .process_sequential(query, search_results, draft, layers_used, start)
+            .await;
+        span_ctx.begin_layer("speculator").success();
+        span_ctx.begin_layer("judge").success();
+        span_ctx.finalize();
+        output
     }
 
     async fn index(&mut self, document: Document) -> Result<(), OxiRagError> {
@@ -565,12 +667,32 @@ where
     }
 }
 
-/// Builder for constructing a Pipeline.
+/// Fluent builder for constructing a type-safe [`Pipeline`].
+///
+/// Each of the three layers (Echo, Speculator, Judge) must be provided before
+/// calling [`build`]; omitting any layer causes [`build`] to return an error.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use oxirag::prelude::*;
+///
+/// let pipeline = PipelineBuilder::new()
+///     .with_echo(EchoLayer::new(MockEmbeddingProvider::new(384), InMemoryVectorStore::new(384)))
+///     .with_speculator(RuleBasedSpeculator::default())
+///     .with_judge(JudgeImpl::new(AdvancedClaimExtractor::new(), MockSmtVerifier::default(), JudgeConfig::default()))
+///     .with_config(PipelineConfig { enable_fast_path: false, ..Default::default() })
+///     .build()
+///     .expect("all layers configured");
+/// ```
+///
+/// [`build`]: PipelineBuilder::build
 pub struct PipelineBuilder<E, S, J> {
     echo: Option<E>,
     speculator: Option<S>,
     judge: Option<J>,
     config: PipelineConfig,
+    observers: Vec<Arc<dyn SpanObserver>>,
 }
 
 impl<E, S, J> Default for PipelineBuilder<E, S, J> {
@@ -580,6 +702,7 @@ impl<E, S, J> Default for PipelineBuilder<E, S, J> {
             speculator: None,
             judge: None,
             config: PipelineConfig::default(),
+            observers: Vec::new(),
         }
     }
 }
@@ -625,6 +748,15 @@ where
         self
     }
 
+    /// Register span observers that will be notified for every pipeline execution.
+    ///
+    /// Multiple calls append observers; they do not replace earlier ones.
+    #[must_use]
+    pub fn with_observers(mut self, observers: Vec<Arc<dyn SpanObserver>>) -> Self {
+        self.observers.extend(observers);
+        self
+    }
+
     /// Build the pipeline.
     ///
     /// # Errors
@@ -641,7 +773,13 @@ where
             .judge
             .ok_or_else(|| PipelineError::BuildError("Judge layer not configured".to_string()))?;
 
-        Ok(Pipeline::new(echo, speculator, judge, self.config))
+        Ok(Pipeline::new_with_observers(
+            echo,
+            speculator,
+            judge,
+            self.config,
+            self.observers,
+        ))
     }
 }
 

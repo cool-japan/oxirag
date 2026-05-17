@@ -10,7 +10,14 @@ use crate::layer1_echo::similarity::top_k_similar;
 use crate::layer1_echo::traits::{IndexedDocument, SimilarityMetric, VectorStore};
 use crate::types::{DocumentId, SearchResult};
 
-/// An in-memory vector store for development and testing.
+/// An in-memory vector store backed by a `HashMap`, suitable for development and testing.
+///
+/// All documents and embeddings are stored in memory with no persistence. The store
+/// supports optional capacity limits and pluggable [`SimilarityMetric`] (cosine, dot
+/// product, or Euclidean). Thread safety is provided by [`tokio::sync::RwLock`].
+///
+/// For persistent storage across restarts, use the `echo-redb` feature which provides
+/// a `redb`-backed implementation.
 pub struct InMemoryVectorStore {
     /// The stored documents and embeddings.
     documents: RwLock<HashMap<DocumentId, IndexedDocument>>,

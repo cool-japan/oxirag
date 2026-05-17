@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OxiRAG WASM Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        h1 { color: #0f172a; }
+        h2 { color: #334155; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea { min-height: 80px; resize: vertical; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        #status {
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .success { background: #dcfce7; color: #166534; }
+        .error   { background: #fee2e2; color: #991b1b; }
+        .info    { background: #dbeafe; color: #1d4ed8; }
+        pre {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        #doc-count { font-size: 13px; color: #64748b; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <h1>OxiRAG WASM Demo</h1>
+    <p>
+        In-browser semantic search powered by
+        <a href="https://github.com/cool-japan/oxirag" target="_blank">OxiRAG</a>.
+        Documents are stored in IndexedDB and persist across page reloads.
+    </p>
+
+    <!-- Status bar -->
+    <div id="status" class="info">Loading WASM module...</div>
+
+    <!-- Index section -->
+    <div class="card">
+        <h2>Index a document</h2>
+        <label for="content">Content</label>
+        <textarea id="content" placeholder="Paste or type the content you want to index..."></textarea>
+        <label for="doc-title" style="display:block; margin-top:8px;">Title (optional)</label>
+        <input type="text" id="doc-title" placeholder="Document title">
+        <br>
+        <button id="index-btn" disabled>Index</button>
+        <div id="doc-count">Indexed documents: 0</div>
+    </div>
+
+    <!-- Search section -->
+    <div class="card">
+        <h2>Search</h2>
+        <input type="text" id="query" placeholder="Enter a search query...">
+        <br>
+        <button id="search-btn" disabled>Search (top 5)</button>
+        <pre id="results" style="margin-top:12px; display:none;"></pre>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card">
+        <h2>Danger zone</h2>
+        <button id="clear-btn" disabled style="background:#ef4444;">Clear all documents</button>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>

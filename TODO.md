@@ -156,10 +156,18 @@ This project implements four innovative concepts:
 ### WASM
 
 - [ ] Test and optimize WASM bundle size
-- [ ] Add Web Worker support for background processing
-- [ ] Implement IndexedDB backend for persistent storage
-- [ ] Add streaming response support
-- [ ] Create React/Vue/Svelte component wrappers
+- [x] Add Web Worker support for background processing (v0.5.0)
+- [x] Implement IndexedDB backend for persistent storage (v0.5.0)
+- [x] Add streaming response support (v0.5.0 — ReadableStream via query_stream)
+- [x] Create React/Vue/Svelte component wrappers (v0.6.0 — npm/ TypeScript package)
+
+### OpenTelemetry (v0.4.0 ✅)
+
+- [x] **`SpanObserver` trait**: pluggable observer hook in `PipelineSpanContext`
+- [x] **`MemoryObserver`**: in-memory collector for tests and REST metrics endpoint
+- [x] **Pipeline instrumentation**: `PipelineBuilder::with_observers`, per-layer RAII spans
+- [x] **`OtelSpanObserver`**: stdout + OTLP/gRPC exporters (feature `otel`)
+- [x] **Example**: `examples/otel_tracing.rs` (stdout exporter, zero infrastructure)
 
 ### API Improvements
 
@@ -171,8 +179,9 @@ This project implements four innovative concepts:
 
 - [x] **Load Testing**: Utilities for concurrent operations testing (`load_testing.rs`)
 - [x] **Property-based testing**: 60+ proptest tests for vectors, cache, graphs, claims, normalization
-- [ ] Add integration tests with real models
-- [ ] Implement fuzzing for claim extraction
+- [ ] Add integration tests with real models (network-guarded tests exist; need live model run)
+- [x] **Cross-layer integration tests**: `tests/pipeline_e2e.rs`, `tests/persistence_redb.rs`, `tests/observability_e2e.rs` (v0.4.0)
+- [x] **Proptest fuzz harness**: `tests/fuzz_claim_extraction.rs`, `tests/fuzz_query_normalization.rs`, `tests/fuzz_fingerprint.rs` (v0.4.0)
 
 ---
 
@@ -180,19 +189,19 @@ This project implements four innovative concepts:
 
 ### Documentation
 
-- [ ] Add API documentation with examples
-- [ ] Create architecture decision records (ADRs)
-- [ ] Write layer-specific tutorials
-- [ ] Add troubleshooting guide
-- [ ] Create performance tuning guide
+- [x] Add API documentation with examples (v0.6.0 — docs/layers/ tutorials)
+- [x] Create architecture decision records (ADRs) (v0.6.0 — docs/adr/)
+- [x] Write layer-specific tutorials (v0.6.0 — docs/layers/)
+- [x] Add troubleshooting guide (v0.6.0 — docs/troubleshooting.md)
+- [x] Create performance tuning guide (v0.5.0 — docs/perf.md)
 
 ### Ecosystem
 
-- [ ] Create Python bindings with PyO3
-- [ ] Add Node.js bindings
-- [ ] Implement REST API server example
-- [ ] Create Docker image
-- [ ] Add OpenTelemetry integration
+- [x] Create Python bindings with PyO3 (v0.5.0)
+- [x] Add Node.js bindings (v0.6.0 — `src/nodejs/`, napi-rs 2.x, `package.json`, `tests/nodejs_smoke.rs`)
+- [x] **REST API server** (`src/rest_server.rs`, feature `rest-server`): `AppState`, `build_router`, `build_and_serve`, 5 routes, 19 tests (v0.4.0)
+- [x] Create Docker image (v0.5.0)
+- [x] **OpenTelemetry integration** (`src/observability/otel.rs`, feature `otel`): OTLP + stdout exporters (v0.4.0)
 
 ### Advanced Features
 
@@ -200,7 +209,7 @@ This project implements four innovative concepts:
 - [x] **Reranking**: Cross-encoder style reranking pipeline (`reranker.rs`)
 - [x] **Query Expansion**: Synonyms, stemming, PRF expansion (`query_expansion.rs`)
 - [x] **Relevance Feedback**: User feedback loop with Rocchio algorithm (`relevance_feedback.rs`)
-- [ ] Support multi-modal embeddings (text + image)
+- [x] **Multi-modal embeddings** (`src/layer1_echo/embedding/clip.rs`, feature `multimodal`): CLIP text+image embeddings via Candle, `EmbeddingInput<'a>` enum, `MultiModalEmbeddingProvider` trait, `CandleClipProvider` (v0.4.0)
 
 ---
 
@@ -396,15 +405,49 @@ This project implements four innovative concepts:
 | v0.1.1    | 100%            | 95%            | 100%         | 90%           |
 | **v0.2.0**| **100%** ✅     | **98%** ✅     | **100%** ✅  | **95%** ✅    |
 | **v0.3.0**| **100%** ✅     | **99%** ✅     | **100%** ✅  | **98%** ✅    |
+| **v0.4.0**| **100%** ✅     | **99%** ✅     | **100%** ✅  | **98%** ✅    |
 | v1.0.0    | 100%            | 100%           | 100%         | 100%          |
+
+### Codebase Statistics (v0.6.0)
+- **Source Files**: ~120 Rust files (+4 nodejs, +4 streaming sub-files, +4 query_expansion sub-files, +5 circuit_breaker sub-files, +6 connection_pool sub-files, +1 nodejs_smoke test)
+- **Total Lines**: ~81,000+ (Rust code)
+- **Tests**: 1,681 (all passing; +11 nodejs smoke, 8 skipped WASM/network)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New features**: `nodejs`
+- **New Ecosystem**:
+  - `src/nodejs/` (napi-rs 2.x bindings: `NapiPipeline`, `NapiPipelineBuilder`, `NapiDocument`, `NapiQuery`, `NapiSearchResult`)
+  - `build.rs` + `napi_stub.c` + `libnapi_stub.so` (napi linker bridge)
+  - `package.json` (@cool-japan/oxirag npm package)
+  - `npm/` TypeScript WASM wrapper (`@cool-japan/oxirag-wasm`)
+  - `docs/adr/` (5 Architecture Decision Records)
+  - `docs/layers/` (4 per-layer tutorials)
+  - `docs/troubleshooting.md` (~555 lines)
+- **File refactors**: streaming, query_expansion, circuit_breaker, connection_pool — all sub-files ≤ 554 lines
+
+### Codebase Statistics (v0.5.0)
+- **Source Files**: ~109 Rust files (+1: `src/bin/oxirag-server.rs`, +1 test: `tests/trait_bounds_native.rs`)
+- **Total Lines**: ~73,000+ (Rust code)
+- **Tests**: 1,658 + new trait-bound compile tests
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New Features (v0.5.0)**: `python` (PyO3 bindings), `wasm-indexeddb` (IndexedDB VectorStore), `wasm-prefix-indexeddb` (IndexedDB PrefixCache)
+- **New Files**: `src/bin/oxirag-server.rs`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docs/docker.md`, `tests/trait_bounds_native.rs`
+- **Trait Refactor**: `VectorStore`, `Echo`, `EmbeddingProvider`, `MultiModalEmbeddingProvider`, `PrefixCacheStore`, `PrefixCacheExt` now use cfg-gated `async_trait(?Send)` on wasm32
+
+### Codebase Statistics (v0.4.0)
+- **Source Files**: 102 Rust files (+3: `observability/otel.rs`, `layer1_echo/embedding/clip.rs`, `rest_server.rs`)
+- **Total Lines**: ~73,000 (Rust code)
+- **Tests**: 1,658 (+89 from v0.3.0: 5 observer, 7 OTel, 25+ CLIP/multimodal, 19 REST, 12 integration E2E, 21 proptest fuzz)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New Features (v0.4.0)**: `otel` (OpenTelemetry OTLP+stdout), `multimodal` (CLIP text+image), `rest-server` (axum HTTP API), SpanObserver/MemoryObserver, cross-layer integration test suite, proptest fuzz harness
+- **New Features (v0.3.0)**: RedbGraphStore (feature `graphrag-redb`), HiddenStatePooling + apply\_hidden\_state\_pooling, extract\_sentence\_embedding, PipelineSpanContext / LayerSpan / SpanReport observability module
+- **New Features (v0.2.0)**: RedbPrefixCache (feature `prefix-cache-redb`), RedbVectorStore (feature `echo-redb`), CandleHiddenStateProvider (features `hidden-states+speculator`), BGE/MPNet embedding presets
+- **Refactored (v0.2.0)**: `distillation/progressive.rs` (1741 lines) → `distillation/progressive/` (4 files, all under 700 lines)
+- **Performance**: 5.6x-9.0x faster similarity computations with SIMD (unchanged)
 
 ### Codebase Statistics (v0.3.0)
 - **Source Files**: 99 Rust files (+2 from v0.2.0: `layer4_graph/redb_store.rs`, `observability.rs`)
 - **Total Lines**: ~68,000 (Rust code)
 - **Tests**: 1,569 (+65 from v0.2.0: 12 RedbGraphStore, 12 observability, 8 prefix_cache proptest, 8 echo-redb proptest, 7 embedding preset, 9 hidden-state pooling, 9 more candle_provider)
-- **Clippy Warnings**: 0
-- **Rustdoc Warnings**: 0
-- **New Features (v0.3.0)**: RedbGraphStore (feature `graphrag-redb`), HiddenStatePooling + apply\_hidden\_state\_pooling, extract\_sentence\_embedding, PipelineSpanContext / LayerSpan / SpanReport observability module
-- **New Features (v0.2.0)**: RedbPrefixCache (feature `prefix-cache-redb`), RedbVectorStore (feature `echo-redb`), CandleHiddenStateProvider (features `hidden-states+speculator`), BGE/MPNet embedding presets
-- **Refactored (v0.2.0)**: `distillation/progressive.rs` (1741 lines) → `distillation/progressive/` (4 files, all under 700 lines)
-- **Performance**: 5.6x-9.0x faster similarity computations with SIMD (unchanged)

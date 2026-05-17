@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "oxirag"
+version = "0.5.0"
+description = "A four-layer RAG engine with SMT-based logic verification"
+license = "Apache-2.0"
+requires-python = ">=3.9"
+keywords = ["rag", "semantic-search", "smt", "verification"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+features = ["python"]
+module-name = "oxirag"
+python-source = "python"

@@ -218,8 +218,9 @@ impl<P: EmbeddingProvider> CachedEmbeddingProvider<P> {
     }
 }
 
-#[async_trait]
-impl<P: EmbeddingProvider> EmbeddingProvider for CachedEmbeddingProvider<P> {
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+impl<P: EmbeddingProvider + Send + Sync> EmbeddingProvider for CachedEmbeddingProvider<P> {
     async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError> {
         let text_hash = Self::hash_text(text);
 

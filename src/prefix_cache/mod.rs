@@ -144,6 +144,8 @@
 
 pub mod fingerprint;
 pub mod hierarchy;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-prefix-indexeddb"))]
+mod indexeddb_backend;
 pub mod invalidation;
 pub mod paging;
 pub mod persistent;
@@ -175,6 +177,9 @@ pub use types::{
 
 #[cfg(feature = "prefix-cache-redb")]
 pub use redb_backend::{PersistedKVEntry, RedbPrefixCache, RedbPrefixCacheConfig};
+
+#[cfg(all(target_arch = "wasm32", feature = "wasm-prefix-indexeddb"))]
+pub use indexeddb_backend::IndexedDbPrefixCache;
 
 #[cfg(test)]
 mod tests {

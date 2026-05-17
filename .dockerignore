@@ -1,0 +1,7 @@
+target/
+examples/wasm/
+python/
+tests/
+benches/
+*.md
+.git/

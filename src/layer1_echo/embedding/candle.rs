@@ -372,7 +372,13 @@ impl EmbeddingProvider for CandleEmbeddingProvider {
     }
 }
 
-/// A mock embedding provider for testing without ML dependencies.
+/// A mock embedding provider that generates deterministic pseudo-random vectors for testing.
+///
+/// No ML model is loaded. Each text is hashed to seed a simple numeric computation that
+/// produces a unit-normalised vector of the requested `dimension`. The same text always
+/// produces the same vector within one process, so tests are reproducible.
+///
+/// This provider is WASM-compatible and has no native dependencies.
 pub struct MockEmbeddingProvider {
     dimension: usize,
     model_id: String,
@@ -596,7 +602,7 @@ mod tests {
     // Additional edge-case and preset-coverage tests
     // -----------------------------------------------------------------------
 
-    /// All four presets must have a non-empty model_id and a non-zero max_length.
+    /// All four presets must have a non-empty `model_id` and a non-zero `max_length`.
     #[test]
     fn test_all_presets_have_valid_model_ids() {
         let presets = [
@@ -646,7 +652,7 @@ mod tests {
         );
     }
 
-    /// Default config must use "main" revision and have reasonable max_length.
+    /// Default config must use "main" revision and have reasonable `max_length`.
     #[test]
     fn test_default_config_revision_and_length() {
         let config = CandleEmbeddingConfig::default();
@@ -680,7 +686,7 @@ mod tests {
         }
     }
 
-    /// MPNet preset has a shorter max_length than the BGE presets.
+    /// `MPNet` preset has a shorter `max_length` than the BGE presets.
     #[test]
     fn test_mpnet_shorter_window_than_bge() {
         let mpnet = CandleEmbeddingConfig::all_mpnet_base_v2();
@@ -693,7 +699,7 @@ mod tests {
         );
     }
 
-    /// Mock provider: embed_batch returns one embedding per text.
+    /// Mock provider: `embed_batch` returns one embedding per text.
     #[tokio::test]
     async fn test_mock_provider_batch_count_matches_input() {
         let provider = MockEmbeddingProvider::new(16);
@@ -711,7 +717,7 @@ mod tests {
         }
     }
 
-    /// Mock provider model_id is preserved by `with_model_id`.
+    /// Mock provider `model_id` is preserved by `with_model_id`.
     #[test]
     fn test_mock_provider_with_model_id() {
         let provider = MockEmbeddingProvider::new(32).with_model_id("my-custom-model");

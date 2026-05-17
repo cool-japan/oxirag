@@ -1,0 +1,58 @@
+{
+  "name": "@cool-japan/oxirag-wasm",
+  "version": "0.6.0",
+  "description": "OxiRAG four-layer RAG engine — typed TypeScript/WASM package for browsers and edge runtimes",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build:wasm": "wasm-pack build --target web --release --features wasm,wasm-indexeddb ../../",
+    "build:ts": "tsc --project tsconfig.json",
+    "build": "npm run build:wasm && npm run build:ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "clean": "rimraf dist"
+  },
+  "files": [
+    "dist/**",
+    "pkg/**",
+    "worker.js",
+    "README.md"
+  ],
+  "keywords": [
+    "rag",
+    "retrieval-augmented-generation",
+    "wasm",
+    "webassembly",
+    "semantic-search",
+    "vector-search",
+    "rust",
+    "typescript",
+    "browser",
+    "edge"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cool-japan/oxirag"
+  },
+  "bugs": {
+    "url": "https://github.com/cool-japan/oxirag/issues"
+  },
+  "homepage": "https://github.com/cool-japan/oxirag#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {},
+  "sideEffects": false
+}

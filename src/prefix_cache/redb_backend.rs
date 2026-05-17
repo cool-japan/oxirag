@@ -53,7 +53,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 
 use super::traits::PrefixCacheStore;
@@ -1083,13 +1083,21 @@ mod tests {
 
         // Insert 3 entries with immediate TTL and 2 without.
         for i in 0_u64..3 {
-            let fp = ContextFingerprint::new(i, 100 + i as usize, format!("exp {i}"));
+            let fp = ContextFingerprint::new(
+                i,
+                100 + usize::try_from(i).expect("i fits usize"),
+                format!("exp {i}"),
+            );
             let entry = KVCacheEntry::new(format!("exp_{i}"), fp, vec![0.0; 4], 100)
                 .with_ttl(Duration::from_secs(0));
             cache.put(entry).await.expect("put should succeed");
         }
         for i in 10_u64..12 {
-            let fp = ContextFingerprint::new(i, 200 + i as usize, format!("live {i}"));
+            let fp = ContextFingerprint::new(
+                i,
+                200 + usize::try_from(i).expect("i fits usize"),
+                format!("live {i}"),
+            );
             let entry = KVCacheEntry::new(format!("live_{i}"), fp, vec![1.0; 4], 100);
             cache.put(entry).await.expect("put should succeed");
         }

@@ -420,7 +420,7 @@ impl<E: EmbeddingProvider> SemanticReranker<E> {
 }
 
 #[async_trait]
-impl<E: EmbeddingProvider> Reranker for SemanticReranker<E> {
+impl<E: EmbeddingProvider + Send + Sync> Reranker for SemanticReranker<E> {
     async fn rerank(
         &self,
         query: &Query,
@@ -546,7 +546,7 @@ impl<E: EmbeddingProvider> HybridReranker<E> {
 }
 
 #[async_trait]
-impl<E: EmbeddingProvider> Reranker for HybridReranker<E> {
+impl<E: EmbeddingProvider + Send + Sync> Reranker for HybridReranker<E> {
     async fn rerank(
         &self,
         query: &Query,

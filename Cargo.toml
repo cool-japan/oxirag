@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.3.0"
+version = "0.6.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -32,7 +32,19 @@ futures = { version = "0.3", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
-web-sys = { version = "0.3", optional = true, features = ["console"] }
+web-sys = { version = "0.3", optional = true, features = [
+    "console",
+    # IndexedDB
+    "IdbFactory", "IdbDatabase", "IdbObjectStore", "IdbTransaction",
+    "IdbRequest", "IdbOpenDbRequest", "IdbKeyRange",
+    "IdbCursor", "IdbCursorWithValue", "IdbVersionChangeEvent", "DomStringList",
+    "Window", "WorkerGlobalScope",
+    # Web Worker
+    "Worker", "WorkerOptions", "DedicatedWorkerGlobalScope",
+    "MessageEvent", "MessagePort",
+    # Streaming
+    "ReadableStream", "ReadableStreamDefaultController",
+] }
 getrandom = { version = "0.4", features = ["wasm_js"], optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
@@ -48,16 +60,43 @@ candle-transformers = { version = "0.10", optional = true }
 hf-hub = { version = "0.5", optional = true }
 tokenizers = { version = "0.23", optional = true }
 
+# Multi-modal (image + text) support
+image = { version = "0.25", optional = true }
+
 # Layer 3: Judge
 oxiz = { version = "0.2.1", optional = true }
 
 # Persistent storage backend (pure Rust, ACID embedded DB)
 redb = { version = "4", optional = true }
 
+# OpenTelemetry integration (optional, otel feature)
+opentelemetry = { version = "0.32", optional = true, features = ["trace"] }
+opentelemetry_sdk = { version = "0.32", optional = true, features = ["trace"] }
+opentelemetry-otlp = { version = "0.32", optional = true, features = ["trace", "grpc-tonic"] }
+opentelemetry-stdout = { version = "0.32", optional = true, features = ["trace"] }
+tonic = { version = "0.14", optional = true }
+
+# Python bindings (pyo3 feature)
+pyo3 = { version = "0.28", features = ["extension-module"], optional = true }
+pyo3-async-runtimes = { version = "0.28", features = ["tokio-runtime"], optional = true }
+
+# Node.js bindings (napi-rs)
+napi = { version = "2", features = ["napi4", "tokio_rt", "async"], optional = true }
+napi-derive = { version = "2", optional = true }
+
+# REST server dependencies
+axum = { version = "0.8", optional = true, features = ["json", "macros"] }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", optional = true, features = ["cors", "trace"] }
+tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter"] }
+
 # CUDA support - only available on x86_64 Linux and Windows (where CUDA toolkit exists)
 # cudarc is the underlying CUDA runtime - target-gated to prevent build failures on unsupported platforms
 [target.'cfg(all(target_arch = "x86_64", any(target_os = "linux", target_os = "windows")))'.dependencies]
 cudarc = { version = "0.19", optional = true, features = ["cuda-12000"] }
+
+[build-dependencies]
+napi-build = "2"
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -65,6 +104,7 @@ criterion = { version = "0.8", features = ["async_tokio"] }
 tempfile = "3.27"
 wasm-bindgen-test = "0.3"
 proptest = "1.11"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
 default = ["native", "echo"]
@@ -76,6 +116,7 @@ wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys", "web-sys", "getrandom"
 echo = []
 speculator = ["candle-core", "candle-nn", "candle-transformers", "hf-hub", "tokenizers"]
 judge = ["oxiz"]
+multimodal = ["speculator", "dep:image"]
 graphrag = []
 distillation = []
 prefix-cache = []
@@ -89,6 +130,18 @@ prefix-cache-redb = ["prefix-cache", "dep:redb"]
 echo-redb = ["echo", "dep:redb"]
 # Persistent redb backend for graph store (Layer 4 GraphRAG)
 graphrag-redb = ["graphrag", "dep:redb"]
+# OpenTelemetry integration (native only - requires async runtime)
+otel = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tonic", "native"]
+# REST server feature (native only)
+rest-server = ["dep:axum", "dep:tower", "dep:tower-http", "dep:tracing-subscriber", "native"]
+# Python bindings (requires pyo3 0.28 + maturin)
+python = ["dep:pyo3", "dep:pyo3-async-runtimes", "native", "echo"]
+# Node.js bindings (napi-rs 2.x, build via @napi-rs/cli)
+nodejs = ["dep:napi", "dep:napi-derive", "native", "echo"]
+# WASM IndexedDB backend for VectorStore
+wasm-indexeddb = ["wasm", "echo"]
+# WASM IndexedDB backend for PrefixCache
+wasm-prefix-indexeddb = ["wasm", "prefix-cache"]
 # All layers (native only due to speculator)
 full = ["native", "echo", "speculator", "judge", "graphrag", "prefix-cache", "distillation", "hidden-states", "quantization", "prefix-cache-redb", "echo-redb", "graphrag-redb"]
 # Hardware acceleration features (marker features - platform-conditional)
@@ -100,6 +153,9 @@ cuda = ["speculator", "dep:cudarc"]
 # This is a marker feature - actual Metal support requires macOS and appropriate GPU
 metal = ["speculator"]
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-bulk-memory"]
+
 [profile.release]
 lto = true
 opt-level = "z"
@@ -107,6 +163,17 @@ codegen-units = 1
 
 [profile.release.package."*"]
 opt-level = "z"
+
+[profile.release-wasm]
+inherits = "release"
+panic = "abort"
+strip = true
+opt-level = "z"
+
+[[bin]]
+name = "oxirag-server"
+path = "src/bin/oxirag-server.rs"
+required-features = ["rest-server"]
 
 [[bench]]
 name = "benchmarks"

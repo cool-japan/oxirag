@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  oxirag:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      OXIRAG_HOST: "0.0.0.0"
+      OXIRAG_PORT: "3000"
+      OXIRAG_DIMENSION: "128"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      RUST_LOG: "info"
+    depends_on:
+      - jaeger
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
