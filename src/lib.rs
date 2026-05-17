@@ -122,9 +122,18 @@ pub mod query_expansion;
 pub mod relevance_feedback;
 pub mod reranker;
 pub mod retry;
+#[cfg(feature = "chunking")]
+pub mod chunking;
+#[cfg(feature = "semantic-cache")]
+pub mod semantic_cache;
+#[cfg(feature = "advanced-retrieval")]
+pub mod advanced_retrieval;
 pub mod simd_similarity;
 pub mod streaming;
 pub mod types;
+
+#[cfg(feature = "rag-eval")]
+pub mod evaluation;
 
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
@@ -272,6 +281,13 @@ pub mod prelude {
         MockQueryExecutor, MockQueryGenerator, QueryExecutor, QueryGenerator, RequestResult,
     };
 
+    // Chunking exports
+    #[cfg(feature = "chunking")]
+    pub use crate::chunking::{
+        Chunk, ChunkConfig, ChunkStrategy, DocumentChunker, FixedSizeChunker, MarkdownChunker,
+        RecursiveChunker, SentenceChunker,
+    };
+
     // Reranker exports
     pub use crate::reranker::{
         CrossEncoderReranker, FusionStrategy, HybridReranker, KeywordReranker,
@@ -324,6 +340,14 @@ pub mod prelude {
         QuantizationConfig, QuantizationType, QuantizedDocument, QuantizedTensor,
         QuantizedVectorStore, Quantizer, compute_quantization_error, compute_snr_db,
         hamming_distance, int4_dot_product, int8_dot_product,
+    };
+
+    // RAG evaluation framework exports
+    #[cfg(feature = "rag-eval")]
+    pub use crate::evaluation::{
+        AggregateStats, AnswerRelevanceScorer, ContextPrecisionScorer, ContextRecallScorer,
+        DatasetStats, EvalError, EvaluationDataset, EvaluationMetric, EvaluationResult,
+        EvaluationSample, FaithfulnessScorer, OverallScorer, RagEvaluator,
     };
 }
 

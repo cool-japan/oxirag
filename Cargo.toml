@@ -152,6 +152,14 @@ cuda = ["speculator", "dep:cudarc"]
 # Metal: Available on macOS (Apple Silicon/AMD GPU)
 # This is a marker feature - actual Metal support requires macOS and appropriate GPU
 metal = ["speculator"]
+# Document chunking strategies (always available — pure Rust, no ML deps)
+chunking = []
+# Semantic cache for query-level memoization (no extra deps)
+semantic-cache = []
+# Advanced retrieval: RAG-Fusion, HyDE, MMR (no extra deps)
+advanced-retrieval = []
+# RAG evaluation framework — RAGAS-style lexical metrics
+rag-eval = []
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]
