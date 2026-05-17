@@ -96,7 +96,8 @@ impl RedbVectorStore {
     /// Returns [`VectorStoreError::StorageError`] when the database cannot be
     /// opened or the initial table inspection fails.
     pub fn new(path: impl AsRef<Path>, dimension: usize) -> Result<Self, VectorStoreError> {
-        let db = Database::create(path).map_err(|e| VectorStoreError::StorageError(e.to_string()))?;
+        let db =
+            Database::create(path).map_err(|e| VectorStoreError::StorageError(e.to_string()))?;
 
         // Ensure the table exists (creates it on first open).
         {
@@ -175,14 +176,12 @@ impl RedbVectorStore {
     /// Returns a [`VectorStoreError::StorageError`] when the timestamps cannot
     /// be parsed (should never happen for data we wrote ourselves).
     fn from_persisted(p: PersistedDocument) -> Result<IndexedDocument, VectorStoreError> {
-        let created_at = p
-            .created_at_rfc3339
-            .parse::<DateTime<Utc>>()
-            .map_err(|e| VectorStoreError::StorageError(format!("bad created_at timestamp: {e}")))?;
-        let updated_at = p
-            .updated_at_rfc3339
-            .parse::<DateTime<Utc>>()
-            .map_err(|e| VectorStoreError::StorageError(format!("bad updated_at timestamp: {e}")))?;
+        let created_at = p.created_at_rfc3339.parse::<DateTime<Utc>>().map_err(|e| {
+            VectorStoreError::StorageError(format!("bad created_at timestamp: {e}"))
+        })?;
+        let updated_at = p.updated_at_rfc3339.parse::<DateTime<Utc>>().map_err(|e| {
+            VectorStoreError::StorageError(format!("bad updated_at timestamp: {e}"))
+        })?;
 
         let doc = Document {
             id: DocumentId::from_string(p.document_id),
@@ -220,8 +219,7 @@ impl RedbVectorStore {
             .iter()
             .map_err(|e| VectorStoreError::StorageError(e.to_string()))?
         {
-            let (_key, value) =
-                entry.map_err(|e| VectorStoreError::StorageError(e.to_string()))?;
+            let (_key, value) = entry.map_err(|e| VectorStoreError::StorageError(e.to_string()))?;
             let persisted: PersistedDocument = serde_json::from_slice(value.value())
                 .map_err(|e| VectorStoreError::StorageError(e.to_string()))?;
             docs.push(Self::from_persisted(persisted)?);
@@ -488,12 +486,15 @@ impl VectorStore for RedbVectorStore {
         }
 
         let embeddings: Vec<Vec<f32>> = all_docs.iter().map(|d| d.embedding.clone()).collect();
-        let top_indices = top_k_similar(query_embedding, &embeddings, top_k, self.metric, min_score);
+        let top_indices =
+            top_k_similar(query_embedding, &embeddings, top_k, self.metric, min_score);
 
         let results = top_indices
             .into_iter()
             .enumerate()
-            .map(|(rank, (idx, score))| SearchResult::new(all_docs[idx].document.clone(), score, rank))
+            .map(|(rank, (idx, score))| {
+                SearchResult::new(all_docs[idx].document.clone(), score, rank)
+            })
             .collect();
 
         Ok(results)
@@ -542,12 +543,15 @@ impl VectorStore for RedbVectorStore {
         }
 
         let embeddings: Vec<Vec<f32>> = filtered.iter().map(|d| d.embedding.clone()).collect();
-        let top_indices = top_k_similar(query_embedding, &embeddings, top_k, self.metric, min_score);
+        let top_indices =
+            top_k_similar(query_embedding, &embeddings, top_k, self.metric, min_score);
 
         let results = top_indices
             .into_iter()
             .enumerate()
-            .map(|(rank, (idx, score))| SearchResult::new(filtered[idx].document.clone(), score, rank))
+            .map(|(rank, (idx, score))| {
+                SearchResult::new(filtered[idx].document.clone(), score, rank)
+            })
             .collect();
 
         Ok(results)
@@ -680,7 +684,13 @@ mod tests {
         let result = store.insert(doc).await;
 
         assert!(
-            matches!(result, Err(VectorStoreError::DimensionMismatch { expected: 3, actual: 2 })),
+            matches!(
+                result,
+                Err(VectorStoreError::DimensionMismatch {
+                    expected: 3,
+                    actual: 2
+                })
+            ),
             "expected DimensionMismatch"
         );
     }
@@ -693,7 +703,10 @@ mod tests {
         let doc1 = make_doc("first", vec![1.0, 0.0]);
         let id = doc1.document.id.clone();
 
-        store.insert(doc1).await.expect("first insert should succeed");
+        store
+            .insert(doc1)
+            .await
+            .expect("first insert should succeed");
 
         // Attempt to insert a different document under the same ID.
         let mut doc2 = make_doc("second", vec![0.0, 1.0]);
@@ -722,7 +735,10 @@ mod tests {
         assert_eq!(store.count().await, 0);
 
         // Deleting a non-existent document should return false.
-        let deleted_again = store.delete(&id).await.expect("second delete should not error");
+        let deleted_again = store
+            .delete(&id)
+            .await
+            .expect("second delete should not error");
         assert!(!deleted_again, "second delete should return false");
     }
 
@@ -793,7 +809,11 @@ mod tests {
             .await
             .expect("upsert should succeed");
         assert!(!was_insert, "upsert of existing doc should return false");
-        assert_eq!(store.count().await, 1, "count should not increase on update");
+        assert_eq!(
+            store.count().await,
+            1,
+            "count should not increase on update"
+        );
 
         let retrieved = store
             .get(&id)
@@ -916,8 +936,7 @@ mod tests {
 
         let doc_id = {
             // Scope: create store, insert, and drop it.
-            let mut store = RedbVectorStore::new(&db_path, 3)
-                .expect("first open should succeed");
+            let mut store = RedbVectorStore::new(&db_path, 3).expect("first open should succeed");
             let doc = make_doc("persisted content", vec![0.5, 0.5, 0.0]);
             let id = doc.document.id.clone();
             store.insert(doc).await.expect("insert should succeed");
@@ -946,11 +965,7 @@ mod tests {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::pedantic,
-)]
+#[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::pedantic)]
 mod prop_tests {
     use proptest::prelude::*;
     use tempfile::TempDir;

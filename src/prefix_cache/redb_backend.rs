@@ -374,8 +374,8 @@ impl RedbPrefixCache {
             .map_err(|e| OxiRagError::Config(format!("redb iter failed: {e}")))?;
 
         for result in iter {
-            let (_key, value) = result
-                .map_err(|e| OxiRagError::Config(format!("redb iter item failed: {e}")))?;
+            let (_key, value) =
+                result.map_err(|e| OxiRagError::Config(format!("redb iter item failed: {e}")))?;
             if let Ok(entry) = Self::decode_entry_static(value.value())
                 && !entry.is_expired()
             {
@@ -418,8 +418,8 @@ impl RedbPrefixCache {
         let mut oldest_ts = u64::MAX;
 
         for result in iter {
-            let (key, value) = result
-                .map_err(|e| OxiRagError::Config(format!("redb iter item failed: {e}")))?;
+            let (key, value) =
+                result.map_err(|e| OxiRagError::Config(format!("redb iter item failed: {e}")))?;
             if let Ok(entry) = Self::decode_entry_static(value.value())
                 && entry.created_at_secs < oldest_ts
             {
@@ -667,8 +667,7 @@ impl PrefixCacheStore for RedbPrefixCache {
         let Ok(Some(guard)) = table.get(raw_key.as_str()) else {
             return false;
         };
-        Self::decode_entry_static(guard.value())
-            .is_ok_and(|e| !e.is_expired())
+        Self::decode_entry_static(guard.value()).is_ok_and(|e| !e.is_expired())
     }
 
     /// Delete all entries from the cache and reset statistics.
@@ -841,17 +840,13 @@ impl PrefixCacheStore for RedbPrefixCache {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::float_cmp
-)]
+#[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::float_cmp)]
 mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::prefix_cache::types::{ContextFingerprint, KVCacheEntry, PrefixCacheConfig};
     use crate::prefix_cache::traits::PrefixCacheStore;
+    use crate::prefix_cache::types::{ContextFingerprint, KVCacheEntry, PrefixCacheConfig};
 
     /// Construct a test entry with a given string id, hash, and kv data size.
     fn make_entry(id: &str, hash: u64, prefix_len: usize, kv_size: usize) -> KVCacheEntry {
@@ -939,7 +934,10 @@ mod tests {
         // Second pass: remove via the raw composite table key.
         let entry2 = make_entry("e2b", 222, 100, 8);
         cache.put(entry2).await.expect("second put should succeed");
-        assert!(cache.contains(&fp).await, "entry must exist for second remove");
+        assert!(
+            cache.contains(&fp).await,
+            "entry must exist for second remove"
+        );
 
         let raw_key = format!("{}:{}", 222_u64, 100_usize);
         let removed2 = cache.remove(&raw_key).await;
@@ -1215,7 +1213,7 @@ mod tests {
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
     clippy::float_cmp,
-    clippy::pedantic,
+    clippy::pedantic
 )]
 mod prop_tests {
     use std::time::Duration;
@@ -1232,9 +1230,8 @@ mod prop_tests {
 
     /// Strategy: generate an arbitrary [`ContextFingerprint`].
     fn arb_fingerprint() -> impl Strategy<Value = ContextFingerprint> {
-        (any::<u64>(), 1usize..1000usize, "[a-z]{1,20}").prop_map(
-            |(hash, len, summary)| ContextFingerprint::new(hash, len, summary),
-        )
+        (any::<u64>(), 1usize..1000usize, "[a-z]{1,20}")
+            .prop_map(|(hash, len, summary)| ContextFingerprint::new(hash, len, summary))
     }
 
     /// Strategy: generate arbitrary KV data (1..=128 f32 values in [-1, 1)).

@@ -163,13 +163,11 @@ impl CandleDevice {
         match self {
             CandleDevice::Cpu => Ok(CandleCoreDevice::Cpu),
             #[cfg(feature = "cuda")]
-            CandleDevice::Cuda(ordinal) => {
-                CandleCoreDevice::new_cuda(ordinal).map_err(|e| {
-                    HiddenStateError::ProviderError(format!(
-                        "Failed to open CUDA device {ordinal}: {e}"
-                    ))
-                })
-            }
+            CandleDevice::Cuda(ordinal) => CandleCoreDevice::new_cuda(ordinal).map_err(|e| {
+                HiddenStateError::ProviderError(format!(
+                    "Failed to open CUDA device {ordinal}: {e}"
+                ))
+            }),
             #[cfg(feature = "metal")]
             CandleDevice::Metal => CandleCoreDevice::new_metal(0).map_err(|e| {
                 HiddenStateError::ProviderError(format!("Failed to open Metal device: {e}"))
@@ -360,22 +358,16 @@ impl CandleHiddenStateProvider {
             // SAFETY: mmap is safe here because the file is a read-only
             // safetensors blob whose lifetime is tied to the VarBuilder.
             unsafe {
-                VarBuilder::from_mmaped_safetensors(
-                    &[weights_path],
-                    CandleDType::F32,
-                    &device,
-                )
-                .map_err(|e| {
-                    HiddenStateError::ProviderError(format!(
-                        "Failed to mmap safetensors weights: {e}"
-                    ))
-                })?
+                VarBuilder::from_mmaped_safetensors(&[weights_path], CandleDType::F32, &device)
+                    .map_err(|e| {
+                        HiddenStateError::ProviderError(format!(
+                            "Failed to mmap safetensors weights: {e}"
+                        ))
+                    })?
             }
         } else {
             VarBuilder::from_pth(weights_path, CandleDType::F32, &device).map_err(|e| {
-                HiddenStateError::ProviderError(format!(
-                    "Failed to load PyTorch weights: {e}"
-                ))
+                HiddenStateError::ProviderError(format!("Failed to load PyTorch weights: {e}"))
             })?
         };
 
@@ -409,9 +401,7 @@ impl CandleHiddenStateProvider {
         revision: &str,
         device: CandleDevice,
     ) -> Result<Self, HiddenStateError> {
-        Self::new(
-            CandleHiddenStateConfig::new(model_id, revision).with_device(device),
-        )
+        Self::new(CandleHiddenStateConfig::new(model_id, revision).with_device(device))
     }
 
     // ── Internal helpers ────────────────────────────────────────────────────
@@ -429,12 +419,7 @@ impl CandleHiddenStateProvider {
             .encode(text, true)
             .map_err(|e| HiddenStateError::ProviderError(format!("Tokenisation failed: {e}")))?;
 
-        let ids: Vec<u32> = encoding
-            .get_ids()
-            .iter()
-            .copied()
-            .take(max_len)
-            .collect();
+        let ids: Vec<u32> = encoding.get_ids().iter().copied().take(max_len).collect();
 
         let seq_len = ids.len();
         if seq_len == 0 {
@@ -447,10 +432,9 @@ impl CandleHiddenStateProvider {
         let position_ids: Vec<u32> = (0u32..u32::try_from(seq_len).unwrap_or(u32::MAX)).collect();
 
         // Build [1, seq_len] tensors.
-        let input_ids =
-            Tensor::from_vec(ids, (1, seq_len), &self.device).map_err(|e| {
-                HiddenStateError::ProviderError(format!("Failed to build input_ids tensor: {e}"))
-            })?;
+        let input_ids = Tensor::from_vec(ids, (1, seq_len), &self.device).map_err(|e| {
+            HiddenStateError::ProviderError(format!("Failed to build input_ids tensor: {e}"))
+        })?;
 
         let token_type_ids =
             Tensor::from_vec(type_ids, (1, seq_len), &self.device).map_err(|e| {
@@ -459,11 +443,9 @@ impl CandleHiddenStateProvider {
                 ))
             })?;
 
-        let position_ids_tensor =
-            Tensor::from_vec(position_ids, (1, seq_len), &self.device).map_err(|e| {
-                HiddenStateError::ProviderError(format!(
-                    "Failed to build position_ids tensor: {e}"
-                ))
+        let position_ids_tensor = Tensor::from_vec(position_ids, (1, seq_len), &self.device)
+            .map_err(|e| {
+                HiddenStateError::ProviderError(format!("Failed to build position_ids tensor: {e}"))
             })?;
 
         Ok((input_ids, token_type_ids, position_ids_tensor, seq_len))
@@ -487,13 +469,9 @@ impl CandleHiddenStateProvider {
         // Ensure we work in f32 and flatten to a contiguous Vec.
         let data = hidden_states
             .to_dtype(CandleDType::F32)
-            .map_err(|e| {
-                HiddenStateError::ProviderError(format!("Dtype conversion failed: {e}"))
-            })?
+            .map_err(|e| HiddenStateError::ProviderError(format!("Dtype conversion failed: {e}")))?
             .flatten_all()
-            .map_err(|e| {
-                HiddenStateError::ProviderError(format!("Tensor flattening failed: {e}"))
-            })?
+            .map_err(|e| HiddenStateError::ProviderError(format!("Tensor flattening failed: {e}")))?
             .to_vec1::<f32>()
             .map_err(|e| {
                 HiddenStateError::ProviderError(format!(
@@ -525,15 +503,12 @@ impl CandleHiddenStateProvider {
 
         let shape = TensorShape::new(vec![1, seq_len, self.hidden_dim]);
         let hidden_tensor = HiddenStateTensor::from_vec(data, shape).map_err(|e| {
-            HiddenStateError::ProviderError(format!(
-                "Failed to construct hidden state tensor: {e}"
-            ))
+            HiddenStateError::ProviderError(format!("Failed to construct hidden state tensor: {e}"))
         })?;
 
         let layer = LayerHiddenState::new(0, hidden_tensor);
 
-        let mut states =
-            ModelHiddenStates::new(&self.candle_config.model_id, 1, self.hidden_dim);
+        let mut states = ModelHiddenStates::new(&self.candle_config.model_id, 1, self.hidden_dim);
         states.sequence_length = seq_len;
         states.add_layer(layer);
 
@@ -573,10 +548,7 @@ impl CandleHiddenStateProvider {
     /// Returns [`HiddenStateError::ProviderError`] if tokenisation or model inference fails.
     ///
     /// [`extract_hidden_states`]: CandleHiddenStateProvider::extract_hidden_states
-    pub fn extract_sentence_embedding(
-        &self,
-        text: &str,
-    ) -> Result<Vec<f32>, HiddenStateError> {
+    pub fn extract_sentence_embedding(&self, text: &str) -> Result<Vec<f32>, HiddenStateError> {
         let max_len = self.candle_config.max_sequence_length;
 
         // Tokenise, obtaining the raw token IDs alongside the tensors.
@@ -585,12 +557,7 @@ impl CandleHiddenStateProvider {
             .encode(text, true)
             .map_err(|e| HiddenStateError::ProviderError(format!("Tokenisation failed: {e}")))?;
 
-        let raw_ids: Vec<u32> = encoding
-            .get_ids()
-            .iter()
-            .copied()
-            .take(max_len)
-            .collect();
+        let raw_ids: Vec<u32> = encoding.get_ids().iter().copied().take(max_len).collect();
 
         let seq_len = raw_ids.len();
         if seq_len == 0 {
@@ -615,15 +582,12 @@ impl CandleHiddenStateProvider {
                 ))
             })?;
 
-        let position_ids_tensor =
-            Tensor::from_vec(position_ids_raw, (1, seq_len), &self.device).map_err(|e| {
-                HiddenStateError::ProviderError(format!(
-                    "Failed to build position_ids tensor: {e}"
-                ))
+        let position_ids_tensor = Tensor::from_vec(position_ids_raw, (1, seq_len), &self.device)
+            .map_err(|e| {
+                HiddenStateError::ProviderError(format!("Failed to build position_ids tensor: {e}"))
             })?;
 
-        let data =
-            self.forward_pass(&input_ids, &token_type_ids, &position_ids_tensor)?;
+        let data = self.forward_pass(&input_ids, &token_type_ids, &position_ids_tensor)?;
 
         // Pool using raw token IDs for MaskMean padding detection.
         Ok(self.pool_hidden_states(&data, seq_len, Some(&raw_ids)))
@@ -632,8 +596,7 @@ impl CandleHiddenStateProvider {
     /// Shared extraction logic used by both trait methods.
     fn extract_sync(&self, text: &str) -> Result<ModelHiddenStates, HiddenStateError> {
         let max_len = self.candle_config.max_sequence_length;
-        let (input_ids, token_type_ids, position_ids, seq_len) =
-            self.tokenise(text, max_len)?;
+        let (input_ids, token_type_ids, position_ids, seq_len) = self.tokenise(text, max_len)?;
 
         let data = self.forward_pass(&input_ids, &token_type_ids, &position_ids)?;
         self.build_model_hidden_states(data, seq_len)
@@ -899,13 +862,8 @@ mod pooling_tests {
         let token_ids: Vec<u32> = vec![101, 2022, 102, 0];
         let data = synthetic_data(4, 2);
 
-        let result = apply_hidden_state_pooling(
-            &data,
-            4,
-            2,
-            HiddenStatePooling::MaskMean,
-            Some(&token_ids),
-        );
+        let result =
+            apply_hidden_state_pooling(&data, 4, 2, HiddenStatePooling::MaskMean, Some(&token_ids));
 
         assert_eq!(result.len(), 2);
         let expected = 2.0_f32;
@@ -982,9 +940,12 @@ mod pooling_tests {
     #[test]
     fn test_cls_pooling_zero_data_is_finite() {
         let data = vec![0.0f32; 16];
-        let result =
-            apply_hidden_state_pooling(&data, 2, 8, HiddenStatePooling::Cls, None);
-        assert_eq!(result.len(), 8, "CLS pooling must return hidden_dim elements");
+        let result = apply_hidden_state_pooling(&data, 2, 8, HiddenStatePooling::Cls, None);
+        assert_eq!(
+            result.len(),
+            8,
+            "CLS pooling must return hidden_dim elements"
+        );
         for (i, &v) in result.iter().enumerate() {
             assert!(v.is_finite(), "CLS output[{i}] must be finite, got {v}");
         }
@@ -995,9 +956,11 @@ mod pooling_tests {
     fn test_mean_pool_single_token_equals_token_values() {
         // hidden_dim=4, seq_len=1
         let data = vec![1.0_f32, 2.0, 3.0, 4.0];
-        let result =
-            apply_hidden_state_pooling(&data, 1, 4, HiddenStatePooling::MeanPool, None);
-        assert_eq!(result, data, "MeanPool of a single token must equal that token");
+        let result = apply_hidden_state_pooling(&data, 1, 4, HiddenStatePooling::MeanPool, None);
+        assert_eq!(
+            result, data,
+            "MeanPool of a single token must equal that token"
+        );
     }
 
     /// MaxPool on identical tokens returns the same values.
@@ -1005,8 +968,7 @@ mod pooling_tests {
     fn test_max_pool_uniform_data_returns_same_value() {
         // 3 tokens, each [0.5, 0.5], hidden_dim=2
         let data = vec![0.5_f32, 0.5, 0.5, 0.5, 0.5, 0.5];
-        let result =
-            apply_hidden_state_pooling(&data, 3, 2, HiddenStatePooling::MaxPool, None);
+        let result = apply_hidden_state_pooling(&data, 3, 2, HiddenStatePooling::MaxPool, None);
         for &v in &result {
             assert!(
                 (v - 0.5).abs() < f32::EPSILON,
@@ -1023,16 +985,14 @@ mod pooling_tests {
         // so it averages all tokens rather than dividing by zero.
         let data = synthetic_data(3, 2);
         let token_ids: Vec<u32> = vec![0, 0, 0]; // all padding
-        let result = apply_hidden_state_pooling(
-            &data,
-            3,
-            2,
-            HiddenStatePooling::MaskMean,
-            Some(&token_ids),
-        );
+        let result =
+            apply_hidden_state_pooling(&data, 3, 2, HiddenStatePooling::MaskMean, Some(&token_ids));
         assert_eq!(result.len(), 2, "MaskMean must return hidden_dim elements");
         for (i, &v) in result.iter().enumerate() {
-            assert!(v.is_finite(), "MaskMean output[{i}] must be finite, got {v}");
+            assert!(
+                v.is_finite(),
+                "MaskMean output[{i}] must be finite, got {v}"
+            );
         }
     }
 

@@ -7,9 +7,7 @@
 
 use std::collections::HashMap;
 
-use super::types::{
-    EpochMetrics, ProgressiveConfig, ProgressiveResult, StageConfig, StageResult,
-};
+use super::types::{EpochMetrics, ProgressiveConfig, ProgressiveResult, StageConfig, StageResult};
 
 #[cfg(feature = "distillation")]
 use super::super::collector::TrainingExample;

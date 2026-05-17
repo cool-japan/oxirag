@@ -105,14 +105,24 @@ impl RedbGraphStore {
         {
             let write_txn = db.begin_write().map_err(|e| storage_err!(e))?;
             {
-                let _e = write_txn.open_table(ENTITIES).map_err(|e| storage_err!(e))?;
+                let _e = write_txn
+                    .open_table(ENTITIES)
+                    .map_err(|e| storage_err!(e))?;
                 let _r = write_txn
                     .open_table(RELATIONSHIPS)
                     .map_err(|e| storage_err!(e))?;
-                let _o = write_txn.open_table(OUTGOING).map_err(|e| storage_err!(e))?;
-                let _i = write_txn.open_table(INCOMING).map_err(|e| storage_err!(e))?;
-                let _n = write_txn.open_table(NAME_IDX).map_err(|e| storage_err!(e))?;
-                let _t = write_txn.open_table(TYPE_IDX).map_err(|e| storage_err!(e))?;
+                let _o = write_txn
+                    .open_table(OUTGOING)
+                    .map_err(|e| storage_err!(e))?;
+                let _i = write_txn
+                    .open_table(INCOMING)
+                    .map_err(|e| storage_err!(e))?;
+                let _n = write_txn
+                    .open_table(NAME_IDX)
+                    .map_err(|e| storage_err!(e))?;
+                let _t = write_txn
+                    .open_table(TYPE_IDX)
+                    .map_err(|e| storage_err!(e))?;
             }
             write_txn.commit().map_err(|e| storage_err!(e))?;
         }
@@ -152,11 +162,13 @@ impl RedbGraphStore {
         key: &str,
     ) -> Result<HashSet<String>, GraphError> {
         let read_txn = self.db.begin_read().map_err(|e| storage_err!(e))?;
-        let table = read_txn.open_table(table_def).map_err(|e| storage_err!(e))?;
+        let table = read_txn
+            .open_table(table_def)
+            .map_err(|e| storage_err!(e))?;
         match table.get(key).map_err(|e| storage_err!(e))? {
             Some(guard) => {
-                let vec: Vec<String> = serde_json::from_slice(guard.value())
-                    .map_err(|e| storage_err!(e))?;
+                let vec: Vec<String> =
+                    serde_json::from_slice(guard.value()).map_err(|e| storage_err!(e))?;
                 Ok(vec.into_iter().collect())
             }
             None => Ok(HashSet::new()),
@@ -262,25 +274,33 @@ impl RedbGraphStore {
         let write_txn = self.db.begin_write().map_err(|e| storage_err!(e))?;
         {
             // entities
-            let mut tbl = write_txn.open_table(ENTITIES).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(ENTITIES)
+                .map_err(|e| storage_err!(e))?;
             tbl.insert(entity.id.as_str(), entity_bytes.as_slice())
                 .map_err(|e| storage_err!(e))?;
         }
         {
             // name index
-            let mut tbl = write_txn.open_table(NAME_IDX).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(NAME_IDX)
+                .map_err(|e| storage_err!(e))?;
             tbl.insert(name_lower.as_str(), name_bytes.as_slice())
                 .map_err(|e| storage_err!(e))?;
         }
         {
             // type index
-            let mut tbl = write_txn.open_table(TYPE_IDX).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(TYPE_IDX)
+                .map_err(|e| storage_err!(e))?;
             tbl.insert(type_key.as_str(), type_bytes.as_slice())
                 .map_err(|e| storage_err!(e))?;
         }
         {
             // outgoing adjacency (initialise only if absent)
-            let mut tbl = write_txn.open_table(OUTGOING).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(OUTGOING)
+                .map_err(|e| storage_err!(e))?;
             if tbl
                 .get(entity.id.as_str())
                 .map_err(|e| storage_err!(e))?
@@ -292,7 +312,9 @@ impl RedbGraphStore {
         }
         {
             // incoming adjacency (initialise only if absent)
-            let mut tbl = write_txn.open_table(INCOMING).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(INCOMING)
+                .map_err(|e| storage_err!(e))?;
             if tbl
                 .get(entity.id.as_str())
                 .map_err(|e| storage_err!(e))?
@@ -331,32 +353,29 @@ impl RedbGraphStore {
                 .map_err(|e| storage_err!(e))?;
         }
         {
-            let mut tbl = write_txn.open_table(OUTGOING).map_err(|e| storage_err!(e))?;
-            tbl.insert(
-                relationship.source_id.as_str(),
-                out_bytes.as_slice(),
-            )
-            .map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(OUTGOING)
+                .map_err(|e| storage_err!(e))?;
+            tbl.insert(relationship.source_id.as_str(), out_bytes.as_slice())
+                .map_err(|e| storage_err!(e))?;
         }
         {
-            let mut tbl = write_txn.open_table(INCOMING).map_err(|e| storage_err!(e))?;
-            tbl.insert(
-                relationship.target_id.as_str(),
-                in_bytes.as_slice(),
-            )
-            .map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(INCOMING)
+                .map_err(|e| storage_err!(e))?;
+            tbl.insert(relationship.target_id.as_str(), in_bytes.as_slice())
+                .map_err(|e| storage_err!(e))?;
         }
         write_txn.commit().map_err(|e| storage_err!(e))?;
         Ok(())
     }
 
     /// Collect all keys from a table as owned `String`s.
-    fn all_keys(
-        &self,
-        table_def: TableDefinition<&str, &[u8]>,
-    ) -> Result<Vec<String>, GraphError> {
+    fn all_keys(&self, table_def: TableDefinition<&str, &[u8]>) -> Result<Vec<String>, GraphError> {
         let read_txn = self.db.begin_read().map_err(|e| storage_err!(e))?;
-        let table = read_txn.open_table(table_def).map_err(|e| storage_err!(e))?;
+        let table = read_txn
+            .open_table(table_def)
+            .map_err(|e| storage_err!(e))?;
         let mut keys = Vec::new();
         for entry in table.iter().map_err(|e| storage_err!(e))? {
             let (k, _v) = entry.map_err(|e| storage_err!(e))?;
@@ -497,9 +516,8 @@ impl GraphStore for RedbGraphStore {
 
         match direction {
             Direction::Outgoing | Direction::Both => {
-                let mut out = self.collect_neighbors_for_direction(id, OUTGOING, |rel| {
-                    &rel.target_id
-                })?;
+                let mut out =
+                    self.collect_neighbors_for_direction(id, OUTGOING, |rel| &rel.target_id)?;
                 neighbors.append(&mut out);
             }
             Direction::Incoming => {}
@@ -507,9 +525,8 @@ impl GraphStore for RedbGraphStore {
 
         match direction {
             Direction::Incoming | Direction::Both => {
-                let mut inc = self.collect_neighbors_for_direction(id, INCOMING, |rel| {
-                    &rel.source_id
-                })?;
+                let mut inc =
+                    self.collect_neighbors_for_direction(id, INCOMING, |rel| &rel.source_id)?;
                 neighbors.append(&mut inc);
             }
             Direction::Outgoing => {}
@@ -570,9 +587,7 @@ impl GraphStore for RedbGraphStore {
             for entry in name_table.iter().map_err(|e| storage_err!(e))? {
                 let (k_guard, v_guard) = entry.map_err(|e| storage_err!(e))?;
                 let indexed_name = k_guard.value();
-                if indexed_name.contains(&name_lower as &str)
-                    || name_lower.contains(indexed_name)
-                {
+                if indexed_name.contains(&name_lower as &str) || name_lower.contains(indexed_name) {
                     let entity_ids: Vec<String> =
                         serde_json::from_slice(v_guard.value()).map_err(|e| storage_err!(e))?;
                     for eid in entity_ids {
@@ -644,10 +659,7 @@ impl GraphStore for RedbGraphStore {
                 }
 
                 // The frontier entity is the last one in the current path.
-                let current_id = current_path
-                    .end()
-                    .map(|e| e.id.clone())
-                    .unwrap_or_default();
+                let current_id = current_path.end().map(|e| e.id.clone()).unwrap_or_default();
 
                 // Get neighbors according to query direction.
                 let neighbors = self.get_neighbors(&current_id, query.direction).await?;
@@ -729,7 +741,9 @@ impl GraphStore for RedbGraphStore {
         // Delete everything in one write transaction.
         let write_txn = self.db.begin_write().map_err(|e| storage_err!(e))?;
         {
-            let mut tbl = write_txn.open_table(ENTITIES).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(ENTITIES)
+                .map_err(|e| storage_err!(e))?;
             for k in &entity_keys {
                 tbl.remove(k.as_str()).map_err(|e| storage_err!(e))?;
             }
@@ -743,25 +757,33 @@ impl GraphStore for RedbGraphStore {
             }
         }
         {
-            let mut tbl = write_txn.open_table(OUTGOING).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(OUTGOING)
+                .map_err(|e| storage_err!(e))?;
             for k in &out_keys {
                 tbl.remove(k.as_str()).map_err(|e| storage_err!(e))?;
             }
         }
         {
-            let mut tbl = write_txn.open_table(INCOMING).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(INCOMING)
+                .map_err(|e| storage_err!(e))?;
             for k in &inc_keys {
                 tbl.remove(k.as_str()).map_err(|e| storage_err!(e))?;
             }
         }
         {
-            let mut tbl = write_txn.open_table(NAME_IDX).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(NAME_IDX)
+                .map_err(|e| storage_err!(e))?;
             for k in &name_keys {
                 tbl.remove(k.as_str()).map_err(|e| storage_err!(e))?;
             }
         }
         {
-            let mut tbl = write_txn.open_table(TYPE_IDX).map_err(|e| storage_err!(e))?;
+            let mut tbl = write_txn
+                .open_table(TYPE_IDX)
+                .map_err(|e| storage_err!(e))?;
             for k in &type_keys {
                 tbl.remove(k.as_str()).map_err(|e| storage_err!(e))?;
             }
@@ -781,7 +803,9 @@ impl GraphStore for RedbGraphStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::layer4_graph::types::{EntityType, GraphEntity, GraphRelationship, RelationshipType};
+    use crate::layer4_graph::types::{
+        EntityType, GraphEntity, GraphRelationship, RelationshipType,
+    };
     use tempfile::TempDir;
 
     // -----------------------------------------------------------------------
@@ -789,8 +813,7 @@ mod tests {
     // -----------------------------------------------------------------------
 
     fn make_store(dir: &TempDir) -> RedbGraphStore {
-        RedbGraphStore::new(dir.path().join("graph.redb"))
-            .expect("store creation should succeed")
+        RedbGraphStore::new(dir.path().join("graph.redb")).expect("store creation should succeed")
     }
 
     fn tech_entity(name: &str, id: &str) -> GraphEntity {
@@ -901,31 +924,39 @@ mod tests {
         let tmp = TempDir::new().expect("tempdir");
         let mut store = make_store(&tmp);
 
-        store.add_entity(tech_entity("Rust", "rust")).await.expect("rust");
-        store.add_entity(tech_entity("LLVM", "llvm")).await.expect("llvm");
-        store.add_entity(tech_entity("Cargo", "cargo")).await.expect("cargo");
-        store.add_relationship(uses_rel("rust", "llvm")).await.expect("r1");
-        store.add_relationship(uses_rel("rust", "cargo")).await.expect("r2");
+        store
+            .add_entity(tech_entity("Rust", "rust"))
+            .await
+            .expect("rust");
+        store
+            .add_entity(tech_entity("LLVM", "llvm"))
+            .await
+            .expect("llvm");
+        store
+            .add_entity(tech_entity("Cargo", "cargo"))
+            .await
+            .expect("cargo");
+        store
+            .add_relationship(uses_rel("rust", "llvm"))
+            .await
+            .expect("r1");
+        store
+            .add_relationship(uses_rel("rust", "cargo"))
+            .await
+            .expect("r2");
 
         let neighbors = store
             .get_neighbors(&"rust".to_string(), Direction::Outgoing)
             .await
             .expect("get_neighbors outgoing");
-        assert_eq!(
-            neighbors.len(),
-            2,
-            "rust has two outgoing neighbours"
-        );
+        assert_eq!(neighbors.len(), 2, "rust has two outgoing neighbours");
 
         // The start entity itself should have no incoming edges.
         let incoming = store
             .get_neighbors(&"rust".to_string(), Direction::Incoming)
             .await
             .expect("get_neighbors incoming");
-        assert!(
-            incoming.is_empty(),
-            "rust has no incoming edges"
-        );
+        assert!(incoming.is_empty(), "rust has no incoming edges");
     }
 
     #[tokio::test]
@@ -933,19 +964,24 @@ mod tests {
         let tmp = TempDir::new().expect("tempdir");
         let mut store = make_store(&tmp);
 
-        store.add_entity(tech_entity("Rust", "rust")).await.expect("rust");
-        store.add_entity(tech_entity("LLVM", "llvm")).await.expect("llvm");
-        store.add_relationship(uses_rel("rust", "llvm")).await.expect("r1");
+        store
+            .add_entity(tech_entity("Rust", "rust"))
+            .await
+            .expect("rust");
+        store
+            .add_entity(tech_entity("LLVM", "llvm"))
+            .await
+            .expect("llvm");
+        store
+            .add_relationship(uses_rel("rust", "llvm"))
+            .await
+            .expect("r1");
 
         let incoming = store
             .get_neighbors(&"llvm".to_string(), Direction::Incoming)
             .await
             .expect("get_neighbors incoming llvm");
-        assert_eq!(
-            incoming.len(),
-            1,
-            "llvm has one incoming edge from rust"
-        );
+        assert_eq!(incoming.len(), 1, "llvm has one incoming edge from rust");
         assert_eq!(incoming[0].1.id, "rust");
     }
 
@@ -958,8 +994,14 @@ mod tests {
         store.add_entity(tech_entity("A", "a")).await.expect("a");
         store.add_entity(tech_entity("B", "b")).await.expect("b");
         store.add_entity(tech_entity("C", "c")).await.expect("c");
-        store.add_relationship(uses_rel("a", "b")).await.expect("ab");
-        store.add_relationship(uses_rel("b", "c")).await.expect("bc");
+        store
+            .add_relationship(uses_rel("a", "b"))
+            .await
+            .expect("ab");
+        store
+            .add_relationship(uses_rel("b", "c"))
+            .await
+            .expect("bc");
 
         let both = store
             .get_neighbors(&"b".to_string(), Direction::Both)
@@ -1051,10 +1093,22 @@ mod tests {
         store.add_entity(concept_entity("C", "c")).await.expect("c");
         store.add_entity(concept_entity("D", "d")).await.expect("d");
         store.add_entity(tech_entity("E", "e")).await.expect("e");
-        store.add_relationship(related_rel("a", "b")).await.expect("ab");
-        store.add_relationship(related_rel("b", "c")).await.expect("bc");
-        store.add_relationship(related_rel("c", "d")).await.expect("cd");
-        store.add_relationship(uses_rel("a", "e")).await.expect("ae");
+        store
+            .add_relationship(related_rel("a", "b"))
+            .await
+            .expect("ab");
+        store
+            .add_relationship(related_rel("b", "c"))
+            .await
+            .expect("bc");
+        store
+            .add_relationship(related_rel("c", "d"))
+            .await
+            .expect("cd");
+        store
+            .add_relationship(uses_rel("a", "e"))
+            .await
+            .expect("ae");
 
         // 2-hop BFS from A.
         let query = GraphQuery::new(vec!["a".to_string()]).with_max_hops(2);
@@ -1086,7 +1140,11 @@ mod tests {
         let mut store = make_store(&tmp);
 
         assert_eq!(store.entity_count().await, 0, "initially 0 entities");
-        assert_eq!(store.relationship_count().await, 0, "initially 0 relationships");
+        assert_eq!(
+            store.relationship_count().await,
+            0,
+            "initially 0 relationships"
+        );
 
         store
             .add_entity(concept_entity("A", "a"))
@@ -1102,7 +1160,11 @@ mod tests {
             .expect("add rel");
 
         assert_eq!(store.entity_count().await, 2, "should be 2 entities");
-        assert_eq!(store.relationship_count().await, 1, "should be 1 relationship");
+        assert_eq!(
+            store.relationship_count().await,
+            1,
+            "should be 1 relationship"
+        );
     }
 
     #[tokio::test]
@@ -1110,16 +1172,29 @@ mod tests {
         let tmp = TempDir::new().expect("tempdir");
         let mut store = make_store(&tmp);
 
-        store.add_entity(tech_entity("Rust", "rust")).await.expect("rust");
-        store.add_entity(tech_entity("LLVM", "llvm")).await.expect("llvm");
-        store.add_relationship(uses_rel("rust", "llvm")).await.expect("rel");
+        store
+            .add_entity(tech_entity("Rust", "rust"))
+            .await
+            .expect("rust");
+        store
+            .add_entity(tech_entity("LLVM", "llvm"))
+            .await
+            .expect("llvm");
+        store
+            .add_relationship(uses_rel("rust", "llvm"))
+            .await
+            .expect("rel");
 
         assert_eq!(store.entity_count().await, 2);
         assert_eq!(store.relationship_count().await, 1);
 
         store.clear().await.expect("clear should succeed");
 
-        assert_eq!(store.entity_count().await, 0, "entity count should be 0 after clear");
+        assert_eq!(
+            store.entity_count().await,
+            0,
+            "entity count should be 0 after clear"
+        );
         assert_eq!(
             store.relationship_count().await,
             0,
@@ -1160,7 +1235,11 @@ mod tests {
 
         // Phase 2: reopen and verify counts.
         let store = RedbGraphStore::new(&db_path).expect("second open");
-        assert_eq!(store.entity_count().await, 2, "entity count must survive reopen");
+        assert_eq!(
+            store.entity_count().await,
+            2,
+            "entity count must survive reopen"
+        );
         assert_eq!(
             store.relationship_count().await,
             1,

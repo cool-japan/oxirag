@@ -338,11 +338,7 @@ impl LayerSpan<'_> {
     /// Record an arbitrary key-value attribute on this layer span.
     ///
     /// Returns `&mut Self` for method chaining.
-    pub fn set_attribute(
-        &mut self,
-        key: impl Into<String>,
-        value: impl Into<String>,
-    ) -> &mut Self {
+    pub fn set_attribute(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
         self.record.attributes.insert(key.into(), value.into());
         self
     }
@@ -421,8 +417,7 @@ impl Drop for LayerSpan<'_> {
     /// [`skip`]: LayerSpan::skip
     fn drop(&mut self) {
         if !self.committed {
-            self.record.status =
-                SpanStatus::Error("dropped without completion".to_string());
+            self.record.status = SpanStatus::Error("dropped without completion".to_string());
             self.record.duration_ms =
                 u64::try_from(self.start.elapsed().as_millis()).unwrap_or(u64::MAX);
             // Push without panicking: Vec::push is infallible.
@@ -512,9 +507,7 @@ impl SpanReport {
         rows.push(sep);
 
         for span in &self.layer_spans {
-            let items_str = span
-                .item_count
-                .map_or_else(String::new, |c| c.to_string());
+            let items_str = span.item_count.map_or_else(String::new, |c| c.to_string());
 
             // Truncate layer name to fit the column.
             let layer_display = if span.layer_name.len() > W_LAYER - 2 {
@@ -675,7 +668,10 @@ mod tests {
             span.success();
         }
         let record = &ctx.layer_spans[0];
-        assert_eq!(record.attributes.get("model"), Some(&"bge-base".to_string()));
+        assert_eq!(
+            record.attributes.get("model"),
+            Some(&"bge-base".to_string())
+        );
         assert_eq!(record.attributes.get("top_k"), Some(&"10".to_string()));
     }
 
@@ -763,7 +759,10 @@ mod tests {
         let report = ctx.report();
         let table = report.format_table();
 
-        assert!(table.contains("echo"), "table must contain layer name 'echo'");
+        assert!(
+            table.contains("echo"),
+            "table must contain layer name 'echo'"
+        );
         assert!(table.contains("SUCCESS"), "table must contain SUCCESS");
         assert!(table.contains("ERROR"), "table must contain ERROR");
         assert!(table.contains("Total:"), "table must contain summary line");

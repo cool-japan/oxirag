@@ -572,11 +572,13 @@ mod tests {
 
         #[test]
         fn test_early_stopping() {
-            let stages = vec![StageConfig::new(
-                ModelSize::from_params(7000.0),
-                ModelSize::from_params(1000.0),
-            )
-            .with_epochs(10)];
+            let stages = vec![
+                StageConfig::new(
+                    ModelSize::from_params(7000.0),
+                    ModelSize::from_params(1000.0),
+                )
+                .with_epochs(10),
+            ];
 
             let config = ProgressiveConfig::with_stages(stages).with_early_stopping(2);
 
