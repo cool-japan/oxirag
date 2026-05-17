@@ -58,9 +58,7 @@ fn make_chunk(
     // Collect char indices so we can safely slice.
     let chars: Vec<(usize, char)> = full_text.char_indices().collect();
     let byte_start = chars.get(start_char).map_or(full_text.len(), |(b, _)| *b);
-    let byte_end = chars
-        .get(end_char)
-        .map_or(full_text.len(), |(b, _)| *b);
+    let byte_end = chars.get(end_char).map_or(full_text.len(), |(b, _)| *b);
 
     let raw = &full_text[byte_start..byte_end];
     let content = maybe_strip(raw, config);
@@ -305,11 +303,9 @@ impl ChunkStrategy for SentenceChunker {
 
                 if content.chars().count() >= config.min_chunk_size {
                     let start_char =
-                        Self::find_offset(&doc.content, text.trim_start(), 0)
-                            .min(search_from_char);
-                    let end_char = (start_char + content.chars().count()).min(
-                        doc.content.chars().count(),
-                    );
+                        Self::find_offset(&doc.content, text.trim_start(), 0).min(search_from_char);
+                    let end_char =
+                        (start_char + content.chars().count()).min(doc.content.chars().count());
                     chunks.push(Chunk::new(
                         content,
                         doc.id.to_string(),
@@ -514,8 +510,7 @@ impl ChunkStrategy for RecursiveChunker {
         }
 
         // Step 1: split into leaf segments using the separator hierarchy.
-        let leaves =
-            Self::split_recursive(&doc.content, RECURSIVE_SEPARATORS, config.chunk_size);
+        let leaves = Self::split_recursive(&doc.content, RECURSIVE_SEPARATORS, config.chunk_size);
 
         let doc_char_count = doc.content.chars().count();
         let separator_boundaries = Self::compute_boundaries(&doc.content, &leaves);
@@ -681,10 +676,8 @@ impl MarkdownChunker {
     /// Locate the start character of `section` in `doc_content`, searching
     /// from `search_from_char`.
     fn section_start_char(doc_content: &str, section: &str, search_from_char: usize) -> usize {
-        let chars_from: Vec<(usize, char)> = doc_content
-            .char_indices()
-            .skip(search_from_char)
-            .collect();
+        let chars_from: Vec<(usize, char)> =
+            doc_content.char_indices().skip(search_from_char).collect();
         let byte_from = chars_from.first().map_or(doc_content.len(), |(b, _)| *b);
         let slice = &doc_content[byte_from..];
         let trimmed_section = section.trim_start();
@@ -718,8 +711,7 @@ impl ChunkStrategy for MarkdownChunker {
                 continue;
             }
 
-            let start_char =
-                Self::section_start_char(&doc.content, section, search_from_char);
+            let start_char = Self::section_start_char(&doc.content, section, search_from_char);
             let section_char_len = section.chars().count();
 
             if section_char_len <= config.chunk_size {

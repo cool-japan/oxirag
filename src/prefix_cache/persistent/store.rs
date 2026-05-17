@@ -7,13 +7,15 @@ use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
 
+use super::super::store::InMemoryPrefixCache;
+use super::super::traits::PrefixCacheStore;
+use super::super::types::{
+    CacheKey, CacheStats, ContextFingerprint, KVCacheEntry, PrefixCacheConfig,
+};
 use super::io::{append_entry, load_index, read_entry, rewrite_data_file, save_index};
 use super::types::{
     CacheIndex, CompactionStats, IndexEntry, PersistedEntry, PersistentCacheConfig,
 };
-use super::super::store::InMemoryPrefixCache;
-use super::super::traits::PrefixCacheStore;
-use super::super::types::{CacheKey, CacheStats, ContextFingerprint, KVCacheEntry, PrefixCacheConfig};
 use crate::error::OxiRagError;
 
 // ---------------------------------------------------------------------------

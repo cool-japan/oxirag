@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.6.0"
+version = "0.8.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -160,6 +160,14 @@ semantic-cache = []
 advanced-retrieval = []
 # RAG evaluation framework — RAGAS-style lexical metrics
 rag-eval = []
+# Multi-turn conversational RAG with history management and query reformulation
+conversational = []
+# FLARE: Forward-Looking Active REtrieval — iterative generate-retrieve loop
+flare = []
+# Knowledge base collections / namespaced multi-tenant indexing
+collections = []
+# Integrated document processing pipeline wiring chunking + cache + retrieval
+document-pipeline = ["chunking", "semantic-cache", "advanced-retrieval"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

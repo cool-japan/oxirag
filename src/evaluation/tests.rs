@@ -88,8 +88,7 @@ fn test_sample_with_ground_truth() {
 #[test]
 fn test_sample_with_source_doc_ids() {
     let ids = vec!["doc-1".to_string(), "doc-2".to_string()];
-    let sample =
-        EvaluationSample::new("id-3", "q", vec![], "a").with_source_doc_ids(ids.clone());
+    let sample = EvaluationSample::new("id-3", "q", vec![], "a").with_source_doc_ids(ids.clone());
     assert_eq!(sample.source_doc_ids, ids);
 }
 
@@ -101,10 +100,7 @@ fn test_sample_from_pipeline_output() {
     assert!(!sample.id.is_empty());
     assert_eq!(sample.query, "What is Rust?");
     assert!(!sample.context.is_empty());
-    assert_eq!(
-        sample.answer,
-        "Rust is a systems programming language."
-    );
+    assert_eq!(sample.answer, "Rust is a systems programming language.");
     assert_eq!(sample.context.len(), output.search_results.len());
     assert_eq!(sample.source_doc_ids.len(), output.search_results.len());
 }
@@ -164,7 +160,10 @@ async fn test_answer_relevance_identical() {
         None,
     );
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score > 0.7_f32, "Identical query/answer should give high score, got {score}");
+    assert!(
+        score > 0.7_f32,
+        "Identical query/answer should give high score, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -177,7 +176,10 @@ async fn test_answer_relevance_irrelevant() {
         None,
     );
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score < 0.2_f32, "Irrelevant answer should give low score, got {score}");
+    assert!(
+        score < 0.2_f32,
+        "Irrelevant answer should give low score, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -220,18 +222,23 @@ async fn test_faithfulness_full_support() {
     let answer = "Rust is a systems programming language focused on safety and performance.";
     let sample = make_sample("what is rust", vec![context], answer, None);
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score > 0.5_f32, "Fully supported answer should score high, got {score}");
+    assert!(
+        score > 0.5_f32,
+        "Fully supported answer should score high, got {score}"
+    );
 }
 
 #[tokio::test]
 async fn test_faithfulness_no_support() {
     let scorer = FaithfulnessScorer::default();
     let context = "Python is a high-level scripting language.";
-    let answer =
-        "Bananas are a tropical fruit. Monkeys love bananas very much. They are yellow.";
+    let answer = "Bananas are a tropical fruit. Monkeys love bananas very much. They are yellow.";
     let sample = make_sample("query", vec![context], answer, None);
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score < 0.5_f32, "Unsupported answer should score low, got {score}");
+    assert!(
+        score < 0.5_f32,
+        "Unsupported answer should score low, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -284,7 +291,10 @@ async fn test_context_precision_all_relevant() {
     ];
     let sample = make_sample(query, context, "answer", None);
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score > 0.5_f32, "All relevant chunks should score high, got {score}");
+    assert!(
+        score > 0.5_f32,
+        "All relevant chunks should score high, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -300,7 +310,10 @@ async fn test_context_precision_none_relevant() {
     ];
     let sample = make_sample(query, context, "answer", None);
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score < 0.2_f32, "No relevant chunks should score low, got {score}");
+    assert!(
+        score < 0.2_f32,
+        "No relevant chunks should score low, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -318,8 +331,8 @@ async fn test_context_precision_mixed() {
     };
     let query = "rust language";
     let context = vec![
-        "Rust is a language for systems programming.",  // relevant
-        "Bananas are tropical fruit.",                   // not relevant
+        "Rust is a language for systems programming.", // relevant
+        "Bananas are tropical fruit.",                 // not relevant
     ];
     let sample = make_sample(query, context, "answer", None);
     let score = scorer.score(&sample).await.expect("score failed");
@@ -338,7 +351,10 @@ async fn test_context_recall_full() {
     let context = vec!["rust programming language safety performance systems"];
     let sample = make_sample("query", context, "answer", Some(ground_truth));
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score > 0.8_f32, "Full recall should be near 1.0, got {score}");
+    assert!(
+        score > 0.8_f32,
+        "Full recall should be near 1.0, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -348,7 +364,10 @@ async fn test_context_recall_partial() {
     let context = vec!["rust language"]; // only partial overlap
     let sample = make_sample("query", context, "answer", Some(ground_truth));
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score > 0.0_f32 && score < 1.0_f32, "Partial recall: {score}");
+    assert!(
+        score > 0.0_f32 && score < 1.0_f32,
+        "Partial recall: {score}"
+    );
 }
 
 #[tokio::test]
@@ -380,7 +399,10 @@ async fn test_overall_scorer_perfect() {
     let gt = "rust language programming safety performance";
     let sample = make_sample(query, vec![ctx], answer, Some(gt));
     let score = scorer.score(&sample).await.expect("score failed");
-    assert!(score > 0.4_f32, "Perfect-ish sample should score > 0.4, got {score}");
+    assert!(
+        score > 0.4_f32,
+        "Perfect-ish sample should score > 0.4, got {score}"
+    );
 }
 
 #[tokio::test]
@@ -507,9 +529,7 @@ async fn test_evaluator_empty_dataset() {
 
 #[tokio::test]
 async fn test_evaluator_custom_metrics() {
-    let evaluator = RagEvaluator::new(vec![
-        Box::new(AnswerRelevanceScorer::default()),
-    ]);
+    let evaluator = RagEvaluator::new(vec![Box::new(AnswerRelevanceScorer::default())]);
     let sample = make_sample("rust", vec!["rust language"], "rust programming", None);
     // evaluate() should work with only one metric; missing metric names get 0.0
     let result = evaluator.evaluate(&sample).await.expect("evaluate failed");
@@ -558,9 +578,7 @@ fn test_dataset_stats_empty() {
 #[test]
 fn test_dataset_stats_with_samples() {
     let mut dataset = EvaluationDataset::new();
-    dataset.add(
-        make_sample("q1", vec!["ctx1", "ctx2"], "short", None).with_ground_truth("gt1"),
-    );
+    dataset.add(make_sample("q1", vec!["ctx1", "ctx2"], "short", None).with_ground_truth("gt1"));
     dataset.add(make_sample("q2", vec!["ctx3"], "longer answer here", None));
 
     let stats = dataset.stats();
@@ -613,10 +631,8 @@ fn test_dataset_save_load_json_roundtrip() {
     let loaded = EvaluationDataset::load_json(&path).expect("load failed");
     assert_eq!(loaded.len(), dataset.len());
 
-    let original_queries: Vec<&str> =
-        dataset.iter().map(|s| s.query.as_str()).collect();
-    let loaded_queries: Vec<&str> =
-        loaded.iter().map(|s| s.query.as_str()).collect();
+    let original_queries: Vec<&str> = dataset.iter().map(|s| s.query.as_str()).collect();
+    let loaded_queries: Vec<&str> = loaded.iter().map(|s| s.query.as_str()).collect();
     assert_eq!(original_queries, loaded_queries);
 
     // Verify ground truth was preserved
@@ -648,7 +664,10 @@ fn test_eval_error_display() {
 
     let err2 = EvalError::EmptyContext;
     let msg = err2.to_string();
-    assert!(msg.to_lowercase().contains("context"), "Expected 'context' in '{msg}'");
+    assert!(
+        msg.to_lowercase().contains("context"),
+        "Expected 'context' in '{msg}'"
+    );
 
     let err3 = EvalError::Other("custom message".to_string());
     assert!(err3.to_string().contains("custom message"));

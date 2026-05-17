@@ -378,353 +378,353 @@ async fn test_redb_memory_usage() {
 
 #[cfg(test)]
 #[allow(
-clippy::cast_precision_loss,
-clippy::cast_sign_loss,
-clippy::float_cmp,
-clippy::pedantic
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::pedantic
 )]
 mod prop_tests {
-use std::time::Duration;
+    use std::time::Duration;
 
-use proptest::prelude::*;
+    use proptest::prelude::*;
 
-use super::super::store::RedbPrefixCache;
-use crate::prefix_cache::traits::PrefixCacheStore;
-use crate::prefix_cache::types::{ContextFingerprint, KVCacheEntry, PrefixCacheConfig};
+    use super::super::store::RedbPrefixCache;
+    use crate::prefix_cache::traits::PrefixCacheStore;
+    use crate::prefix_cache::types::{ContextFingerprint, KVCacheEntry, PrefixCacheConfig};
 
-// -----------------------------------------------------------------------
-// Strategies
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Strategies
+    // -----------------------------------------------------------------------
 
-/// Strategy: generate an arbitrary [`ContextFingerprint`].
-fn arb_fingerprint() -> impl Strategy<Value = ContextFingerprint> {
-    (any::<u64>(), 1usize..1000usize, "[a-z]{1,20}")
-        .prop_map(|(hash, len, summary)| ContextFingerprint::new(hash, len, summary))
-}
+    /// Strategy: generate an arbitrary [`ContextFingerprint`].
+    fn arb_fingerprint() -> impl Strategy<Value = ContextFingerprint> {
+        (any::<u64>(), 1usize..1000usize, "[a-z]{1,20}")
+            .prop_map(|(hash, len, summary)| ContextFingerprint::new(hash, len, summary))
+    }
 
-/// Strategy: generate arbitrary KV data (1..=128 f32 values in [-1, 1)).
-fn arb_kv_data() -> impl Strategy<Value = Vec<f32>> {
-    prop::collection::vec(-1.0f32..1.0f32, 1..=128)
-}
+    /// Strategy: generate arbitrary KV data (1..=128 f32 values in [-1, 1)).
+    fn arb_kv_data() -> impl Strategy<Value = Vec<f32>> {
+        prop::collection::vec(-1.0f32..1.0f32, 1..=128)
+    }
 
-/// Open a fresh [`RedbPrefixCache`] backed by a unique file in `dir`.
-fn open_prop_cache(dir: &tempfile::TempDir, suffix: &str) -> RedbPrefixCache {
-    let path = dir.path().join(format!("prop_{suffix}.redb"));
-    RedbPrefixCache::new(path, PrefixCacheConfig::default())
-        .expect("RedbPrefixCache::new should succeed in proptest")
-}
+    /// Open a fresh [`RedbPrefixCache`] backed by a unique file in `dir`.
+    fn open_prop_cache(dir: &tempfile::TempDir, suffix: &str) -> RedbPrefixCache {
+        let path = dir.path().join(format!("prop_{suffix}.redb"));
+        RedbPrefixCache::new(path, PrefixCacheConfig::default())
+            .expect("RedbPrefixCache::new should succeed in proptest")
+    }
 
-// -----------------------------------------------------------------------
-// Test 1 – put / get round-trip preserves kv_data
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 1 – put / get round-trip preserves kv_data
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_put_get_roundtrip(
-        fp in arb_fingerprint(),
-        kv_data in arb_kv_data(),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "rtrip");
+        #[test]
+        fn prop_put_get_roundtrip(
+            fp in arb_fingerprint(),
+            kv_data in arb_kv_data(),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "rtrip");
 
-        let entry = KVCacheEntry::new(
-            "prop_key",
-            fp.clone(),
-            kv_data.clone(),
-            fp.prefix_length,
-        );
-
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            cache.put(entry).await.expect("put must succeed");
-            let retrieved = cache.get(&fp).await;
-            prop_assert!(
-                retrieved.is_some(),
-                "get() must return Some after a successful put"
+            let entry = KVCacheEntry::new(
+                "prop_key",
+                fp.clone(),
+                kv_data.clone(),
+                fp.prefix_length,
             );
-            let hit = retrieved.expect("checked above");
-            prop_assert_eq!(
-                hit.kv_data.len(),
-                kv_data.len(),
-                "kv_data length must be preserved through the round-trip"
-            );
-            for (i, (got, expected)) in hit.kv_data.iter().zip(kv_data.iter()).enumerate() {
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                cache.put(entry).await.expect("put must succeed");
+                let retrieved = cache.get(&fp).await;
                 prop_assert!(
-                    (got - expected).abs() < f32::EPSILON,
-                    "kv_data[{}] mismatch: got {got}, expected {expected}",
-                    i
+                    retrieved.is_some(),
+                    "get() must return Some after a successful put"
                 );
-            }
-            Ok(())
-        })?;
+                let hit = retrieved.expect("checked above");
+                prop_assert_eq!(
+                    hit.kv_data.len(),
+                    kv_data.len(),
+                    "kv_data length must be preserved through the round-trip"
+                );
+                for (i, (got, expected)) in hit.kv_data.iter().zip(kv_data.iter()).enumerate() {
+                    prop_assert!(
+                        (got - expected).abs() < f32::EPSILON,
+                        "kv_data[{}] mismatch: got {got}, expected {expected}",
+                        i
+                    );
+                }
+                Ok(())
+            })?;
+        }
     }
-}
 
-// -----------------------------------------------------------------------
-// Test 2 – contains() returns true after a put
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 2 – contains() returns true after a put
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_contains_after_put(
-        fp in arb_fingerprint(),
-        kv_data in arb_kv_data(),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "contains");
+        #[test]
+        fn prop_contains_after_put(
+            fp in arb_fingerprint(),
+            kv_data in arb_kv_data(),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "contains");
 
-        let entry = KVCacheEntry::new("ck", fp.clone(), kv_data, fp.prefix_length);
+            let entry = KVCacheEntry::new("ck", fp.clone(), kv_data, fp.prefix_length);
 
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            cache.put(entry).await.expect("put must succeed");
-            prop_assert!(
-                cache.contains(&fp).await,
-                "contains() must return true for a fingerprint that was just put"
-            );
-            Ok(())
-        })?;
-    }
-}
-
-// -----------------------------------------------------------------------
-// Test 3 – len() increments correctly for N distinct fingerprints
-// -----------------------------------------------------------------------
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
-
-    #[test]
-    fn prop_len_increments(
-        // Produce up to 8 distinct hashes; use u8 to keep the pool small
-        hashes in prop::collection::hash_set(any::<u8>().prop_map(|b| b as u64), 1..=8usize),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "len");
-        let n = hashes.len();
-
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            for (idx, hash) in hashes.into_iter().enumerate() {
-                let fp = ContextFingerprint::new(hash, idx + 1, "s");
-                let entry = KVCacheEntry::new(format!("k{idx}"), fp, vec![0.0_f32; 4], idx + 1);
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
                 cache.put(entry).await.expect("put must succeed");
-            }
-            prop_assert_eq!(
-                cache.len(),
-                n,
-                "len() must equal the number of distinct puts, got {} expected {}",
-                cache.len(),
-                n
-            );
-            Ok(())
-        })?;
+                prop_assert!(
+                    cache.contains(&fp).await,
+                    "contains() must return true for a fingerprint that was just put"
+                );
+                Ok(())
+            })?;
+        }
     }
-}
 
-// -----------------------------------------------------------------------
-// Test 4 – remove() decrements len and returns the removed entry
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 3 – len() increments correctly for N distinct fingerprints
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_remove_decrements_len(
-        fp in arb_fingerprint(),
-        kv_data in arb_kv_data(),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "remove");
+        #[test]
+        fn prop_len_increments(
+            // Produce up to 8 distinct hashes; use u8 to keep the pool small
+            hashes in prop::collection::hash_set(any::<u8>().prop_map(|b| b as u64), 1..=8usize),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "len");
+            let n = hashes.len();
 
-        let raw_key = format!("{}:{}", fp.hash, fp.prefix_length);
-        let entry = KVCacheEntry::new("rk", fp.clone(), kv_data, fp.prefix_length);
-
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            cache.put(entry).await.expect("put must succeed");
-            prop_assert_eq!(cache.len(), 1, "len must be 1 after one put");
-
-            let removed = cache.remove(&raw_key).await;
-            prop_assert!(
-                removed.is_some(),
-                "remove() must return Some for a key that exists"
-            );
-            prop_assert_eq!(
-                cache.len(),
-                0,
-                "len must drop to 0 after the only entry is removed"
-            );
-            Ok(())
-        })?;
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                for (idx, hash) in hashes.into_iter().enumerate() {
+                    let fp = ContextFingerprint::new(hash, idx + 1, "s");
+                    let entry = KVCacheEntry::new(format!("k{idx}"), fp, vec![0.0_f32; 4], idx + 1);
+                    cache.put(entry).await.expect("put must succeed");
+                }
+                prop_assert_eq!(
+                    cache.len(),
+                    n,
+                    "len() must equal the number of distinct puts, got {} expected {}",
+                    cache.len(),
+                    n
+                );
+                Ok(())
+            })?;
+        }
     }
-}
 
-// -----------------------------------------------------------------------
-// Test 5 – clear() empties the cache regardless of how many entries exist
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 4 – remove() decrements len and returns the removed entry
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_clear_empties_cache(
-        hashes in prop::collection::hash_set(any::<u8>().prop_map(|b| b as u64), 1..=8usize),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "clear");
+        #[test]
+        fn prop_remove_decrements_len(
+            fp in arb_fingerprint(),
+            kv_data in arb_kv_data(),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "remove");
 
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            for (idx, hash) in hashes.into_iter().enumerate() {
-                let fp = ContextFingerprint::new(hash, idx + 1, "c");
-                let entry = KVCacheEntry::new(format!("c{idx}"), fp, vec![1.0_f32; 2], idx + 1);
+            let raw_key = format!("{}:{}", fp.hash, fp.prefix_length);
+            let entry = KVCacheEntry::new("rk", fp.clone(), kv_data, fp.prefix_length);
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
                 cache.put(entry).await.expect("put must succeed");
-            }
-            prop_assume!(cache.len() > 0);
+                prop_assert_eq!(cache.len(), 1, "len must be 1 after one put");
 
-            cache.clear().await;
-
-            prop_assert_eq!(
-                cache.len(),
-                0,
-                "len() must be 0 after clear()"
-            );
-            prop_assert!(cache.is_empty(), "is_empty() must return true after clear()");
-            Ok(())
-        })?;
+                let removed = cache.remove(&raw_key).await;
+                prop_assert!(
+                    removed.is_some(),
+                    "remove() must return Some for a key that exists"
+                );
+                prop_assert_eq!(
+                    cache.len(),
+                    0,
+                    "len must drop to 0 after the only entry is removed"
+                );
+                Ok(())
+            })?;
+        }
     }
-}
 
-// -----------------------------------------------------------------------
-// Test 6 – two distinct fingerprints do not interfere with each other
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 5 – clear() empties the cache regardless of how many entries exist
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_distinct_fingerprints_independent(
-        hash1 in 0u64..u64::MAX / 2,
-        hash2 in (u64::MAX / 2)..u64::MAX,
-        kv1 in arb_kv_data(),
-        kv2 in arb_kv_data(),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "indep");
+        #[test]
+        fn prop_clear_empties_cache(
+            hashes in prop::collection::hash_set(any::<u8>().prop_map(|b| b as u64), 1..=8usize),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "clear");
 
-        let fp1 = ContextFingerprint::new(hash1, 10, "fp1");
-        let fp2 = ContextFingerprint::new(hash2, 20, "fp2");
-        let len1 = kv1.len();
-        let len2 = kv2.len();
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                for (idx, hash) in hashes.into_iter().enumerate() {
+                    let fp = ContextFingerprint::new(hash, idx + 1, "c");
+                    let entry = KVCacheEntry::new(format!("c{idx}"), fp, vec![1.0_f32; 2], idx + 1);
+                    cache.put(entry).await.expect("put must succeed");
+                }
+                prop_assume!(cache.len() > 0);
 
-        let entry1 = KVCacheEntry::new("k1", fp1.clone(), kv1, 10);
-        let entry2 = KVCacheEntry::new("k2", fp2.clone(), kv2, 20);
+                cache.clear().await;
 
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            cache.put(entry1).await.expect("put fp1 must succeed");
-            cache.put(entry2).await.expect("put fp2 must succeed");
-
-            let r1 = cache.get(&fp1).await;
-            let r2 = cache.get(&fp2).await;
-
-            prop_assert!(r1.is_some(), "fp1 must be retrievable");
-            prop_assert!(r2.is_some(), "fp2 must be retrievable");
-
-            prop_assert_eq!(
-                r1.expect("checked").kv_data.len(),
-                len1,
-                "fp1 kv_data length must be unchanged"
-            );
-            prop_assert_eq!(
-                r2.expect("checked").kv_data.len(),
-                len2,
-                "fp2 kv_data length must be unchanged"
-            );
-            Ok(())
-        })?;
+                prop_assert_eq!(
+                    cache.len(),
+                    0,
+                    "len() must be 0 after clear()"
+                );
+                prop_assert!(cache.is_empty(), "is_empty() must return true after clear()");
+                Ok(())
+            })?;
+        }
     }
-}
 
-// -----------------------------------------------------------------------
-// Test 7 – find_prefix_match returns a cached entry shorter than the query
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 6 – two distinct fingerprints do not interfere with each other
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_find_prefix_match_shorter_found(
-        short_len in 1usize..50usize,
-        long_len  in 51usize..200usize,
-        hash_cached in any::<u64>(),
-        hash_query  in any::<u64>(),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "pfx");
+        #[test]
+        fn prop_distinct_fingerprints_independent(
+            hash1 in 0u64..u64::MAX / 2,
+            hash2 in (u64::MAX / 2)..u64::MAX,
+            kv1 in arb_kv_data(),
+            kv2 in arb_kv_data(),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "indep");
 
-        // Cache an entry with `short_len`; query with `long_len` (> short_len).
-        let fp_short = ContextFingerprint::new(hash_cached, short_len, "short");
-        let fp_query  = ContextFingerprint::new(hash_query,  long_len,  "query");
+            let fp1 = ContextFingerprint::new(hash1, 10, "fp1");
+            let fp2 = ContextFingerprint::new(hash2, 20, "fp2");
+            let len1 = kv1.len();
+            let len2 = kv2.len();
 
-        let entry = KVCacheEntry::new("ps", fp_short, vec![0.5_f32; 4], short_len);
+            let entry1 = KVCacheEntry::new("k1", fp1.clone(), kv1, 10);
+            let entry2 = KVCacheEntry::new("k2", fp2.clone(), kv2, 20);
 
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            cache.put(entry).await.expect("put must succeed");
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                cache.put(entry1).await.expect("put fp1 must succeed");
+                cache.put(entry2).await.expect("put fp2 must succeed");
 
-            let matched = cache.find_prefix_match(&fp_query).await;
-            prop_assert!(
-                matched.is_some(),
-                "find_prefix_match must find the shorter cached entry \
-                 (cached_len={short_len}, query_len={long_len})"
-            );
-            prop_assert_eq!(
-                matched.expect("checked").fingerprint.prefix_length,
-                short_len,
-                "matched entry must have the cached prefix_length"
-            );
-            Ok(())
-        })?;
+                let r1 = cache.get(&fp1).await;
+                let r2 = cache.get(&fp2).await;
+
+                prop_assert!(r1.is_some(), "fp1 must be retrievable");
+                prop_assert!(r2.is_some(), "fp2 must be retrievable");
+
+                prop_assert_eq!(
+                    r1.expect("checked").kv_data.len(),
+                    len1,
+                    "fp1 kv_data length must be unchanged"
+                );
+                prop_assert_eq!(
+                    r2.expect("checked").kv_data.len(),
+                    len2,
+                    "fp2 kv_data length must be unchanged"
+                );
+                Ok(())
+            })?;
+        }
     }
-}
 
-// -----------------------------------------------------------------------
-// Test 8 – entry with TTL=0 is not returned by get() (expires immediately)
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Test 7 – find_prefix_match returns a cached entry shorter than the query
+    // -----------------------------------------------------------------------
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
-    #[test]
-    fn prop_ttl_zero_expires_immediately(
-        fp in arb_fingerprint(),
-        kv_data in arb_kv_data(),
-    ) {
-        let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
-        let mut cache = open_prop_cache(&dir, "ttl0");
+        #[test]
+        fn prop_find_prefix_match_shorter_found(
+            short_len in 1usize..50usize,
+            long_len  in 51usize..200usize,
+            hash_cached in any::<u64>(),
+            hash_query  in any::<u64>(),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "pfx");
 
-        let entry = KVCacheEntry::new("ttl_prop", fp.clone(), kv_data, fp.prefix_length)
-            .with_ttl(Duration::from_secs(0)); // expires immediately
+            // Cache an entry with `short_len`; query with `long_len` (> short_len).
+            let fp_short = ContextFingerprint::new(hash_cached, short_len, "short");
+            let fp_query  = ContextFingerprint::new(hash_query,  long_len,  "query");
 
-        let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
-        rt.block_on(async {
-            cache.put(entry).await.expect("put must succeed");
-            // Give the clock at least 1 ms to advance past the 0-second TTL.
-            std::thread::sleep(Duration::from_millis(5));
+            let entry = KVCacheEntry::new("ps", fp_short, vec![0.5_f32; 4], short_len);
 
-            let result = cache.get(&fp).await;
-            prop_assert!(
-                result.is_none(),
-                "get() must return None for an entry with TTL=0 after any non-zero wall-clock duration"
-            );
-            Ok(())
-        })?;
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                cache.put(entry).await.expect("put must succeed");
+
+                let matched = cache.find_prefix_match(&fp_query).await;
+                prop_assert!(
+                    matched.is_some(),
+                    "find_prefix_match must find the shorter cached entry \
+                     (cached_len={short_len}, query_len={long_len})"
+                );
+                prop_assert_eq!(
+                    matched.expect("checked").fingerprint.prefix_length,
+                    short_len,
+                    "matched entry must have the cached prefix_length"
+                );
+                Ok(())
+            })?;
+        }
     }
-}
+
+    // -----------------------------------------------------------------------
+    // Test 8 – entry with TTL=0 is not returned by get() (expires immediately)
+    // -----------------------------------------------------------------------
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+
+        #[test]
+        fn prop_ttl_zero_expires_immediately(
+            fp in arb_fingerprint(),
+            kv_data in arb_kv_data(),
+        ) {
+            let dir = tempfile::TempDir::new().expect("tempdir creation must succeed");
+            let mut cache = open_prop_cache(&dir, "ttl0");
+
+            let entry = KVCacheEntry::new("ttl_prop", fp.clone(), kv_data, fp.prefix_length)
+                .with_ttl(Duration::from_secs(0)); // expires immediately
+
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime must start");
+            rt.block_on(async {
+                cache.put(entry).await.expect("put must succeed");
+                // Give the clock at least 1 ms to advance past the 0-second TTL.
+                std::thread::sleep(Duration::from_millis(5));
+
+                let result = cache.get(&fp).await;
+                prop_assert!(
+                    result.is_none(),
+                    "get() must return None for an entry with TTL=0 after any non-zero wall-clock duration"
+                );
+                Ok(())
+            })?;
+        }
+    }
 }

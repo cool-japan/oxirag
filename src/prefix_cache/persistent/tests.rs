@@ -177,8 +177,8 @@ async fn test_persistent_cache_ttl_expiration() {
     let mut cache = PersistentPrefixCache::open(config).expect("test operation should succeed");
 
     let fp = ContextFingerprint::new(12345, 100, "test");
-    let entry = KVCacheEntry::new("test1", fp.clone(), vec![0.0; 10], 100)
-        .with_ttl(Duration::from_secs(0));
+    let entry =
+        KVCacheEntry::new("test1", fp.clone(), vec![0.0; 10], 100).with_ttl(Duration::from_secs(0));
 
     cache
         .put(entry)
@@ -329,11 +329,9 @@ async fn test_hybrid_cache_warm_cache() {
     // Reopen and warm cache
     {
         let memory_config = PrefixCacheConfig::default();
-        let mut cache = HybridPersistentCache::new(
-            memory_config,
-            PersistentCacheConfig::new(temp_dir.path()),
-        )
-        .expect("test operation should succeed");
+        let mut cache =
+            HybridPersistentCache::new(memory_config, PersistentCacheConfig::new(temp_dir.path()))
+                .expect("test operation should succeed");
 
         assert_eq!(cache.memory_cache.len(), 0);
         assert_eq!(cache.persistent_cache.len(), 5);
@@ -374,8 +372,7 @@ async fn test_hybrid_cache_combined_stats() {
 fn test_persisted_entry_conversion() {
     use super::types::PersistedEntry;
     let fp = ContextFingerprint::new(12345, 100, "test content");
-    let entry =
-        KVCacheEntry::new("key1", fp.clone(), vec![1.0, 2.0, 3.0], 50).with_ttl_secs(3600);
+    let entry = KVCacheEntry::new("key1", fp.clone(), vec![1.0, 2.0, 3.0], 50).with_ttl_secs(3600);
 
     let persisted = PersistedEntry::from_kv_entry(&entry);
     assert_eq!(persisted.key, "key1");

@@ -33,7 +33,11 @@ impl CacheEntry {
     ///
     /// `hit_count` starts at `0` and `created_at` is set to [`Instant::now`].
     #[must_use]
-    pub fn new(query_text: impl Into<String>, query_embedding: Vec<f32>, output: PipelineOutput) -> Self {
+    pub fn new(
+        query_text: impl Into<String>,
+        query_embedding: Vec<f32>,
+        output: PipelineOutput,
+    ) -> Self {
         Self {
             query_text: query_text.into(),
             query_embedding,

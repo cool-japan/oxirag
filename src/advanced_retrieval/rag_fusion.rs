@@ -262,10 +262,7 @@ impl RagFusion {
 ///
 /// [`DocumentId`]: crate::types::DocumentId
 #[must_use]
-pub fn reciprocal_rank_fusion(
-    result_lists: &[Vec<SearchResult>],
-    k: f32,
-) -> Vec<SearchResult> {
+pub fn reciprocal_rank_fusion(result_lists: &[Vec<SearchResult>], k: f32) -> Vec<SearchResult> {
     if result_lists.is_empty() {
         return Vec::new();
     }
@@ -314,9 +311,21 @@ pub fn reciprocal_rank_fusion(
 fn strip_question_word(query: &str) -> &str {
     let lower = query.to_lowercase();
     let prefixes = [
-        "what is ", "what are ", "how does ", "how do ", "why is ", "why are ",
-        "when did ", "when does ", "where can ", "where is ", "who is ", "who uses ",
-        "tell me about ", "explain ", "describe ",
+        "what is ",
+        "what are ",
+        "how does ",
+        "how do ",
+        "why is ",
+        "why are ",
+        "when did ",
+        "when does ",
+        "where can ",
+        "where is ",
+        "who is ",
+        "who uses ",
+        "tell me about ",
+        "explain ",
+        "describe ",
     ];
     for prefix in &prefixes {
         if lower.starts_with(prefix) {

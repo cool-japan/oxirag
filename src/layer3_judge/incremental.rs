@@ -6,9 +6,9 @@
 
 pub mod checker;
 pub mod conflict;
-pub mod types;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub use checker::IncrementalConsistencyChecker;
 pub use types::{ClaimConflict, ConflictType, ConsistencyResult, Resolution};

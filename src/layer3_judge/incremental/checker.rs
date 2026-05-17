@@ -7,7 +7,8 @@ use crate::types::LogicalClaim;
 use super::conflict::{
     are_opposite_predicates, check_causal_conflict, check_comparison_conflict,
     check_direct_contradiction, check_modal_conflict, check_predicate_conflict,
-    check_temporal_conflict, estimate_specificity, extract_subject, hash_structure, normalize_string,
+    check_temporal_conflict, estimate_specificity, extract_subject, hash_structure,
+    normalize_string,
 };
 use super::types::{ClaimConflict, ConsistencyResult, Resolution};
 
@@ -260,7 +261,10 @@ impl IncrementalConsistencyChecker {
     }
 
     /// Find conflicts between a new claim and existing claims.
-    pub(super) fn find_conflicts_with_new_claim(&self, new_claim: &LogicalClaim) -> Vec<ClaimConflict> {
+    pub(super) fn find_conflicts_with_new_claim(
+        &self,
+        new_claim: &LogicalClaim,
+    ) -> Vec<ClaimConflict> {
         let mut conflicts = Vec::new();
         let new_hash = hash_structure(&new_claim.structure);
 
@@ -320,10 +324,7 @@ pub fn make_pair(id1: &str, id2: &str) -> (String, String) {
 }
 
 /// Dispatch all conflict checks for a pair of claims.
-fn check_claim_pair(
-    claim1: &LogicalClaim,
-    claim2: &LogicalClaim,
-) -> Option<ClaimConflict> {
+fn check_claim_pair(claim1: &LogicalClaim, claim2: &LogicalClaim) -> Option<ClaimConflict> {
     // Check for direct contradiction (A and NOT A)
     if let Some(conflict) = check_direct_contradiction(claim1, claim2) {
         return Some(conflict);

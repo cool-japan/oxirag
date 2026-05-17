@@ -45,7 +45,11 @@ fn fixed_basic_split() {
     let config = small_config(10, 0);
     let chunks = FixedSizeChunker.chunk(&doc, &config);
     // 26 chars / 10 step = 3 chunks (10, 10, 6)
-    assert_eq!(chunks.len(), 3, "expected 3 chunks for 26-char doc with size=10");
+    assert_eq!(
+        chunks.len(),
+        3,
+        "expected 3 chunks for 26-char doc with size=10"
+    );
     assert_eq!(chunks[0].content, "abcdefghij");
     assert_eq!(chunks[1].content, "klmnopqrst");
     assert_eq!(chunks[2].content, "uvwxyz");
@@ -179,8 +183,7 @@ fn sentence_preserves_boundaries() {
 
 #[test]
 fn sentence_overlap_produces_repeated_content() {
-    let text =
-        "Alpha sentence one. Beta sentence two. Gamma sentence three. Delta sentence four.";
+    let text = "Alpha sentence one. Beta sentence two. Gamma sentence three. Delta sentence four.";
     let doc = Document::new(text);
     let config = ChunkConfig::default()
         .with_chunk_size(50)
@@ -228,8 +231,7 @@ fn sentence_single_short_text() {
 
 #[test]
 fn recursive_paragraph_split() {
-    let text =
-        "Paragraph one content.\n\nParagraph two content.\n\nParagraph three content.";
+    let text = "Paragraph one content.\n\nParagraph two content.\n\nParagraph three content.";
     let doc = Document::new(text);
     let config = small_config(30, 0);
     let chunks = RecursiveChunker.chunk(&doc, &config);
@@ -319,8 +321,7 @@ fn markdown_h3_headings() {
 
 #[test]
 fn markdown_code_block_preserved() {
-    let md =
-        "# Code Example\n\n```rust\nfn main() {\n    println!(\"Hello\");\n}\n```\n\n## After Block\n\nSome text.";
+    let md = "# Code Example\n\n```rust\nfn main() {\n    println!(\"Hello\");\n}\n```\n\n## After Block\n\nSome text.";
     let doc = Document::new(md);
     let config = permissive_config();
     let chunks = MarkdownChunker.chunk(&doc, &config);
@@ -386,7 +387,10 @@ fn chunker_chunk_document_roundtrip() {
     let chunker = DocumentChunker::with_fixed_size(config);
     let indexed = chunker.chunk_document(&doc);
 
-    assert!(!indexed.is_empty(), "should produce at least one indexed doc");
+    assert!(
+        !indexed.is_empty(),
+        "should produce at least one indexed doc"
+    );
     for d in &indexed {
         assert!(!d.content.is_empty());
         // Chunk-level metadata should be present.
@@ -459,16 +463,32 @@ fn chunker_raw_chunks_returns_chunk_type() {
     assert!(!raw.is_empty());
     // raw_chunks and chunk_document should agree on count.
     let indexed = chunker.chunk_document(&doc);
-    assert_eq!(raw.len(), indexed.len(), "raw and indexed should have same count");
+    assert_eq!(
+        raw.len(),
+        indexed.len(),
+        "raw and indexed should have same count"
+    );
 }
 
 #[test]
 fn chunker_strategy_name_exposed() {
     let config = permissive_config();
-    assert_eq!(DocumentChunker::with_fixed_size(config.clone()).strategy_name(), "fixed-size");
-    assert_eq!(DocumentChunker::with_sentences(config.clone()).strategy_name(), "sentence");
-    assert_eq!(DocumentChunker::with_recursive(config.clone()).strategy_name(), "recursive");
-    assert_eq!(DocumentChunker::with_markdown(config).strategy_name(), "markdown");
+    assert_eq!(
+        DocumentChunker::with_fixed_size(config.clone()).strategy_name(),
+        "fixed-size"
+    );
+    assert_eq!(
+        DocumentChunker::with_sentences(config.clone()).strategy_name(),
+        "sentence"
+    );
+    assert_eq!(
+        DocumentChunker::with_recursive(config.clone()).strategy_name(),
+        "recursive"
+    );
+    assert_eq!(
+        DocumentChunker::with_markdown(config).strategy_name(),
+        "markdown"
+    );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -487,10 +507,19 @@ fn chunk_into_document_carries_metadata() {
 
     assert_eq!(doc.content, "chunk content");
     assert_eq!(doc.metadata.get("topic"), Some(&"testing".to_string()));
-    assert_eq!(doc.metadata.get("source_doc_id"), Some(&"doc-abc".to_string()));
+    assert_eq!(
+        doc.metadata.get("source_doc_id"),
+        Some(&"doc-abc".to_string())
+    );
     assert_eq!(doc.metadata.get("chunk_index"), Some(&"0".to_string()));
-    assert!(doc.metadata.contains_key("start_char"), "start_char must be in metadata");
-    assert!(doc.metadata.contains_key("end_char"), "end_char must be in metadata");
+    assert!(
+        doc.metadata.contains_key("start_char"),
+        "start_char must be in metadata"
+    );
+    assert!(
+        doc.metadata.contains_key("end_char"),
+        "end_char must be in metadata"
+    );
 }
 
 #[test]
@@ -539,7 +568,10 @@ fn edge_case_very_small_chunk_size() {
         .with_chunk_overlap(1)
         .with_min_chunk_size(1);
     let chunks = FixedSizeChunker.chunk(&doc, &config);
-    assert!(chunks.len() > 2, "small chunk_size should produce many chunks");
+    assert!(
+        chunks.len() > 2,
+        "small chunk_size should produce many chunks"
+    );
     for chunk in &chunks {
         assert!(chunk.content.chars().count() <= 3);
     }
@@ -556,7 +588,10 @@ fn edge_case_zero_overlap_no_repetition() {
     assert_eq!(chunks.len(), 2);
     // Verify no character appears in two chunks (no overlap).
     let combined: String = chunks.iter().map(|c| c.content.as_str()).collect();
-    assert_eq!(combined, "abcdefghij", "zero overlap: chars must not repeat");
+    assert_eq!(
+        combined, "abcdefghij",
+        "zero overlap: chars must not repeat"
+    );
 }
 
 #[test]
@@ -569,7 +604,11 @@ fn edge_case_overlap_equals_chunk_size_minus_one() {
         .with_min_chunk_size(1);
     let chunks = FixedSizeChunker.chunk(&doc, &config);
     // positions: 0-3, 1-4, 2-5
-    assert_eq!(chunks.len(), 3, "step-1 overlap should produce len-size+1 chunks");
+    assert_eq!(
+        chunks.len(),
+        3,
+        "step-1 overlap should produce len-size+1 chunks"
+    );
 }
 
 #[test]

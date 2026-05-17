@@ -14,9 +14,9 @@
 
 pub mod ops;
 pub mod store;
-pub mod types;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub use store::RedbPrefixCache;
 pub use types::{PersistedKVEntry, RedbPrefixCacheConfig};

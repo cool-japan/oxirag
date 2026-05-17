@@ -33,10 +33,7 @@ pub fn hash_structure_recursive<H: Hasher>(structure: &ClaimStructure, hasher: &
             "predicate".hash(hasher);
             normalize_string(subject).hash(hasher);
             normalize_string(predicate).hash(hasher);
-            object
-                .as_ref()
-                .map(|o| normalize_string(o))
-                .hash(hasher);
+            object.as_ref().map(|o| normalize_string(o)).hash(hasher);
         }
         ClaimStructure::Comparison {
             left,
@@ -313,10 +310,7 @@ pub fn check_comparison_conflict(
         let r2_norm = normalize_string(r2);
 
         // A > B and A < B
-        if l1_norm == l2_norm
-            && r1_norm == r2_norm
-            && are_opposite_comparisons(*op1, *op2)
-        {
+        if l1_norm == l2_norm && r1_norm == r2_norm && are_opposite_comparisons(*op1, *op2) {
             return Some(ClaimConflict::new(
                 &claim1.id,
                 &claim2.id,
@@ -398,10 +392,7 @@ pub fn check_temporal_conflict(
         }
 
         // Same events but contradictory relations
-        if e1_norm == e2_norm
-            && r1_norm == r2_norm
-            && are_opposite_time_relations(tr1, tr2)
-        {
+        if e1_norm == e2_norm && r1_norm == r2_norm && are_opposite_time_relations(tr1, tr2) {
             return Some(ClaimConflict::new(
                 &claim1.id,
                 &claim2.id,
@@ -419,10 +410,7 @@ pub fn check_temporal_conflict(
 
 /// Check for modal conflicts.
 #[must_use]
-pub fn check_modal_conflict(
-    claim1: &LogicalClaim,
-    claim2: &LogicalClaim,
-) -> Option<ClaimConflict> {
+pub fn check_modal_conflict(claim1: &LogicalClaim, claim2: &LogicalClaim) -> Option<ClaimConflict> {
     use crate::types::Modality;
 
     if let (

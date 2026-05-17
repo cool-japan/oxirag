@@ -6,7 +6,7 @@
 use redb::{Database, ReadableDatabase, ReadableTable};
 
 use super::super::types::CacheStats;
-use super::types::{PersistedKVEntry, CACHE_TABLE};
+use super::types::{CACHE_TABLE, PersistedKVEntry};
 use crate::error::OxiRagError;
 
 // ---------------------------------------------------------------------------

@@ -71,7 +71,9 @@ async fn test_store_and_exact_lookup() {
     let emb = uniform_vec(8);
     let output = make_output("Rust is fast.");
 
-    cache.store(emb.clone(), "What is Rust?", output.clone()).await;
+    cache
+        .store(emb.clone(), "What is Rust?", output.clone())
+        .await;
 
     let hit = cache.lookup(&emb).await;
     assert!(hit.is_some());
@@ -284,7 +286,10 @@ async fn test_clear_removes_all_entries() {
 fn test_cosine_similarity_identical() {
     let v = vec![1.0_f32, 2.0, 3.0];
     let sim = InMemorySemanticCache::cosine_similarity(&v, &v);
-    assert!((sim - 1.0).abs() < 1e-5, "Identical vectors should have similarity 1.0, got {sim}");
+    assert!(
+        (sim - 1.0).abs() < 1e-5,
+        "Identical vectors should have similarity 1.0, got {sim}"
+    );
 }
 
 #[test]
@@ -292,7 +297,10 @@ fn test_cosine_similarity_orthogonal() {
     let a = vec![1.0_f32, 0.0, 0.0];
     let b = vec![0.0_f32, 1.0, 0.0];
     let sim = InMemorySemanticCache::cosine_similarity(&a, &b);
-    assert!((sim - 0.0).abs() < 1e-5, "Orthogonal vectors should have similarity 0.0, got {sim}");
+    assert!(
+        (sim - 0.0).abs() < 1e-5,
+        "Orthogonal vectors should have similarity 0.0, got {sim}"
+    );
 }
 
 #[test]
@@ -300,7 +308,10 @@ fn test_cosine_similarity_anti_parallel() {
     let a = vec![1.0_f32, 0.0];
     let b = vec![-1.0_f32, 0.0];
     let sim = InMemorySemanticCache::cosine_similarity(&a, &b);
-    assert!(sim <= 0.0, "Anti-parallel vectors should have similarity <= 0.0, got {sim}");
+    assert!(
+        sim <= 0.0,
+        "Anti-parallel vectors should have similarity <= 0.0, got {sim}"
+    );
 }
 
 #[test]
@@ -308,7 +319,10 @@ fn test_cosine_similarity_zero_vector() {
     let a = vec![0.0_f32, 0.0, 0.0];
     let b = vec![1.0_f32, 0.0, 0.0];
     let sim = InMemorySemanticCache::cosine_similarity(&a, &b);
-    assert!((sim - 0.0).abs() < 1e-5, "Zero vector should return 0.0, got {sim}");
+    assert!(
+        (sim - 0.0).abs() < 1e-5,
+        "Zero vector should return 0.0, got {sim}"
+    );
 }
 
 #[test]
@@ -316,7 +330,10 @@ fn test_cosine_similarity_both_zero_vectors() {
     let a = vec![0.0_f32; 4];
     let b = vec![0.0_f32; 4];
     let sim = InMemorySemanticCache::cosine_similarity(&a, &b);
-    assert!((sim - 0.0).abs() < 1e-5, "Two zero vectors should return 0.0, got {sim}");
+    assert!(
+        (sim - 0.0).abs() < 1e-5,
+        "Two zero vectors should return 0.0, got {sim}"
+    );
 }
 
 #[test]
@@ -354,9 +371,7 @@ async fn test_is_empty_initial() {
 #[tokio::test]
 async fn test_is_empty_after_store() {
     let mut cache = default_cache();
-    cache
-        .store(uniform_vec(4), "q", make_output("a"))
-        .await;
+    cache.store(uniform_vec(4), "q", make_output("a")).await;
     assert!(!cache.is_empty());
 }
 

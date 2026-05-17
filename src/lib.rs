@@ -91,6 +91,10 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(unexpected_cfgs)]
 
+#[cfg(feature = "advanced-retrieval")]
+pub mod advanced_retrieval;
+#[cfg(feature = "chunking")]
+pub mod chunking;
 pub mod circuit_breaker;
 pub mod config;
 pub mod connection_pool;
@@ -122,18 +126,26 @@ pub mod query_expansion;
 pub mod relevance_feedback;
 pub mod reranker;
 pub mod retry;
-#[cfg(feature = "chunking")]
-pub mod chunking;
 #[cfg(feature = "semantic-cache")]
 pub mod semantic_cache;
-#[cfg(feature = "advanced-retrieval")]
-pub mod advanced_retrieval;
 pub mod simd_similarity;
 pub mod streaming;
 pub mod types;
 
 #[cfg(feature = "rag-eval")]
 pub mod evaluation;
+
+#[cfg(feature = "conversational")]
+pub mod conversation;
+
+#[cfg(feature = "flare")]
+pub mod retrieval_loop;
+
+#[cfg(feature = "collections")]
+pub mod collections;
+
+#[cfg(feature = "document-pipeline")]
+pub mod document_pipeline;
 
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
@@ -348,6 +360,41 @@ pub mod prelude {
         AggregateStats, AnswerRelevanceScorer, ContextPrecisionScorer, ContextRecallScorer,
         DatasetStats, EvalError, EvaluationDataset, EvaluationMetric, EvaluationResult,
         EvaluationSample, FaithfulnessScorer, OverallScorer, RagEvaluator,
+    };
+
+    // Conversational RAG exports
+    #[cfg(feature = "conversational")]
+    pub use crate::conversation::{
+        ConversationAwareQuery, ConversationError, ConversationHistory, ConversationId,
+        ConversationalPipeline, FollowUpDetector, FullHistoryBuffer, HistoryBuffer, HybridBuffer,
+        InMemorySessionManager, QueryReformulator as ConversationQueryReformulator,
+        ReformulationStrategy, Session, SessionConfig, SessionManager, SlidingWindowBuffer,
+        SummaryBuffer, Turn, TurnRole,
+    };
+
+    // FLARE adaptive retrieval loop exports
+    #[cfg(feature = "flare")]
+    pub use crate::retrieval_loop::{
+        ConfidenceEstimator, ContextDoc, ContextWindow, FlareConfig, FlareEngine, FlareError,
+        FlareGenerator, FlareOutput, FlareRetriever, IterationRecord, MockFlareGenerator,
+        MockFlareRetriever, QueryAugmentedRetriever, SentenceConfidence, TemplateGenerator,
+        TokenConfidence,
+    };
+
+    // Knowledge base collections exports
+    #[cfg(feature = "collections")]
+    pub use crate::collections::{
+        Collection, CollectionConfig, CollectionError, CollectionId, CollectionIndex,
+        CollectionMetadata, CollectionSimilarityMetric, CollectionStats, CollectionStore,
+        FederatedResult, InMemoryCollectionStore,
+    };
+
+    // Integrated document processing pipeline exports
+    #[cfg(feature = "document-pipeline")]
+    pub use crate::document_pipeline::{
+        ChunkProvenance, ChunkStrategyKind, DocumentAwareResult, DocumentPipelineBuilder,
+        DocumentPipelineError, IndexingConfig, IndexingPipeline, IndexingResult, PipelineStats,
+        RetrievalPipeline,
     };
 }
 

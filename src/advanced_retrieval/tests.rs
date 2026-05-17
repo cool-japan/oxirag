@@ -4,11 +4,11 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 
+use crate::advanced_retrieval::rag_fusion::reciprocal_rank_fusion;
 use crate::advanced_retrieval::{
     AdvancedRetrievalError, HydeConfig, HydeRetrieval, MmrConfig, MmrReranker, RagFusion,
     RagFusionConfig, RetrievalConfig, RetrievalStrategy,
 };
-use crate::advanced_retrieval::rag_fusion::reciprocal_rank_fusion;
 use crate::error::EmbeddingError;
 use crate::layer1_echo::traits::Echo;
 use crate::types::{Document, DocumentId, SearchResult};
@@ -95,9 +95,7 @@ fn test_retrieval_config_defaults() {
 
 #[test]
 fn test_retrieval_config_builders() {
-    let cfg = RetrievalConfig::default()
-        .with_top_k(5)
-        .with_min_score(0.7);
+    let cfg = RetrievalConfig::default().with_top_k(5).with_min_score(0.7);
     assert_eq!(cfg.top_k, 5);
     assert_eq!(cfg.min_score, Some(0.7));
 }
@@ -152,7 +150,11 @@ fn test_rag_fusion_config_builders() {
 fn test_generate_variants_count() {
     let fusion = RagFusion::new(RagFusionConfig::default());
     let variants = fusion.generate_variants("What is Rust?");
-    assert_eq!(variants.len(), 4, "Should generate exactly num_queries variants");
+    assert_eq!(
+        variants.len(),
+        4,
+        "Should generate exactly num_queries variants"
+    );
 }
 
 #[test]
@@ -239,10 +241,7 @@ fn test_rrf_deduplication() {
 fn test_rrf_known_scores() {
     // Doc "a" at rank 1 in list 0, rank 2 in list 1.
     // Doc "b" at rank 2 in list 0, rank 1 in list 1.
-    let list0 = vec![
-        make_result("a", "a", 0.9, 0),
-        make_result("b", "b", 0.8, 1),
-    ];
+    let list0 = vec![make_result("a", "a", 0.9, 0), make_result("b", "b", 0.8, 1)];
     let list1 = vec![
         make_result("b", "b", 0.85, 0),
         make_result("a", "a", 0.75, 1),
@@ -281,7 +280,10 @@ async fn test_rag_fusion_retrieve_smoke_test() {
     let echo = MockEcho::new(mock_results);
 
     let fusion = RagFusion::new(RagFusionConfig::default().with_top_k(5));
-    let results = fusion.retrieve("test query", &echo).await.expect("retrieve should succeed");
+    let results = fusion
+        .retrieve("test query", &echo)
+        .await
+        .expect("retrieve should succeed");
 
     // MockEcho returns the same 2 results for every variant; after dedup we
     // still have exactly 2 unique documents.
@@ -292,7 +294,10 @@ async fn test_rag_fusion_retrieve_smoke_test() {
 async fn test_rag_fusion_retrieve_empty_results() {
     let echo = MockEcho::new(vec![]);
     let fusion = RagFusion::new(RagFusionConfig::default());
-    let results = fusion.retrieve("query", &echo).await.expect("retrieve should succeed");
+    let results = fusion
+        .retrieve("query", &echo)
+        .await
+        .expect("retrieve should succeed");
     assert!(results.is_empty());
 }
 
@@ -328,7 +333,10 @@ fn test_hyde_generate_contains_query() {
     let hyde = HydeRetrieval::new(HydeConfig::default());
     let query = "What is Rust programming language?";
     let doc = hyde.generate_hypothetical_doc(query);
-    assert!(doc.contains(query), "Hypothetical doc should contain the original query");
+    assert!(
+        doc.contains(query),
+        "Hypothetical doc should contain the original query"
+    );
 }
 
 #[test]
@@ -336,7 +344,10 @@ fn test_hyde_generate_contains_prefix() {
     let cfg = HydeConfig::default().with_hypothetical_prefix("ANSWER: ");
     let hyde = HydeRetrieval::new(cfg);
     let doc = hyde.generate_hypothetical_doc("some query");
-    assert!(doc.starts_with("ANSWER: "), "Doc should start with the configured prefix");
+    assert!(
+        doc.starts_with("ANSWER: "),
+        "Doc should start with the configured prefix"
+    );
 }
 
 #[test]
@@ -344,7 +355,10 @@ fn test_hyde_generate_longer_than_query() {
     let hyde = HydeRetrieval::new(HydeConfig::default());
     let query = "What is machine learning?";
     let doc = hyde.generate_hypothetical_doc(query);
-    assert!(doc.len() > query.len(), "Hypothetical doc should be longer than the query");
+    assert!(
+        doc.len() > query.len(),
+        "Hypothetical doc should be longer than the query"
+    );
 }
 
 #[test]
@@ -353,7 +367,8 @@ fn test_hyde_generate_contains_keywords() {
     // Query has content words: "machine", "learning", "algorithms"
     let doc = hyde.generate_hypothetical_doc("What are machine learning algorithms?");
     // At least one of the content words should appear in the expansion.
-    let has_keyword = doc.contains("machine") || doc.contains("learning") || doc.contains("algorithms");
+    let has_keyword =
+        doc.contains("machine") || doc.contains("learning") || doc.contains("algorithms");
     assert!(has_keyword, "Doc should contain query keywords; got: {doc}");
 }
 
@@ -365,7 +380,9 @@ async fn test_hyde_retrieve_smoke_test() {
     let echo = MockEcho::new(mock_results);
 
     let hyde = HydeRetrieval::new(HydeConfig::default());
-    let results = hyde.retrieve("How does a compiler work?", &echo).await
+    let results = hyde
+        .retrieve("How does a compiler work?", &echo)
+        .await
         .expect("retrieve should succeed");
     assert_eq!(results.len(), 1);
 }
@@ -374,7 +391,9 @@ async fn test_hyde_retrieve_smoke_test() {
 async fn test_hyde_retrieve_empty_echo() {
     let echo = MockEcho::new(vec![]);
     let hyde = HydeRetrieval::new(HydeConfig::default());
-    let results = hyde.retrieve("query", &echo).await
+    let results = hyde
+        .retrieve("query", &echo)
+        .await
         .expect("retrieve should succeed");
     assert!(results.is_empty());
 }
@@ -466,8 +485,8 @@ fn test_mmr_diversity_beats_redundancy() {
     let q_emb = vec![1.0_f32, 0.0];
     let doc_embeddings: HashMap<String, Vec<f32>> = [
         ("a".to_string(), vec![1.0_f32, 0.0]),
-        ("b".to_string(), vec![0.95_f32, 0.0]),  // very close to A
-        ("c".to_string(), vec![0.0_f32, 1.0]),   // orthogonal to both A and B
+        ("b".to_string(), vec![0.95_f32, 0.0]), // very close to A
+        ("c".to_string(), vec![0.0_f32, 1.0]),  // orthogonal to both A and B
     ]
     .into_iter()
     .collect();
@@ -476,14 +495,19 @@ fn test_mmr_diversity_beats_redundancy() {
     assert_eq!(result.len(), 2);
 
     // First should be A (most relevant).
-    assert_eq!(result[0].document.id.as_str(), "a", "First result should be A");
+    assert_eq!(
+        result[0].document.id.as_str(),
+        "a",
+        "First result should be A"
+    );
 
     // With diversity-dominant lambda=0.3: after selecting A,
     // B has high redundancy (sim_B_A≈1.0) → MMR(B)= 0.3*0.95 - 0.7*1.0 ≈ -0.415
     // C has zero redundancy (sim_C_A=0.0)  → MMR(C)= 0.3*0.0 - 0.7*0.0 = 0.0
     // So C > B and C should be selected.
     assert_eq!(
-        result[1].document.id.as_str(), "c",
+        result[1].document.id.as_str(),
+        "c",
         "Second result should be C (diverse), not B (redundant)"
     );
 }
@@ -538,10 +562,7 @@ fn test_mmr_ranks_reassigned_from_zero() {
 fn test_mmr_missing_embedding_fallback() {
     // Documents with no entry in doc_embeddings → original score used for relevance.
     let reranker = MmrReranker::new(MmrConfig::default().with_top_k(2));
-    let candidates = vec![
-        make_result("a", "a", 0.9, 0),
-        make_result("b", "b", 0.3, 1),
-    ];
+    let candidates = vec![make_result("a", "a", 0.9, 0), make_result("b", "b", 0.3, 1)];
     let q_emb = vec![1.0_f32];
     let doc_embeddings: HashMap<String, Vec<f32>> = HashMap::new(); // empty
 

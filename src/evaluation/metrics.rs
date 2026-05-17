@@ -17,16 +17,14 @@ use super::types::{EvalError, EvaluationSample};
 
 /// English stop-words that are excluded from token sets.
 static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of",
-    "with", "by", "from", "up", "about", "into", "through", "during", "before",
-    "after", "above", "below", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "shall", "should",
-    "may", "might", "must", "can", "could", "not", "no", "nor", "so", "yet",
-    "both", "either", "each", "few", "more", "most", "other", "some", "such",
-    "than", "too", "very", "just", "that", "this", "these", "those", "it", "its",
-    "i", "me", "my", "we", "our", "you", "your", "he", "his", "she", "her", "they",
-    "them", "their", "what", "which", "who", "whom", "how", "when", "where", "why",
-    "if", "as", "any", "all", "only", "also",
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+    "from", "up", "about", "into", "through", "during", "before", "after", "above", "below", "is",
+    "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will",
+    "would", "shall", "should", "may", "might", "must", "can", "could", "not", "no", "nor", "so",
+    "yet", "both", "either", "each", "few", "more", "most", "other", "some", "such", "than", "too",
+    "very", "just", "that", "this", "these", "those", "it", "its", "i", "me", "my", "we", "our",
+    "you", "your", "he", "his", "she", "her", "they", "them", "their", "what", "which", "who",
+    "whom", "how", "when", "where", "why", "if", "as", "any", "all", "only", "also",
 ];
 
 /// Tokenise `text` into a set of meaningful lowercase tokens.
@@ -203,25 +201,25 @@ impl EvaluationMetric for FaithfulnessScorer {
         }
 
         // Tokenise all context chunks and union them together.
-        let context_tokens: HashSet<String> = sample
-            .context
-            .iter()
-            .flat_map(|c| tokenize(c))
-            .collect();
+        let context_tokens: HashSet<String> =
+            sample.context.iter().flat_map(|c| tokenize(c)).collect();
 
         let sentences = split_sentences(&sample.answer);
         if sentences.is_empty() {
             return Ok(0.0);
         }
 
-        let supported = sentences.iter().filter(|sentence| {
-            let sent_tokens = tokenize(sentence);
-            if sent_tokens.is_empty() {
-                return false;
-            }
-            let overlap = sent_tokens.intersection(&context_tokens).count() as f32;
-            overlap / sent_tokens.len() as f32 >= self.min_word_overlap
-        }).count();
+        let supported = sentences
+            .iter()
+            .filter(|sentence| {
+                let sent_tokens = tokenize(sentence);
+                if sent_tokens.is_empty() {
+                    return false;
+                }
+                let overlap = sent_tokens.intersection(&context_tokens).count() as f32;
+                overlap / sent_tokens.len() as f32 >= self.min_word_overlap
+            })
+            .count();
 
         Ok(supported as f32 / sentences.len() as f32)
     }
@@ -260,10 +258,14 @@ impl EvaluationMetric for ContextPrecisionScorer {
         }
 
         let query_tokens = tokenize(&sample.query);
-        let relevant = sample.context.iter().filter(|chunk| {
-            let chunk_tokens = tokenize(chunk);
-            jaccard(&chunk_tokens, &query_tokens) >= self.relevance_threshold
-        }).count();
+        let relevant = sample
+            .context
+            .iter()
+            .filter(|chunk| {
+                let chunk_tokens = tokenize(chunk);
+                jaccard(&chunk_tokens, &query_tokens) >= self.relevance_threshold
+            })
+            .count();
 
         Ok(relevant as f32 / sample.context.len() as f32)
     }
@@ -302,11 +304,8 @@ impl EvaluationMetric for ContextRecallScorer {
             return Ok(0.0);
         }
 
-        let context_tokens: HashSet<String> = sample
-            .context
-            .iter()
-            .flat_map(|c| tokenize(c))
-            .collect();
+        let context_tokens: HashSet<String> =
+            sample.context.iter().flat_map(|c| tokenize(c)).collect();
 
         let recalled = gt_tokens.intersection(&context_tokens).count() as f32;
         Ok(recalled / gt_tokens.len() as f32)

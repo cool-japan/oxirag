@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-17
+
+### Added
+
+- **Conversational RAG** (feature `conversational`): Full multi-turn conversation support. `ConversationHistory` with typed `Turn`/`TurnRole`. Four `HistoryBuffer` strategies: `FullHistoryBuffer`, `SlidingWindowBuffer`, `SummaryBuffer` (rolling lazy summary via `Arc<RwLock<_>>`), `HybridBuffer` (recent turns + truncated summary). `FollowUpDetector` with word-boundary pronoun detection, entity extraction from assistant turns, and pronoun resolution. `QueryReformulator` with four `ReformulationStrategy` variants (Concatenation, ContextInjection, FollowUpResolution, Standalone). `InMemorySessionManager` with LRU oldest-session eviction at capacity. `ConversationalPipeline<S, B>` generic wrapper that enriches user queries with conversation context before forwarding to the RAG pipeline. 77 new tests.
+- **FLARE Adaptive Retrieval** (feature `flare`): Forward-Looking Active REtrieval (Jiang et al. 2023). `FlareEngine<G, R>` with full iterative generate-retrieve-generate loop. `ConfidenceEstimator` with log-smoothed token-frequency pseudo-probability, sentence-level averaging, uncertain-sentence identification. `ContextWindow` with sorted, deduped, budget-trimmed context docs. `FlareOutput` with `retrieval_rate()`. `MockFlareGenerator` (cyclic, `Arc<AtomicUsize>` call counter), `TemplateGenerator` (`{query}`/`{context}` substitution). `MockFlareRetriever` + `QueryAugmentedRetriever<R>`. 56 new tests.
+- **Knowledge Base Collections** (feature `collections`): Multi-tenant namespaced vector store. `CollectionId` with lowercase-alphanumeric normalisation. `InMemoryCollectionStore` (capacity-bounded CRUD, running-average latency in `CollectionStats`). `CollectionIndex<S>` with per-collection `InMemoryVectorStore`, single-collection search, and cross-collection RRF fusion (`k=60`) via `cross_collection_search` / `search_all`. `FederatedResult` carries collection provenance. 29 new tests.
+- **Integrated Document Processing Pipeline** (feature `document-pipeline`, depends on `chunking + semantic-cache + advanced-retrieval`): `IndexingPipeline` auto-chunks documents with any of the four chunking strategies, content-hash deduplication, and per-chunk provenance tracking (`ChunkProvenance`). `RetrievalPipeline` with optional `InMemorySemanticCache` hit/miss, `MmrReranker` post-processing, and provenance enrichment into `DocumentAwareResult`. `DocumentPipelineBuilder` fluent API that constructs both pipelines sharing a provenance map and stats handle. `PipelineStats` with cache_hits counter. 26 new tests.
+
+### Codebase Statistics (v0.8.0)
+
+- **Tests**: 2,029 (all passing; +188 from v0.7.0: +77 conversational, +56 flare, +29 collections, +26 document-pipeline)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New features**: `conversational`, `flare`, `collections`, `document-pipeline`
+- **New files**: `src/conversation/{mod,types,buffer,reformulator,session,tests}.rs`, `src/retrieval_loop/{mod,types,confidence,generator,retriever,engine,tests}.rs`, `src/collections/{mod,types,store,index,tests}.rs`, `src/document_pipeline/{mod,types,indexing,retrieval,tests}.rs`
+
+## [0.7.0] - 2026-05-17
+
+### Added
+
+- **Document Chunking** (feature `chunking`): `DocumentChunker` with four strategies — `FixedSizeChunker` (Unicode scalar sliding window with configurable overlap), `SentenceChunker` (sentence-boundary splits with overlap seeding), `RecursiveChunker` (multi-separator cascade: `\n\n` → `\n` → `. ` → ` ` → `""`), `MarkdownChunker` (ATX heading splits with fenced-code-block tracking). `ChunkConfig` with `chunk_size`, `chunk_overlap`, `min_chunk_size`, `strip_whitespace`. `Chunk` with `into_document()` for seamless pipeline integration. Zero external deps (pure Rust).
+- **RAGAS-style Evaluation** (feature `rag-eval`): `RagEvaluator` with four lexical/heuristic metrics: `AnswerRelevanceScorer` (Jaccard + phrase boost), `FaithfulnessScorer` (sentence-level context overlap), `ContextPrecisionScorer`, `ContextRecallScorer`. Configurable `OverallScorer` with per-metric weights. `EvaluationSample::from_pipeline_output()` for frictionless pipeline wiring. `EvaluationDataset` with `save_json()`/`load_json()` for benchmark persistence. `EvalError` with `MissingGroundTruth`, `EmptyContext`, `Other(String)` variants.
+- **Semantic Cache** (feature `semantic-cache`): `InMemorySemanticCache` implementing `SemanticCache` async trait. Cosine-similarity lookup against cached query embeddings (configurable `similarity_threshold`, default 0.92). LRU eviction (`max_entries`), optional TTL expiry, `CacheStats` with `hit_rate`. Zero-vector guard prevents NaN scores. Thread-safe via `Arc<Mutex<...>>`.
+- **Advanced Retrieval** (feature `advanced-retrieval`): `RagFusion` with deterministic multi-query variant generation (negation, qualifier expansion, aspect decomposition) and `reciprocal_rank_fusion()` (HashMap deduplication + tie-breaking). `HydeRetrieval` (Hypothetical Document Embeddings) with stop-word-filtered expansion and delegate search. `MmrReranker` (Maximal Marginal Relevance) greedy loop with configurable λ (`lambda_param`, default 0.5) and fallback to raw score when embedding unavailable. `RetrievalConfig` + `AdvancedRetrievalError` types.
+
+### Codebase Statistics (v0.7.0)
+
+- **Tests**: 1,841 (all passing; +160 from v0.6.0: +40 chunking, +56 rag-eval, +27 semantic-cache, +37 advanced-retrieval)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New features**: `chunking`, `rag-eval`, `semantic-cache`, `advanced-retrieval`
+- **New files**: `src/chunking/{mod,config,chunk,strategies,tests}.rs`, `src/evaluation/{mod,types,metrics,evaluator,dataset,tests}.rs`, `src/semantic_cache/{mod,config,entry,cache,tests}.rs`, `src/advanced_retrieval/{mod,types,rag_fusion,hyde,mmr,tests}.rs`
+
 ## [0.6.0] - 2026-05-17
 
 ### Added

@@ -159,7 +159,10 @@ mod tests {
     fn test_weighted_average_without_recall() {
         let score = EvaluationResult::weighted_average(1.0, 1.0, 1.0, None);
         let diff = (score - 1.0_f32).abs();
-        assert!(diff < 1e-6_f32, "All-1s without recall should give 1.0, got {score}");
+        assert!(
+            diff < 1e-6_f32,
+            "All-1s without recall should give 1.0, got {score}"
+        );
     }
 
     #[test]

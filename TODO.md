@@ -408,6 +408,32 @@ This project implements four innovative concepts:
 | **v0.4.0**| **100%** ✅     | **99%** ✅     | **100%** ✅  | **98%** ✅    |
 | v1.0.0    | 100%            | 100%           | 100%         | 100%          |
 
+### Codebase Statistics (v0.8.0)
+- **Source Files**: ~165 Rust files (+25 for conversation/flare/collections/document_pipeline sub-files)
+- **Total Lines**: ~100,000+ (Rust code)
+- **Tests**: 2,029 (all passing; +188 from v0.7.0)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New features**: `conversational`, `flare`, `collections`, `document-pipeline`
+- **New Modules**:
+  - `src/conversation/` — multi-turn ConversationHistory, 4 buffer strategies, FollowUpDetector, QueryReformulator, InMemorySessionManager, ConversationalPipeline
+  - `src/retrieval_loop/` — FLARE iterative retrieval loop, ConfidenceEstimator, FlareEngine, mock generator/retriever
+  - `src/collections/` — namespaced multi-tenant CollectionIndex with RRF cross-collection fusion
+  - `src/document_pipeline/` — IndexingPipeline (auto-chunk + dedup + provenance), RetrievalPipeline (semantic cache + MMR + provenance enrichment), DocumentPipelineBuilder
+
+### Codebase Statistics (v0.7.0)
+- **Source Files**: ~140 Rust files (+20 for chunking/evaluation/semantic_cache/advanced_retrieval sub-files)
+- **Total Lines**: ~90,000+ (Rust code)
+- **Tests**: 1,841 (all passing; +160 from v0.6.0)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New features**: `chunking`, `rag-eval`, `semantic-cache`, `advanced-retrieval`
+- **New Modules**:
+  - `src/chunking/` — FixedSize, Sentence, Recursive, Markdown strategies
+  - `src/evaluation/` — RAGAS-style Answer Relevance, Faithfulness, Context Precision/Recall
+  - `src/semantic_cache/` — cosine-similarity memoization, LRU eviction, TTL, CacheStats
+  - `src/advanced_retrieval/` — RAG-Fusion (RRF), HyDE, MMR
+
 ### Codebase Statistics (v0.6.0)
 - **Source Files**: ~120 Rust files (+4 nodejs, +4 streaming sub-files, +4 query_expansion sub-files, +5 circuit_breaker sub-files, +6 connection_pool sub-files, +1 nodejs_smoke test)
 - **Total Lines**: ~81,000+ (Rust code)

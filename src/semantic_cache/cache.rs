@@ -175,13 +175,15 @@ impl SemanticCache for InMemorySemanticCache {
             if sim >= threshold {
                 // Update interior-mutable counters (safe — `Cell` is designed
                 // for exactly this single-threaded interior-mutability pattern).
-                self.total_lookups.set(self.total_lookups.get().saturating_add(1));
+                self.total_lookups
+                    .set(self.total_lookups.get().saturating_add(1));
                 self.total_hits.set(self.total_hits.get().saturating_add(1));
                 return Some(entry.output.clone());
             }
         }
 
-        self.total_lookups.set(self.total_lookups.get().saturating_add(1));
+        self.total_lookups
+            .set(self.total_lookups.get().saturating_add(1));
         None
     }
 

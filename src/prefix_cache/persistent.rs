@@ -6,11 +6,9 @@
 
 pub mod io;
 pub mod store;
-pub mod types;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub use store::{HybridPersistentCache, PersistentPrefixCache};
-pub use types::{
-    CacheIndex, CompactionStats, IndexEntry, PersistedEntry, PersistentCacheConfig,
-};
+pub use types::{CacheIndex, CompactionStats, IndexEntry, PersistedEntry, PersistentCacheConfig};

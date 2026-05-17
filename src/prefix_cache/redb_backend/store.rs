@@ -5,13 +5,15 @@ use std::path::Path;
 use async_trait::async_trait;
 use redb::{Database, ReadableDatabase, ReadableTable};
 
+use super::super::traits::PrefixCacheStore;
+use super::super::types::{
+    CacheKey, CacheStats, ContextFingerprint, KVCacheEntry, PrefixCacheConfig,
+};
 use super::ops::{
     decode_entry_static, delete_by_raw_key, encode_entry, find_oldest_key, rebuild_stats,
     scan_counts,
 };
-use super::types::{PersistedKVEntry, CACHE_TABLE};
-use super::super::traits::PrefixCacheStore;
-use super::super::types::{CacheKey, CacheStats, ContextFingerprint, KVCacheEntry, PrefixCacheConfig};
+use super::types::{CACHE_TABLE, PersistedKVEntry};
 use crate::error::OxiRagError;
 
 // ---------------------------------------------------------------------------

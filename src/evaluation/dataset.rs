@@ -1,9 +1,6 @@
 //! [`EvaluationDataset`] and related statistics for batch evaluation.
 
-use std::{
-    io,
-    path::Path,
-};
+use std::{io, path::Path};
 
 use serde::{Deserialize, Serialize};
 
@@ -86,8 +83,7 @@ impl EvaluationDataset {
     ///
     /// Returns an [`io::Error`] if the file cannot be created or written.
     pub fn save_json(&self, path: &Path) -> io::Result<()> {
-        let json = serde_json::to_string_pretty(self)
-            .map_err(io::Error::other)?;
+        let json = serde_json::to_string_pretty(self).map_err(io::Error::other)?;
         std::fs::write(path, json)
     }
 

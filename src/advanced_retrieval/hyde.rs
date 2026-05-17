@@ -106,13 +106,11 @@ impl HydeRetrieval {
 
         // Extract content words (skip stop-words) for keyword padding.
         let stop_words = [
-            "a", "an", "the", "is", "are", "was", "were", "be", "been",
-            "being", "have", "has", "had", "do", "does", "did", "will",
-            "would", "shall", "should", "may", "might", "must", "can",
-            "could", "to", "of", "in", "for", "on", "with", "at", "by",
-            "from", "as", "into", "through", "about", "what", "how", "why",
-            "when", "where", "who", "which", "that", "this", "these",
-            "those", "and", "or", "but", "nor", "so", "yet",
+            "a", "an", "the", "is", "are", "was", "were", "be", "been", "being", "have", "has",
+            "had", "do", "does", "did", "will", "would", "shall", "should", "may", "might", "must",
+            "can", "could", "to", "of", "in", "for", "on", "with", "at", "by", "from", "as",
+            "into", "through", "about", "what", "how", "why", "when", "where", "who", "which",
+            "that", "this", "these", "those", "and", "or", "but", "nor", "so", "yet",
         ];
 
         let keywords: Vec<&str> = query

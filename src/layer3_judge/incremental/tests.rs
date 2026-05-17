@@ -4,7 +4,9 @@
 
 use super::checker::IncrementalConsistencyChecker;
 use super::types::{ClaimConflict, ConflictType, ConsistencyResult, Resolution};
-use crate::types::{CausalStrength, ClaimStructure, ComparisonOp, LogicalClaim, Modality, TimeRelation};
+use crate::types::{
+    CausalStrength, ClaimStructure, ComparisonOp, LogicalClaim, Modality, TimeRelation,
+};
 
 fn make_predicate_claim(
     id: &str,

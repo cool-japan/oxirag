@@ -143,10 +143,8 @@ impl RagEvaluator {
     pub async fn aggregate_stats(&self, dataset: &EvaluationDataset) -> AggregateStats {
         let raw_results = self.evaluate_dataset(dataset).await;
 
-        let results: Vec<EvaluationResult> = raw_results
-            .into_iter()
-            .filter_map(Result::ok)
-            .collect();
+        let results: Vec<EvaluationResult> =
+            raw_results.into_iter().filter_map(Result::ok).collect();
 
         if results.is_empty() {
             return AggregateStats {
@@ -167,10 +165,7 @@ impl RagEvaluator {
 
         // context_recall is only meaningful when at least one sample had ground truth.
         // We use the dataset to determine whether that is the case.
-        let gt_count = dataset
-            .iter()
-            .filter(|s| s.ground_truth.is_some())
-            .count();
+        let gt_count = dataset.iter().filter(|s| s.ground_truth.is_some()).count();
         let mean_recall = if gt_count > 0 {
             Some(results.iter().map(|r| r.context_recall).sum::<f32>() / count)
         } else {
