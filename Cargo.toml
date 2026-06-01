@@ -64,7 +64,7 @@ tokenizers = { version = "0.23", optional = true }
 image = { version = "0.25", optional = true }
 
 # Layer 3: Judge
-oxiz = { version = "0.2.1", optional = true }
+oxiz = { version = "0.2.2", optional = true }
 
 # Persistent storage backend (pure Rust, ACID embedded DB)
 redb = { version = "4", optional = true }
