@@ -147,6 +147,138 @@ pub mod collections;
 #[cfg(feature = "document-pipeline")]
 pub mod document_pipeline;
 
+#[cfg(feature = "prompt-templates")]
+pub mod prompt_templates;
+
+#[cfg(feature = "query-routing")]
+pub mod query_router;
+
+#[cfg(feature = "corrective-rag")]
+pub mod corrective_rag;
+
+#[cfg(feature = "attribution")]
+pub mod attribution;
+
+// Theme 1 — Agentic & Reasoning
+#[cfg(feature = "self-rag")]
+pub mod self_rag;
+
+#[cfg(feature = "agentic")]
+pub mod agentic;
+
+#[cfg(feature = "query-decomposition")]
+pub mod query_decomposition;
+
+#[cfg(feature = "context-compression")]
+pub mod context_compression;
+
+// Theme 2 — Safety & Governance
+#[cfg(feature = "guardrails")]
+pub mod guardrails;
+
+#[cfg(feature = "structured-extraction")]
+pub mod structured_extraction;
+
+#[cfg(feature = "output-validation")]
+pub mod output_validation;
+
+// Theme 3 — Knowledge Graph Intelligence
+#[cfg(feature = "graph-community")]
+pub mod graph_community;
+
+#[cfg(feature = "graph-summarization")]
+pub mod graph_summarization;
+
+#[cfg(feature = "raptor")]
+pub mod raptor;
+
+// Theme 4 — Retrieval Depth
+#[cfg(feature = "parent-document")]
+pub mod parent_document;
+
+#[cfg(feature = "temporal-retrieval")]
+pub mod temporal;
+
+// v0.11.0 — Theme 1: Multi-hop & Graph Reasoning
+#[cfg(feature = "multi-hop")]
+pub mod multi_hop;
+
+#[cfg(feature = "fact-triples")]
+pub mod fact_triple;
+
+#[cfg(feature = "knowledge-graph-qa")]
+pub mod knowledge_graph_qa;
+
+// v0.11.0 — Theme 2: Iterative Generation
+#[cfg(feature = "iterative-rag")]
+pub mod iterative_rag;
+
+#[cfg(feature = "chain-of-note")]
+pub mod chain_of_note;
+
+#[cfg(feature = "answer-aggregation")]
+pub mod answer_aggregator;
+
+// v0.11.0 — Theme 3: Trust & Verification
+#[cfg(feature = "hallucination-detection")]
+pub mod hallucination_detector;
+
+#[cfg(feature = "consistency-checking")]
+pub mod consistency_checker;
+
+#[cfg(feature = "trust-scoring")]
+pub mod trust_score;
+
+// v0.11.0 — Theme 4: Routing & Composition
+#[cfg(feature = "semantic-router")]
+pub mod semantic_router;
+
+#[cfg(feature = "query-planning")]
+pub mod query_planning;
+
+#[cfg(feature = "pipeline-composer")]
+pub mod pipeline_composer;
+
+// v0.12.0 — Theme 1: Reranking & Retrieval Precision
+#[cfg(feature = "cross-encoder")]
+pub mod cross_encoder;
+
+#[cfg(feature = "contextual-retrieval")]
+pub mod contextual_retrieval;
+
+#[cfg(feature = "lost-in-middle")]
+pub mod lost_in_middle;
+
+// v0.12.0 — Theme 2: Advanced Reasoning
+#[cfg(feature = "reflexion")]
+pub mod reflexion;
+
+#[cfg(feature = "tree-of-thought")]
+pub mod tree_of_thought;
+
+#[cfg(feature = "chain-of-verification")]
+pub mod chain_of_verification;
+
+// v0.12.0 — Theme 3: Memory & State
+#[cfg(feature = "long-term-memory")]
+pub mod long_term_memory;
+
+#[cfg(feature = "memory-compression")]
+pub mod memory_compression;
+
+#[cfg(feature = "entity-memory")]
+pub mod entity_memory;
+
+// v0.12.0 — Theme 4: Evaluation & Optimization
+#[cfg(feature = "retrieval-eval")]
+pub mod retrieval_eval;
+
+#[cfg(feature = "llm-judge")]
+pub mod llm_judge;
+
+#[cfg(feature = "prompt-optimization")]
+pub mod prompt_optimization;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -395,6 +527,280 @@ pub mod prelude {
         ChunkProvenance, ChunkStrategyKind, DocumentAwareResult, DocumentPipelineBuilder,
         DocumentPipelineError, IndexingConfig, IndexingPipeline, IndexingResult, PipelineStats,
         RetrievalPipeline,
+    };
+
+    // Prompt template registry exports
+    #[cfg(feature = "prompt-templates")]
+    pub use crate::prompt_templates::{
+        PromptRegistry, PromptTemplate, PromptTemplateError, RenderContext, TemplateEngine,
+        TemplateId, builtin_templates,
+    };
+
+    // Query routing exports
+    #[cfg(feature = "query-routing")]
+    pub use crate::query_router::{
+        HeuristicIntentClassifier, IntentClassifier, IntentScores, MockIntentClassifier,
+        QueryIntent, QueryRouter, QueryRouterError, RouterConfig, RoutingDecision, RoutingStrategy,
+    };
+
+    // Corrective RAG exports
+    #[cfg(feature = "corrective-rag")]
+    pub use crate::corrective_rag::{
+        CorrectiveAction, CorrectiveRagEngine, CorrectiveRagError, CragConfig, CragOutput,
+        GradedDocument, HeuristicRetrievalGrader, KnowledgeRefiner, KnowledgeStrip,
+        MockRetrievalGrader, QueryRefiner, RetrievalGrade, RetrievalGrader,
+    };
+
+    // Attribution exports
+    #[cfg(feature = "attribution")]
+    pub use crate::attribution::{
+        AlignmentScorer, AttributedAnswer, AttributionConfig, AttributionError, Attributor,
+        Citation, CitationFormatter, CitationId, CitationStyle, CitedSpan, FaithfulnessChecker,
+        LexicalAligner, SentenceAligner,
+    };
+
+    // Self-RAG exports
+    #[cfg(feature = "self-rag")]
+    pub use crate::self_rag::{
+        HeuristicReflector, MockReflector, ReflectionToken, Reflector, SelfRagConfig,
+        SelfRagEngine, SelfRagError, SelfRagOutput,
+    };
+
+    // Agentic RAG exports
+    #[cfg(feature = "agentic")]
+    pub use crate::agentic::{
+        AgentAction, AgentStep, AgentTrace, AgenticConfig, AgenticError, CalculatorTool,
+        LookupTool, MockTool, ReActAgent, Tool, ToolRegistry,
+    };
+
+    // Query decomposition exports
+    #[cfg(feature = "query-decomposition")]
+    pub use crate::query_decomposition::{
+        DecomposedQuery, DecompositionConfig, DecompositionStrategy, QueryDecomposer,
+        QueryDecompositionEngine, QueryDecompositionError, SubAnswer, SubQuestion,
+    };
+
+    // Context compression exports
+    #[cfg(feature = "context-compression")]
+    pub use crate::context_compression::{
+        CompressedContext, CompressionConfig, CompressionError, ContextCompressor,
+        ExtractiveCompressor, MockCompressor, RedundancyFilter,
+    };
+
+    // Guardrails exports
+    #[cfg(feature = "guardrails")]
+    pub use crate::guardrails::{
+        ContentModerator, GuardrailConfig, GuardrailEngine, GuardrailError, GuardrailReport,
+        InjectionDetector, PiiDetector, PiiKind, PiiMatch, Severity, TopicalRail, Violation,
+    };
+
+    // Structured extraction exports
+    #[cfg(feature = "structured-extraction")]
+    pub use crate::structured_extraction::{
+        ExtractedRecord, ExtractedValue, ExtractionConfig, ExtractionSchema, FieldSchema,
+        FieldType, SchemaExtractor, StructuredExtractionError,
+    };
+
+    // Output validation exports
+    #[cfg(feature = "output-validation")]
+    pub use crate::output_validation::{
+        OutputValidationError, OutputValidator, RuleKind, RuleViolation, ValidationConfig,
+        ValidationReport, ValidationRule,
+    };
+
+    // Graph community exports
+    #[cfg(feature = "graph-community")]
+    pub use crate::graph_community::{
+        Community, CommunityDetector, CommunityGraph, CommunityId, GraphCommunityConfig,
+        GraphCommunityError, LouvainDetector,
+    };
+
+    // Graph summarization exports
+    #[cfg(feature = "graph-summarization")]
+    pub use crate::graph_summarization::{
+        CommunitySummarizer, CommunitySummary, GlobalSearchEngine, GraphSummarizationConfig,
+        GraphSummarizationError, LocalSearchEngine, SummaryReport,
+    };
+
+    // RAPTOR exports
+    #[cfg(feature = "raptor")]
+    pub use crate::raptor::{
+        ClusterStrategy, RaptorBuilder, RaptorConfig, RaptorError, RaptorNode, RaptorTree,
+    };
+
+    // Parent document retrieval exports
+    #[cfg(feature = "parent-document")]
+    pub use crate::parent_document::{
+        ChunkHierarchy, ExpandedResult, ParentChildIndex, ParentDocumentConfig,
+        ParentDocumentError, ParentDocumentRetriever,
+    };
+
+    // Temporal retrieval exports
+    #[cfg(feature = "temporal-retrieval")]
+    pub use crate::temporal::{
+        DecayFunction, TemporalConfig, TemporalError, TemporalReranker, TemporalScore,
+    };
+
+    // Multi-hop traversal exports
+    #[cfg(feature = "multi-hop")]
+    pub use crate::multi_hop::{
+        HopConfig, HopState, MultiHopError, MultiHopResult, MultiHopRetriever,
+    };
+
+    // Fact triple extraction exports
+    #[cfg(feature = "fact-triples")]
+    pub use crate::fact_triple::{Triple, TripleConfig, TripleError, TripleExtractor, TripleStore};
+
+    // Knowledge-graph QA exports
+    #[cfg(feature = "knowledge-graph-qa")]
+    pub use crate::knowledge_graph_qa::{KgqaAnswer, KgqaConfig, KgqaEngine, KgqaError};
+
+    // Iterative RAG exports
+    #[cfg(feature = "iterative-rag")]
+    pub use crate::iterative_rag::{
+        IterationStep, IterativeConfig, IterativeOutput, IterativeRagEngine, IterativeRagError,
+    };
+
+    // Chain-of-Note exports
+    #[cfg(feature = "chain-of-note")]
+    pub use crate::chain_of_note::{
+        ChainOfNoteEngine, ChainOfNoteError, DocumentNote, NoteChain, NoteConfig,
+    };
+
+    // Answer aggregation exports
+    #[cfg(feature = "answer-aggregation")]
+    pub use crate::answer_aggregator::{
+        AggregatedAnswer, AggregationConfig, AggregationError, AggregationStrategy,
+        AnswerAggregator, CandidateAnswer,
+    };
+
+    // Hallucination detection exports
+    #[cfg(feature = "hallucination-detection")]
+    pub use crate::hallucination_detector::{
+        ClaimSupport, HallucinationConfig, HallucinationDetector, HallucinationError,
+        HallucinationReport,
+    };
+
+    // Consistency checking exports
+    #[cfg(feature = "consistency-checking")]
+    pub use crate::consistency_checker::{
+        ConflictType, ConsistencyChecker, ConsistencyConfig, ConsistencyError, ConsistencyReport,
+        Inconsistency,
+    };
+
+    // Trust scoring exports
+    #[cfg(feature = "trust-scoring")]
+    pub use crate::trust_score::{
+        TrustComponents, TrustConfig, TrustError, TrustScore, TrustScorer,
+    };
+
+    // Semantic router exports
+    #[cfg(feature = "semantic-router")]
+    pub use crate::semantic_router::{
+        RouterError, RouterExample, RoutingDecision as SemanticRoutingDecision, RoutingTarget,
+        SemanticRouter, SemanticRoutingConfig,
+    };
+
+    // Query planning exports
+    #[cfg(feature = "query-planning")]
+    pub use crate::query_planning::{
+        PlanExecutor, PlanResult, PlanStep, PlanStepKind, QueryPlan, QueryPlanner,
+        QueryPlanningError, SynthesisStrategy,
+    };
+
+    // Pipeline composer exports
+    #[cfg(feature = "pipeline-composer")]
+    pub use crate::pipeline_composer::{
+        ComposedPipeline, ComposerError, PipelineStage, StageInput, StageOutput,
+    };
+
+    // Cross-encoder reranking exports
+    #[cfg(feature = "cross-encoder")]
+    pub use crate::cross_encoder::{
+        CrossEncoderConfig, CrossEncoderError,
+        CrossEncoderReranker as PairwiseCrossEncoderReranker, CrossEncoderScorer, FeatureWeights,
+        InteractionFeatures, LexicalCrossEncoder, RerankedResult,
+    };
+
+    // Contextual retrieval exports
+    #[cfg(feature = "contextual-retrieval")]
+    pub use crate::contextual_retrieval::{
+        ChunkContext, ContextualChunk, ContextualConfig, ContextualIndexBuilder,
+        ContextualRetrievalError, Contextualizer, ExtractiveContextualizer,
+    };
+
+    // Lost-in-the-middle reordering exports
+    #[cfg(feature = "lost-in-middle")]
+    pub use crate::lost_in_middle::{
+        LostInMiddleError, LostInMiddleReorderer, ReorderConfig, ReorderReport, ReorderStrategy,
+    };
+
+    // Reflexion exports
+    #[cfg(feature = "reflexion")]
+    pub use crate::reflexion::{
+        Attempt, AttemptEvaluator, AttemptScore, EpisodicMemory, HeuristicEvaluator,
+        HeuristicSelfReflector, Reflection, ReflexionConfig, ReflexionEngine, ReflexionError,
+        ReflexionOutcome, SelfReflector,
+    };
+
+    // Tree-of-Thought exports
+    #[cfg(feature = "tree-of-thought")]
+    pub use crate::tree_of_thought::{
+        HeuristicThoughtEvaluator, HeuristicThoughtGenerator, ThoughtEvaluator, ThoughtGenerator,
+        ThoughtSearchStrategy, ThoughtState, ThoughtTree, ThoughtTreeNode, ToTConfig, ToTOutput,
+        TreeOfThoughtEngine, TreeOfThoughtError,
+    };
+
+    // Chain-of-Verification exports
+    #[cfg(feature = "chain-of-verification")]
+    pub use crate::chain_of_verification::{
+        ChainOfVerificationEngine, ChainOfVerificationError, ClaimVerdict, CoVeConfig, CoVeOutput,
+        HeuristicQuestionPlanner, QuestionPlanner, VerificationAnswer, VerificationQuestion,
+    };
+
+    // Long-term memory exports
+    #[cfg(feature = "long-term-memory")]
+    pub use crate::long_term_memory::{
+        HeuristicImportanceScorer, ImportanceScorer, LongTermMemoryConfig, LongTermMemoryError,
+        LongTermMemoryStore, MemoryKind, MemoryQuery, MemoryRecord, MemoryRetriever,
+        RetrievedMemory,
+    };
+
+    // Memory compression exports
+    #[cfg(feature = "memory-compression")]
+    pub use crate::memory_compression::{
+        CompressedBlock, CompressionStats, ExtractiveTurnCompressor, HierarchicalMemory,
+        MemoryCompressionConfig, MemoryCompressionError, MemoryTurn, TurnCompressor,
+    };
+
+    // Entity memory exports
+    #[cfg(feature = "entity-memory")]
+    pub use crate::entity_memory::{
+        EntityCategory, EntityKnowledge, EntityMemoryConfig, EntityMemoryError, EntityMemoryStore,
+        EntityMentionExtractor, EntityMentionSpan, HeuristicEntityMentionExtractor,
+    };
+
+    // Retrieval eval exports
+    #[cfg(feature = "retrieval-eval")]
+    pub use crate::retrieval_eval::{
+        AggregateScores, Qrels, RelevanceJudgment, RetrievalEvalConfig, RetrievalEvalError,
+        RetrievalEvaluator, RetrievalScores, average_precision, dcg_at_k, f1_at_k, hit_rate_at_k,
+        mrr, ndcg_at_k, precision_at_k, recall_at_k, reciprocal_rank,
+    };
+
+    // LLM-judge exports
+    #[cfg(feature = "llm-judge")]
+    pub use crate::llm_judge::{
+        Criterion, CriterionScores, HeuristicJudge, JudgeContext, JudgeMode, JudgeModel, LlmJudge,
+        LlmJudgeConfig, LlmJudgeError, PairwiseVerdict, PointwiseVerdict, Pref, Rubric,
+    };
+
+    // Prompt optimization exports
+    #[cfg(feature = "prompt-optimization")]
+    pub use crate::prompt_optimization::{
+        DemoPool, DemoSelectionStrategy, DemoSelector, Demonstration, DevExample, OutputScorer,
+        PromptOptimizationConfig, PromptOptimizationError, PromptOptimizer, PromptVariant,
+        VariantScore,
     };
 }
 

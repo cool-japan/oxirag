@@ -47,6 +47,18 @@ impl InMemoryGraphStore {
     pub fn relationships_map(&self) -> &HashMap<String, GraphRelationship> {
         &self.relationships
     }
+
+    /// Return a snapshot of all entities (for community detection and summarization).
+    #[must_use]
+    pub fn all_entities(&self) -> Vec<GraphEntity> {
+        self.entities.values().cloned().collect()
+    }
+
+    /// Return a snapshot of all relationships (for community detection and summarization).
+    #[must_use]
+    pub fn all_relationships(&self) -> Vec<GraphRelationship> {
+        self.relationships.values().cloned().collect()
+    }
 }
 
 #[async_trait]

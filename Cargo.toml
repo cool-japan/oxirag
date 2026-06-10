@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.8.0"
+version = "0.12.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -81,8 +81,8 @@ pyo3 = { version = "0.28", features = ["extension-module"], optional = true }
 pyo3-async-runtimes = { version = "0.28", features = ["tokio-runtime"], optional = true }
 
 # Node.js bindings (napi-rs)
-napi = { version = "2", features = ["napi4", "tokio_rt", "async"], optional = true }
-napi-derive = { version = "2", optional = true }
+napi = { version = "3", features = ["napi4", "tokio_rt", "async"], optional = true }
+napi-derive = { version = "3", optional = true }
 
 # REST server dependencies
 axum = { version = "0.8", optional = true, features = ["json", "macros"] }
@@ -168,6 +168,87 @@ flare = []
 collections = []
 # Integrated document processing pipeline wiring chunking + cache + retrieval
 document-pipeline = ["chunking", "semantic-cache", "advanced-retrieval"]
+# Prompt template registry: {{var}} interpolation + {{#if}}/{{#unless}}/{{else}}
+prompt-templates = []
+# Query intent classification and adaptive retrieval-strategy routing
+query-routing = []
+# Corrective RAG (CRAG): retrieval-quality grading + corrective re-retrieval loop
+corrective-rag = ["advanced-retrieval"]
+# Inline citation and source attribution for generated answers
+attribution = []
+# Umbrella for the whole adaptive control plane
+adaptive-control-plane = ["prompt-templates", "query-routing", "corrective-rag", "attribution"]
+# Self-Reflective RAG with reflection tokens (decide when to retrieve, critique own output)
+self-rag = []
+# ReAct Thought→Action→Observation agentic loop with tool registry
+agentic = []
+# Sub-question decomposition → sub-answers → RRF recombination
+query-decomposition = ["advanced-retrieval"]
+# Extractive context distillation before generation
+context-compression = []
+# PII detection/redaction + prompt injection + content moderation + topical rails
+guardrails = []
+# JSON-schema-constrained typed entity extraction
+structured-extraction = []
+# Generated-answer rule enforcement (length, citations, banned phrases, etc.)
+output-validation = []
+# Louvain community detection over the GraphRAG entity-relationship graph
+graph-community = ["graphrag"]
+# Hierarchical community summaries + Microsoft-GraphRAG global/local search
+graph-summarization = ["graph-community"]
+# RAPTOR: recursive abstractive summary tree for multi-document retrieval
+raptor = []
+# Sentence-window / parent-document small-to-big retrieval
+parent-document = ["chunking"]
+# Recency-decay re-scoring with exponential/linear/Gaussian decay functions
+temporal-retrieval = []
+# Theme umbrellas (v0.10.0)
+agentic-reasoning  = ["self-rag", "agentic", "query-decomposition", "context-compression"]
+safety-governance  = ["guardrails", "structured-extraction", "output-validation"]
+graph-intelligence = ["graph-community", "graph-summarization", "raptor"]
+retrieval-depth    = ["parent-document", "temporal-retrieval", "context-compression", "query-decomposition"]
+# v0.11.0 — Multi-hop & Graph Reasoning
+multi-hop           = ["graphrag"]
+fact-triples        = []
+knowledge-graph-qa  = ["graphrag", "fact-triples"]
+# v0.11.0 — Iterative Generation
+iterative-rag       = ["advanced-retrieval"]
+chain-of-note       = []
+answer-aggregation  = []
+# v0.11.0 — Trust & Verification
+hallucination-detection = []
+consistency-checking    = []
+trust-scoring           = ["hallucination-detection", "consistency-checking"]
+# v0.11.0 — Routing & Composition
+semantic-router         = []
+query-planning          = ["query-decomposition"]
+pipeline-composer       = ["guardrails", "output-validation"]
+# v0.11.0 theme umbrellas
+graph-reasoning    = ["multi-hop", "fact-triples", "knowledge-graph-qa"]
+iterative-gen      = ["iterative-rag", "chain-of-note", "answer-aggregation"]
+trust-verify       = ["hallucination-detection", "consistency-checking", "trust-scoring"]
+routing-compose    = ["semantic-router", "query-planning", "pipeline-composer"]
+# v0.12.0 — Theme 1: Reranking & Retrieval Precision
+cross-encoder         = []
+contextual-retrieval  = ["chunking"]
+lost-in-middle        = []
+# v0.12.0 — Theme 2: Advanced Reasoning
+reflexion             = []
+tree-of-thought       = []
+chain-of-verification = ["advanced-retrieval"]
+# v0.12.0 — Theme 3: Memory & State
+long-term-memory      = []
+memory-compression    = []
+entity-memory         = []
+# v0.12.0 — Theme 4: Evaluation & Optimization
+retrieval-eval        = []
+llm-judge             = []
+prompt-optimization   = []
+# v0.12.0 theme umbrellas
+rerank-precision   = ["cross-encoder", "contextual-retrieval", "lost-in-middle"]
+advanced-reasoning = ["reflexion", "tree-of-thought", "chain-of-verification"]
+memory-state       = ["long-term-memory", "memory-compression", "entity-memory"]
+eval-optimization  = ["retrieval-eval", "llm-judge", "prompt-optimization"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

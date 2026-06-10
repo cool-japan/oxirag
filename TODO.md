@@ -1,5 +1,62 @@
 # OxiRAG TODO
 
+## v0.12.0 — Reranking-Precision, Advanced-Reasoning, Memory-State & Eval-Optimization ✅
+
+**Released**: 2026-06-10 | **Tests**: 3,285 | **Warnings**: 0
+
+- [x] **Cross-Encoder Reranking** (`cross-encoder`): 7 interaction features, IDF from candidate set, logistic squash, `CrossEncoderReranker.rerank()`
+- [x] **Contextual Retrieval** (`contextual-retrieval`): TF-IDF extractive blurb + title/position/preceding-gist, `ContextualIndexBuilder.build()`
+- [x] **Lost-in-the-Middle** (`lost-in-middle`): U-shaped reorder (Sandwich/HeadTail), `LostInMiddleReorderer.reorder()`
+- [x] **Reflexion** (`reflexion`): Verbal self-reflection loop, episodic memory, `ReflexionEngine.run<E>`
+- [x] **Tree-of-Thoughts** (`tree-of-thought`): BFS/DFS beam search, `ThoughtTree`, `TreeOfThoughtEngine.run<E>`
+- [x] **Chain-of-Verification** (`chain-of-verification`): CoVe draft→verify→revise, Jaccard verdicts, `ChainOfVerificationEngine.run<E>`
+- [x] **Long-Term Memory** (`long-term-memory`): Generative-agents memory stream, recency+importance+relevance retrieval, `MemoryRetriever`
+- [x] **Memory Compression** (`memory-compression`): Hierarchical compaction, `HierarchicalMemory`, `ExtractiveTurnCompressor`
+- [x] **Entity Memory** (`entity-memory`): Per-entity knowledge tracking, salience scoring, `EntityMemoryStore.observe()`
+- [x] **Retrieval Evaluation** (`retrieval-eval`): nDCG/MAP/MRR/P@k/R@k/AP, `RetrievalEvaluator.evaluate_batch()`
+- [x] **LLM-as-Judge** (`llm-judge`): Pointwise/pairwise/reference, `HeuristicJudge`, `LlmJudge`
+- [x] **Prompt Optimization** (`prompt-optimization`): KNN/MMR/Deterministic/Hardest demo selection, `PromptOptimizer.evaluate_variants()`
+
+---
+
+## v0.11.0 — Multi-hop, Iterative, Trust & Composition ✅
+
+**Released**: 2026-06-10 | **Tests**: 2,687 | **Warnings**: 0
+
+- [x] **Multi-hop Retrieval** (`multi-hop`): Entity-chain BFS traversal, `MultiHopRetriever.run<E>`
+- [x] **Fact Triples** (`fact-triples`): SVO triple extraction, `TripleExtractor`, `TripleStore`
+- [x] **Knowledge Graph QA** (`knowledge-graph-qa`): Subgraph + fact synthesis, `KgqaEngine`
+- [x] **Iterative RAG** (`iterative-rag`): ITER-RETGEN loop, expansion terms, `IterativeRagEngine`
+- [x] **Chain-of-Note** (`chain-of-note`): Per-doc extractive notes → synthesis, `ChainOfNoteEngine`
+- [x] **Answer Aggregation** (`answer-aggregation`): MajorityVote/WeightedFusion/Extractive, `AnswerAggregator`
+- [x] **Hallucination Detection** (`hallucination-detection`): Claim-support scoring, `HallucinationDetector`
+- [x] **Consistency Checking** (`consistency-checking`): Numerical/Temporal/Negation pairwise, `ConsistencyChecker`
+- [x] **Trust Scoring** (`trust-scoring`): 4-component composite score, `TrustScorer`
+- [x] **Semantic Router** (`semantic-router`): FNV-1a KNN routing, `SemanticRouter.route()`
+- [x] **Query Planning** (`query-planning`): DAG plans, Kahn's topo-sort executor, `PlanExecutor.run<E>`
+- [x] **Pipeline Composer** (`pipeline-composer`): `PipelineStage` trait, `ComposedPipeline`
+
+---
+
+## v0.10.0 — Agentic, Safety, Graph-Intelligence & Retrieval-Depth ✅
+
+**Released**: 2026-06-10 | **Tests**: 2,455 | **Warnings**: 0
+
+- [x] **Self-RAG** (`self-rag`): Reflection tokens, `HeuristicReflector`, `SelfRagEngine.run<E>`
+- [x] **Agentic / ReAct** (`agentic`): `Tool` trait, `ToolRegistry`, `ReActAgent.run<E>`, `CalculatorTool`, `LookupTool`
+- [x] **Query Decomposition** (`query-decomposition`): Parallel/LeastToMost/StepBack splits, RRF recombination
+- [x] **Context Compression** (`context-compression`): `ExtractiveCompressor`, `RedundancyFilter`, token-budget packing
+- [x] **Guardrails** (`guardrails`): PII (char-class FSM), injection detection, content moderation, `GuardrailEngine`
+- [x] **Structured Extraction** (`structured-extraction`): Keyword-proximity typed extraction, `SchemaExtractor`
+- [x] **Output Validation** (`output-validation`): Rule-based answer enforcement, `OutputValidator`, 7 rule kinds
+- [x] **Graph Community** (`graph-community`): Louvain modularity detection, `LouvainDetector`, `CommunityGraph`
+- [x] **Graph Summarization** (`graph-summarization`): `CommunitySummarizer`, `GlobalSearchEngine`, `LocalSearchEngine`
+- [x] **RAPTOR** (`raptor`): FNV-1a pseudo-embeddings, agglomerative+KMeans clustering, `RaptorTree.collapsed_retrieval`
+- [x] **Parent-Document Retrieval** (`parent-document`): `ParentChildIndex`, `ParentDocumentRetriever.run<E>`
+- [x] **Temporal Re-ranking** (`temporal-retrieval`): Exponential/Linear/Gaussian/None decay, ISO 8601 parser
+
+---
+
 ## Vision Alignment
 
 This project implements four innovative concepts:
@@ -407,6 +464,19 @@ This project implements four innovative concepts:
 | **v0.3.0**| **100%** ✅     | **99%** ✅     | **100%** ✅  | **98%** ✅    |
 | **v0.4.0**| **100%** ✅     | **99%** ✅     | **100%** ✅  | **98%** ✅    |
 | v1.0.0    | 100%            | 100%           | 100%         | 100%          |
+
+### Codebase Statistics (v0.9.0)
+- **Source Files**: ~185 Rust files (+20 for prompt_templates/query_router/corrective_rag/attribution sub-files)
+- **Total Lines**: ~110,000+ (Rust code)
+- **Tests**: 2,219 (all passing; +190 from v0.8.0)
+- **Clippy Warnings**: 0
+- **Rustdoc Warnings**: 0
+- **New features**: `prompt-templates`, `query-routing`, `corrective-rag`, `attribution`, `adaptive-control-plane`
+- **New Modules**:
+  - `src/prompt_templates/` — versioned template registry, 2-phase tokenizer + recursive-descent engine, `{{#if}}`/`{{#unless}}`/`{{else}}`, 4 built-in RAG templates
+  - `src/query_router/` — 10-intent classifier (heuristic signal tables), 6-strategy router, RouterConfig with full routing/fallback/top-k tables
+  - `src/corrective_rag/` — CRAG grading (Correct/Ambiguous/Incorrect), KnowledgeRefiner strip decompose/recompose, QueryRefiner rewrite, MMR with lexical pseudo-embeddings
+  - `src/attribution/` — token-Jaccard SentenceAligner, CitationFormatter (Numeric/Footnote/Author), FaithfulnessChecker, Attributor with stable dedup
 
 ### Codebase Statistics (v0.8.0)
 - **Source Files**: ~165 Rust files (+25 for conversation/flare/collections/document_pipeline sub-files)
