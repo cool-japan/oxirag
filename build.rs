@@ -11,7 +11,10 @@ fn main() {
     #[cfg(feature = "nodejs")]
     {
         use std::path::PathBuf;
-        let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+        let manifest = PathBuf::from(
+            std::env::var("CARGO_MANIFEST_DIR")
+                .expect("invariant: CARGO_MANIFEST_DIR is always set by cargo"),
+        );
         println!("cargo:rustc-link-search=native={}", manifest.display());
         println!("cargo:rustc-link-lib=dylib=napi_stub");
         println!("cargo:rerun-if-changed=napi_stub.c");
