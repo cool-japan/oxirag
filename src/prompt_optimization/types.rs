@@ -120,6 +120,7 @@ impl DemoSelector {
     ///
     /// Does not panic in practice; internal `unwrap` calls are on non-empty iterators
     /// that are guarded by the `!remaining.is_empty()` loop condition.
+    #[allow(clippy::too_many_lines)]
     pub fn select<'a>(
         &self,
         query: &str,

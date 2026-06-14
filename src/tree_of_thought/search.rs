@@ -33,6 +33,7 @@ impl TreeOfThoughtEngine {
     /// Returns [`TreeOfThoughtError::EmptyQuery`] if `query` is empty.
     /// Returns [`TreeOfThoughtError::RetrievalFailed`] if retrieval fails.
     /// Returns [`TreeOfThoughtError::NoThoughtsGenerated`] if the tree is empty after search.
+    #[allow(clippy::too_many_lines)]
     pub async fn run<E>(&self, query: &str, echo: &E) -> Result<ToTOutput, TreeOfThoughtError>
     where
         E: crate::layer1_echo::traits::Echo + ?Sized,

@@ -5,6 +5,132 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-06-14
+
+Twelve more cutting-edge RAG technique modules (mostly 2023-2024 papers) across four themes —
+Next-Gen Retrieval Architectures, Adaptive Generation Strategies, Knowledge & Context Management,
+and Evaluation & Benchmarking — all pure-Rust heuristic implementations with zero new dependencies.
+
+### Added
+
+#### Theme 1 — Next-Gen Retrieval Architectures
+
+- **HippoRAG** (feature `hipporag`): Gutiérrez et al. 2024. Builds an entity graph (entities co-occurring in a passage are linked) and runs **Personalized PageRank** seeded from the query's entities to score passages by their entities' PPR mass — capturing multi-hop associations in a *single* retrieval step. `HippoRagIndex.build()/search()`. Distinct from `multi_hop` (BFS). 55 tests.
+- **LongRAG** (feature `long-rag`): Jiang et al. 2024. Groups chunks/documents into a small number of *long* retrieval units (`ByDocument` / `BySemanticAdjacency` / `FixedTokenWindow`) up to a token budget, reducing fragmentation. `LongUnitGrouper.group()`, `LongRagRetriever.search()`. 53 tests.
+- **DRAGIN** (feature `dragin`): Su et al. 2024. Dynamic retrieval driven by real-time information need — RIND triggers retrieval on high token uncertainty + content-ness; QFS formulates the query from salient tokens of the recent generated window. `DraginEngine.run` over `UncertaintyGenerator`/`Retriever` traits. 65 tests.
+
+#### Theme 2 — Adaptive Generation Strategies
+
+- **Astute RAG** (feature `astute-rag`): Wang et al. 2024. Reconciles internal (parametric) vs external (retrieved) knowledge under imperfect retrieval — extracts external statements with corroboration-based reliability, detects conflicts, resolves by reliability + `prefer_external`, synthesizes an attributed answer. `AstuteConsolidator.consolidate()/run()`. 70 tests.
+- **Self-Route** (feature `self-route`): Li et al. 2024. Routes between cheap RAG and long-context based on answerability (query-coverage + top relevance of the retrieved context); falls back to `LongContext` when retrieval is insufficient. `SelfRouter.route()`. Distinct from `adaptive_rag` (complexity→depth). 65 tests.
+- **Speculative Drafting** (feature `speculative-drafting`): Wang et al. 2024 Speculative RAG. Clusters retrieved docs (deterministic k-means-lite), drafts one answer per cluster in parallel (`std::thread::scope`), then scores each by verifier support + cross-draft self-consistency and picks the best. `SpeculativeDrafter.run`. 66 tests.
+
+#### Theme 3 — Knowledge & Context Management
+
+- **MemoRAG** (feature `memorag`): Qian et al. 2024. Forms a global corpus memory gist (salient sentences + key terms), generates retrieval *clues* (query ⊕ gist key terms), retrieves evidence per clue and fuses by max-per-doc. `MemoRagEngine.build_memory()/generate_clues()/retrieve()`. 60 tests.
+- **Context Pruning** (feature `context-pruning`): LLMLingua-style token-level compression — scores each token by rarity × content-ness × query-overlap (entities optionally preserved), keeps the top tokens to a target ratio while preserving original order. `TokenPruner.prune()`. Distinct from sentence-extractive `context_compression`. 61 tests.
+- **Knowledge Conflict** (feature `knowledge-conflict`): inter-passage contradiction detection (negation/numeric/temporal mismatch on a shared subject) and resolution by `Recency` / `Authority` / `Majority` policy. `ConflictDetector.detect()`, `ConflictResolver.resolve()`. Distinct from `consistency_checker` (intra-answer). 61 tests.
+
+#### Theme 4 — Evaluation & Benchmarking
+
+- **RGB Eval** (feature `rgb-eval`): Chen et al. 2023. Evaluates four RAG abilities — noise robustness, negative rejection, information integration, counterfactual robustness — via labeled test cases and lexical correctness/rejection heuristics. `RgbEvaluator.evaluate()`. 54 tests.
+- **Nugget Eval** (feature `nugget-eval`): TREC-style nugget scoring — decomposes a reference answer into Vital/Okay information nuggets and scores a system answer by weighted nugget coverage. `NuggetScorer.score()`, `HeuristicNuggetExtractor`. 71 tests.
+- **A/B Eval** (feature `ab-eval`): paired A/B pipeline comparison — win/loss/tie counts plus a fully deterministic **paired bootstrap** confidence interval + two-sided p-value (FNV-1a resampling, no `rand`). `AbEvaluator.compare()`. 62 tests.
+
+- **Four v0.15.0 theme umbrella features**: `next-gen-retrieval`, `adaptive-generation`, `knowledge-context`, `eval-benchmarking`.
+
+### Codebase Statistics (v0.15.0)
+
+- **Tests**: 5,496 (all passing; +743 from v0.14.0's 4,753)
+- **Clippy Warnings**: 0 (`--all-features --all-targets -D warnings`)
+- **Rustdoc Warnings**: 0
+- **New features**: `hipporag`, `long-rag`, `dragin`, `astute-rag`, `self-route`, `speculative-drafting`, `memorag`, `context-pruning`, `knowledge-conflict`, `rgb-eval`, `nugget-eval`, `ab-eval`, `next-gen-retrieval`, `adaptive-generation`, `knowledge-context`, `eval-benchmarking`
+- **New modules**: `src/hippo_rag/`, `src/long_rag/`, `src/dragin/`, `src/astute_rag/`, `src/self_route/`, `src/speculative_drafting/`, `src/memorag/`, `src/context_pruning/`, `src/knowledge_conflict/`, `src/rgb_eval/`, `src/nugget_eval/`, `src/ab_eval/`
+
+## [0.14.0] - 2026-06-14
+
+Twelve more cutting-edge RAG technique modules across four themes — Retrieval & Indexing,
+Ranking & Fusion, Structured Reasoning, and Verification & Robustness — all pure-Rust heuristic
+implementations with zero new dependencies.
+
+### Added
+
+#### Theme 1 — Retrieval & Indexing
+
+- **Sparse Retrieval** (feature `sparse-retrieval`): SPLADE-style learned sparse retrieval. `SparseEncoder.fit()` computes IDF + a token co-occurrence table; `encode()` produces a `SparseVector` of log-saturated `ln(1 + max(0, tf*idf))` weights, then expands the term set with discounted co-occurring terms (simulating SPLADE expansion). `SparseIndex.search()` ranks by sparse dot product. Distinct from BM25 (`hybrid_search`). 56 tests.
+- **Self-Query** (feature `self-query`): self-querying retriever. `SelfQueryParser.parse()` turns a natural-language query into a structured `ParsedFilter` (FilterCondition with Eq/Ne/Gt/Lt/Gte/Lte/Contains) + a residual semantic query, against a configurable `FilterSchema`. Detects "after/before <year>", "by <author>", "above/below <N>", "tagged <X>". `SelfQueryRetriever` applies the filter to document metadata. 65 tests.
+- **Summary Index** (feature `summary-index`): LlamaIndex `DocumentSummaryIndex`. `ExtractiveSummarizer` builds a top-N TF-centrality summary per document; `SummaryIndex.search()` matches the query against summary embeddings but returns the FULL parent document. Flat (one summary per doc), distinct from RAPTOR's recursive tree. 58 tests.
+
+#### Theme 2 — Ranking & Fusion
+
+- **Rank Fusion** (feature `rank-fusion`): multi-list fusion beyond RRF. `RankFusion.fuse()` supports `CombSum`, `CombMnz` (rewards multi-list agreement), `CombAnz`, `Borda`, `Isr`, `WeightedSum`, and `Rrf`, with `ScoreNormalization` (MinMax/ZScore/SumTo1/None). Dedupes by `DocumentId`, deterministic tie-breaking. 55 tests.
+- **Diversity Rank** (feature `diversity-rank`): Determinantal-Point-Process-inspired diverse selection. `DiversityRanker.select()` greedily maximizes a volume-style gain `quality² · Π(1 − sim)` over the selected set — distinct from MMR's linear λ trade-off — with a quality-fill fallback when no positive-gain candidate remains. 60 tests.
+- **Source Credibility** (feature `source-credibility`): source authority scoring (distinct from answer-level `trust_score`). `SourceGraph.pagerank()` runs iterative PageRank over a citation graph (dangling-mass redistribution); `CredibilityScorer.score()` blends PageRank + exponential recency decay + metadata authority (trusted sources, author reputation); `rerank()` blends relevance with credibility. 75 tests.
+
+#### Theme 3 — Structured Reasoning
+
+- **Graph-of-Thoughts** (feature `graph-of-thought`): Besta et al. 2023. Generalizes ToT to a DAG of thoughts with `GotOperation::{Generate, Aggregate, Refine, KeepBest}`. `GraphOfThoughtEngine.run` executes an operation plan over a frontier using caller-supplied sync `ThoughtGenerator`/`ThoughtScorer`/`ThoughtAggregator` traits (with mocks). 55 tests.
+- **Skeleton-of-Thought** (feature `skeleton-of-thought`): Ning et al. 2023. Two-stage generation — produce an answer skeleton (point headers) then expand each point independently, joining into the final answer. `SkeletonOfThoughtEngine.run` over `SkeletonGenerator`/`PointExpander` traits. 48 tests.
+- **Program-of-Thoughts** (feature `program-of-thought`): Chen et al. 2022. Separates reasoning from computation via a real arithmetic DSL — `parse_program()` is a recursive-descent parser (standard precedence, parentheses, unary minus) and `Interpreter.eval()` executes assignments/return over a variable environment (div-by-zero & undefined-variable errors). `ProgramOfThoughtEngine.run` generates → parses → evaluates. 74 tests.
+
+#### Theme 4 — Verification & Robustness
+
+- **Fact Check** (feature `fact-check`): FEVER-style verification. `FactChecker.verify()` retrieves evidence sentences and assigns a `Verdict` (Supports / Refutes / NotEnoughInfo) from lexical overlap + contradiction detection (negation mismatch, number conflicts), with confidence + rationale. Distinct from `hallucination_detector` (Jaccard claim-support). 60 tests.
+- **Noise Filter** (feature `noise-filter`): RAAT-inspired robustness. `NoiseFilter.filter()` scores each passage's query relevance + consensus alignment (similarity to the set centroid), flags distractors, and drops them while keeping at least `keep_min`. Distinct from redundancy filtering (`context_compression`). 53 tests.
+- **Answer Calibration** (feature `answer-calibration`): answer-level confidence calibration + metrics. `AnswerCalibrator.estimate_confidence()` blends verbalized confidence (parses "90%"/hedges), self-agreement, and retrieval support; free functions `compute_metrics`/`expected_calibration_error`/`brier_score` produce ECE/MCE/Brier + a reliability diagram; `fit_platt()` fits a logistic calibration map. 81 tests.
+
+- **Four v0.14.0 theme umbrella features**: `retrieval-indexing`, `ranking-fusion`, `structured-reasoning`, `verification-robustness`.
+
+### Codebase Statistics (v0.14.0)
+
+- **Tests**: 4,753 (all passing; +740 from v0.13.0's 4,013)
+- **Clippy Warnings**: 0 (`--all-features --all-targets -D warnings`)
+- **Rustdoc Warnings**: 0
+- **New features**: `sparse-retrieval`, `self-query`, `summary-index`, `rank-fusion`, `diversity-rank`, `source-credibility`, `graph-of-thought`, `skeleton-of-thought`, `program-of-thought`, `fact-check`, `noise-filter`, `answer-calibration`, `retrieval-indexing`, `ranking-fusion`, `structured-reasoning`, `verification-robustness`
+- **New modules**: `src/sparse_retrieval/`, `src/self_query/`, `src/summary_index/`, `src/rank_fusion/`, `src/diversity_rank/`, `src/source_credibility/`, `src/graph_of_thought/`, `src/skeleton_of_thought/`, `src/program_of_thought/`, `src/fact_check/`, `src/noise_filter/`, `src/answer_calibration/`
+
+## [0.13.0] - 2026-06-14
+
+Twelve new cutting-edge RAG technique modules across four themes — Index-Time Representation,
+Reranking & Result-Set Selection, Compositional Reasoning, and Calibration/Uncertainty/Geometry —
+all pure-Rust heuristic implementations with zero new dependencies.
+
+### Added
+
+#### Theme 1 — Index-Time Representation
+
+- **Late Chunking** (feature `late-chunking`, depends on `chunking`): Jina AI 2024. Embeds the whole document into contextual token vectors *first*, then pools each chunk's token span ("late" pooling) so every chunk embedding carries document context. `LateChunker.encode_document()` blends per-token FNV-1a base embeddings with the document mean by `context_weight`, tiles `chunk_size_tokens` spans with `overlap_tokens`, and pools (`Mean`/`Max`). `naive_chunks()` provides the context-free baseline; `context_weight = 0` makes late ≡ naive. 58 tests.
+- **Proposition Retrieval** (feature `proposition-retrieval`): Chen et al. 2023 Dense-X. Decomposes passages into atomic, self-contained propositions via clause splitting + pronoun resolution (`HeuristicPropositionExtractor`), indexes propositions → parent docs (`PropositionIndex`), and retrieves via best-matching proposition. `search()` returns `PropositionHit`s; `search_documents()` dedupes to the best proposition per parent. 59 tests.
+- **Doc2Query Expansion** (feature `doc2query`): Nogueira et al. doc2query/HyPE index-time expansion. `HeuristicQueryGenerator` generates hypothetical questions a passage answers (definitional / factoid / relational families over TF-salient terms and capitalized entities). `Doc2QueryExpander.expand()` / `to_indexable_document()` append generated queries to passage text for re-indexing. 48 tests.
+
+#### Theme 2 — Reranking & Result-Set Selection
+
+- **Listwise Reranking** (feature `listwise-rerank`): Sun et al. 2023 RankGPT. Sliding-window listwise permutation reranking — slide a window from the back of the list to the front, permuting each window via `ListwiseJudge` (`LexicalListwiseJudge` scores by window-local IDF + token overlap). `ListwiseReranker.rerank()` returns `ListwiseResult`s with original/new ranks; guards `step = 0` and `window ≥ n`. 55 tests.
+- **Autocut** (feature `autocut`): Weaviate-style relevance-gap truncation. `AutoCutter.cut()` detects score discontinuities and dynamically truncates the result list. Four `AutoCutStrategy` variants — `Jumps(k)` (cut after k significant gaps), `RelativeThreshold(r)`, `StdDev(s)`, `Knee` (largest single gap) — clamped to `[min_keep, max_keep]`. `cut_with_report()` returns an `AutoCutReport`. 59 tests.
+- **Semantic Dedup** (feature `semantic-dedup`): LSH near-duplicate removal distinct from cosine redundancy filtering. SimHash (64-bit, frequency-weighted, Hamming distance) and MinHash (k-shingles, seeded permutations, Jaccard estimate). `SemanticDeduplicator.deduplicate()` clusters near-duplicates via union-find single-linkage and keeps one representative per `KeepPolicy` (`First`/`HighestScore`/`Longest`). 64 tests.
+
+#### Theme 3 — Compositional Reasoning
+
+- **Self-Ask** (feature `self-ask`): Press et al. 2022. Explicit follow-up decomposition — iteratively emit `Follow up:` sub-questions, answer each via a supplied `SubAnswerer`, and compose the final answer. `SelfAskEngine.run<M, A>` is generic over caller-supplied `SelfAskModel` + `SubAnswerer` traits (with mocks); `SelfAskTrace` records every hop. 52 tests (+1 doctest).
+- **Self-Consistency** (feature `self-consistency`): Wang et al. 2022. Samples diverse reasoning paths, clusters final answers by semantic equivalence (normalized-string + token-Jaccard single-linkage), and marginalizes — highest-vote cluster wins, confidence = its vote share. `SelfConsistencyEngine.run<S>` / `marginalize()`; `VoteWeighting::{Uniform, ByReasoningLength}`; deterministic tie-breaking. 67 tests (+1 doctest).
+- **Adaptive-RAG** (feature `adaptive-rag`, depends on `advanced-retrieval`): Jeong et al. 2024. Query-complexity classifier (`Straightforward` / `SingleStep` / `MultiStep`) from weighted heuristic signals routes retrieval depth. `AdaptiveRagRouter.route()` returns a `RoutingPlan` (strategy + recommended top-k + max hops). Distinct from `query-routing` (intent → modality). 72 tests.
+
+#### Theme 4 — Calibration, Uncertainty & Embedding Geometry
+
+- **Semantic Entropy** (feature `semantic-entropy`): Kuhn et al. 2023. Clusters sampled answers by bidirectional-entailment (token-Jaccard + mutual containment), computes discrete semantic entropy over the cluster distribution as an uncertainty/hallucination signal. `SemanticEntropyEstimator.estimate()` / `estimate_weighted()` / `is_uncertain()`; `predictive_entropy` baseline ≥ semantic entropy. 66 tests (+1 doctest).
+- **Matryoshka** (feature `matryoshka`): Kusupati et al. 2022. Nested truncatable embeddings (decay-weighted so prefixes stay meaningful) for coarse-to-fine retrieval. `MatryoshkaEmbedding.truncate(dim)` renormalizes a prefix; `MatryoshkaRetriever.search()` runs two-stage retrieval (shortlist by `shortlist_dim` prefix, rerank shortlist by full dim). Distinct from `quantization` (precision). 68 tests.
+- **Synthetic Eval** (feature `synthetic-eval`): RAGAS/ARES-style test-set generation. `SyntheticEvalGenerator.generate()` produces `SyntheticQa` tuples (question, ground-truth answer, source doc, hard distractors) from a corpus via `HeuristicTemplater` (`Factoid`/`Definitional`/`Cloze`/`Relational`) with lexical-overlap distractor mining. Distinct from the scoring modules. 60 tests.
+
+- **Four v0.13.0 theme umbrella features**: `index-representation`, `rerank-selection`, `compositional-reasoning`, `calibration-geometry`.
+
+### Codebase Statistics (v0.13.0)
+
+- **Tests**: 4,013 (all passing; +728 from v0.12.0's 3,285)
+- **Clippy Warnings**: 0 (`--all-features --all-targets -D warnings`)
+- **Rustdoc Warnings**: 0
+- **New features**: `late-chunking`, `proposition-retrieval`, `doc2query`, `listwise-rerank`, `autocut`, `semantic-dedup`, `self-ask`, `self-consistency`, `adaptive-rag`, `semantic-entropy`, `matryoshka`, `synthetic-eval`, `index-representation`, `rerank-selection`, `compositional-reasoning`, `calibration-geometry`
+- **New modules**: `src/late_chunking/`, `src/proposition/`, `src/doc2query/`, `src/listwise_rerank/`, `src/autocut/`, `src/semantic_dedup/`, `src/self_ask/`, `src/self_consistency/`, `src/adaptive_rag/`, `src/semantic_entropy/`, `src/matryoshka/`, `src/synthetic_eval/`
+
 ## [0.12.0] - 2026-06-10
 
 ### Added

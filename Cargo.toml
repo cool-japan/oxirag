@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.12.0"
+version = "0.15.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -249,6 +249,69 @@ rerank-precision   = ["cross-encoder", "contextual-retrieval", "lost-in-middle"]
 advanced-reasoning = ["reflexion", "tree-of-thought", "chain-of-verification"]
 memory-state       = ["long-term-memory", "memory-compression", "entity-memory"]
 eval-optimization  = ["retrieval-eval", "llm-judge", "prompt-optimization"]
+# v0.13.0 — Theme 1: Index-Time Representation
+late-chunking         = ["chunking"]
+proposition-retrieval = []
+doc2query             = []
+# v0.13.0 — Theme 2: Reranking & Result-Set Selection
+listwise-rerank       = []
+autocut               = []
+semantic-dedup        = []
+# v0.13.0 — Theme 3: Compositional Reasoning
+self-ask              = []
+self-consistency      = []
+adaptive-rag          = ["advanced-retrieval"]
+# v0.13.0 — Theme 4: Calibration, Uncertainty & Embedding Geometry
+semantic-entropy      = []
+matryoshka            = []
+synthetic-eval        = []
+# v0.13.0 theme umbrellas
+index-representation    = ["late-chunking", "proposition-retrieval", "doc2query"]
+rerank-selection        = ["listwise-rerank", "autocut", "semantic-dedup"]
+compositional-reasoning = ["self-ask", "self-consistency", "adaptive-rag"]
+calibration-geometry    = ["semantic-entropy", "matryoshka", "synthetic-eval"]
+# v0.14.0 — Theme 1: Retrieval & Indexing
+sparse-retrieval      = []
+self-query            = []
+summary-index         = []
+# v0.14.0 — Theme 2: Ranking & Fusion
+rank-fusion           = []
+diversity-rank        = []
+source-credibility    = []
+# v0.14.0 — Theme 3: Structured Reasoning
+graph-of-thought      = []
+skeleton-of-thought   = []
+program-of-thought    = []
+# v0.14.0 — Theme 4: Verification & Robustness
+fact-check            = []
+noise-filter          = []
+answer-calibration    = []
+# v0.14.0 theme umbrellas
+retrieval-indexing      = ["sparse-retrieval", "self-query", "summary-index"]
+ranking-fusion          = ["rank-fusion", "diversity-rank", "source-credibility"]
+structured-reasoning    = ["graph-of-thought", "skeleton-of-thought", "program-of-thought"]
+verification-robustness = ["fact-check", "noise-filter", "answer-calibration"]
+# v0.15.0 — Theme 1: Next-Gen Retrieval Architectures
+hipporag              = []
+long-rag              = ["chunking"]
+dragin                = []
+# v0.15.0 — Theme 2: Adaptive Generation Strategies
+astute-rag            = []
+self-route            = []
+speculative-drafting  = []
+# v0.15.0 — Theme 3: Knowledge & Context Management
+memorag               = []
+context-pruning       = []
+knowledge-conflict    = []
+# v0.15.0 — Theme 4: Evaluation & Benchmarking
+rgb-eval              = []
+nugget-eval           = []
+ab-eval               = []
+# v0.15.0 theme umbrellas
+next-gen-retrieval    = ["hipporag", "long-rag", "dragin"]
+adaptive-generation   = ["astute-rag", "self-route", "speculative-drafting"]
+knowledge-context     = ["memorag", "context-pruning", "knowledge-conflict"]
+eval-benchmarking     = ["rgb-eval", "nugget-eval", "ab-eval"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

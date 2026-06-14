@@ -279,6 +279,126 @@ pub mod llm_judge;
 #[cfg(feature = "prompt-optimization")]
 pub mod prompt_optimization;
 
+// v0.13.0 — Theme 1: Index-Time Representation
+#[cfg(feature = "late-chunking")]
+pub mod late_chunking;
+
+#[cfg(feature = "proposition-retrieval")]
+pub mod proposition;
+
+#[cfg(feature = "doc2query")]
+pub mod doc2query;
+
+// v0.13.0 — Theme 2: Reranking & Result-Set Selection
+#[cfg(feature = "listwise-rerank")]
+pub mod listwise_rerank;
+
+#[cfg(feature = "autocut")]
+pub mod autocut;
+
+#[cfg(feature = "semantic-dedup")]
+pub mod semantic_dedup;
+
+// v0.13.0 — Theme 3: Compositional Reasoning
+#[cfg(feature = "self-ask")]
+pub mod self_ask;
+
+#[cfg(feature = "self-consistency")]
+pub mod self_consistency;
+
+#[cfg(feature = "adaptive-rag")]
+pub mod adaptive_rag;
+
+// v0.13.0 — Theme 4: Calibration, Uncertainty & Embedding Geometry
+#[cfg(feature = "semantic-entropy")]
+pub mod semantic_entropy;
+
+#[cfg(feature = "matryoshka")]
+pub mod matryoshka;
+
+#[cfg(feature = "synthetic-eval")]
+pub mod synthetic_eval;
+
+// v0.14.0 — Theme 1: Retrieval & Indexing
+#[cfg(feature = "sparse-retrieval")]
+pub mod sparse_retrieval;
+
+#[cfg(feature = "self-query")]
+pub mod self_query;
+
+#[cfg(feature = "summary-index")]
+pub mod summary_index;
+
+// v0.14.0 — Theme 2: Ranking & Fusion
+#[cfg(feature = "rank-fusion")]
+pub mod rank_fusion;
+
+#[cfg(feature = "diversity-rank")]
+pub mod diversity_rank;
+
+#[cfg(feature = "source-credibility")]
+pub mod source_credibility;
+
+// v0.14.0 — Theme 3: Structured Reasoning
+#[cfg(feature = "graph-of-thought")]
+pub mod graph_of_thought;
+
+#[cfg(feature = "skeleton-of-thought")]
+pub mod skeleton_of_thought;
+
+#[cfg(feature = "program-of-thought")]
+pub mod program_of_thought;
+
+// v0.14.0 — Theme 4: Verification & Robustness
+#[cfg(feature = "fact-check")]
+pub mod fact_check;
+
+#[cfg(feature = "noise-filter")]
+pub mod noise_filter;
+
+#[cfg(feature = "answer-calibration")]
+pub mod answer_calibration;
+
+// v0.15.0 — Theme 1: Next-Gen Retrieval Architectures
+#[cfg(feature = "hipporag")]
+pub mod hippo_rag;
+
+#[cfg(feature = "long-rag")]
+pub mod long_rag;
+
+#[cfg(feature = "dragin")]
+pub mod dragin;
+
+// v0.15.0 — Theme 2: Adaptive Generation Strategies
+#[cfg(feature = "astute-rag")]
+pub mod astute_rag;
+
+#[cfg(feature = "self-route")]
+pub mod self_route;
+
+#[cfg(feature = "speculative-drafting")]
+pub mod speculative_drafting;
+
+// v0.15.0 — Theme 3: Knowledge & Context Management
+#[cfg(feature = "memorag")]
+pub mod memorag;
+
+#[cfg(feature = "context-pruning")]
+pub mod context_pruning;
+
+#[cfg(feature = "knowledge-conflict")]
+pub mod knowledge_conflict;
+
+// v0.15.0 — Theme 4: Evaluation & Benchmarking
+#[cfg(feature = "rgb-eval")]
+pub mod rgb_eval;
+
+#[cfg(feature = "nugget-eval")]
+pub mod nugget_eval;
+
+#[cfg(feature = "ab-eval")]
+pub mod ab_eval;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -802,6 +922,249 @@ pub mod prelude {
         PromptOptimizationConfig, PromptOptimizationError, PromptOptimizer, PromptVariant,
         VariantScore,
     };
+
+    // ── v0.13.0 ────────────────────────────────────────────────────────────────
+
+    // Late chunking exports
+    #[cfg(feature = "late-chunking")]
+    pub use crate::late_chunking::{
+        LateChunk, LateChunkConfig, LateChunkError, LateChunker, LatePooling,
+    };
+
+    // Proposition retrieval exports
+    #[cfg(feature = "proposition-retrieval")]
+    pub use crate::proposition::{
+        HeuristicPropositionExtractor, Proposition, PropositionConfig, PropositionError,
+        PropositionExtractor, PropositionHit, PropositionIndex,
+    };
+
+    // Doc2Query expansion exports (QueryGenerator aliased — load_testing already exports one)
+    #[cfg(feature = "doc2query")]
+    pub use crate::doc2query::{
+        Doc2QueryConfig, Doc2QueryError, Doc2QueryExpander, ExpandedDocument,
+        HeuristicQueryGenerator, QueryGenerator as Doc2QueryGenerator,
+    };
+
+    // Listwise reranking exports
+    #[cfg(feature = "listwise-rerank")]
+    pub use crate::listwise_rerank::{
+        LexicalListwiseJudge, ListwiseError, ListwiseJudge, ListwiseReranker, ListwiseResult,
+        WindowConfig,
+    };
+
+    // Autocut exports
+    #[cfg(feature = "autocut")]
+    pub use crate::autocut::{
+        AutoCutConfig, AutoCutError, AutoCutReport, AutoCutStrategy, AutoCutter,
+    };
+
+    // Semantic dedup exports
+    #[cfg(feature = "semantic-dedup")]
+    pub use crate::semantic_dedup::{
+        DedupMethod, KeepPolicy, SemanticDedupConfig, SemanticDedupError, SemanticDeduplicator,
+    };
+
+    // Self-Ask exports
+    #[cfg(feature = "self-ask")]
+    pub use crate::self_ask::{
+        FollowUp, MockSelfAskModel, MockSubAnswerer, SelfAskConfig, SelfAskEngine, SelfAskError,
+        SelfAskModel, SelfAskTrace, SubAnswerer,
+    };
+
+    // Self-Consistency exports
+    #[cfg(feature = "self-consistency")]
+    pub use crate::self_consistency::{
+        AnswerCluster, MockReasoningSampler, ReasoningPath, ReasoningSampler,
+        SelfConsistencyConfig, SelfConsistencyEngine, SelfConsistencyError, SelfConsistencyOutput,
+        VoteWeighting,
+    };
+
+    // Adaptive-RAG exports
+    #[cfg(feature = "adaptive-rag")]
+    pub use crate::adaptive_rag::{
+        AdaptiveRagConfig, AdaptiveRagError, AdaptiveRagRouter, ComplexityClassification,
+        ComplexityClassifier, ComplexitySignal, QueryComplexity, RetrievalStrategy, RoutingPlan,
+    };
+
+    // Semantic entropy exports
+    #[cfg(feature = "semantic-entropy")]
+    pub use crate::semantic_entropy::{
+        MeaningCluster, SemanticEntropyConfig, SemanticEntropyError, SemanticEntropyEstimator,
+        SemanticEntropyResult,
+    };
+
+    // Matryoshka exports
+    #[cfg(feature = "matryoshka")]
+    pub use crate::matryoshka::{
+        MatryoshkaConfig, MatryoshkaEmbedding, MatryoshkaEncoder, MatryoshkaError, MatryoshkaHit,
+        MatryoshkaRetriever,
+    };
+
+    // Synthetic eval exports
+    #[cfg(feature = "synthetic-eval")]
+    pub use crate::synthetic_eval::{
+        HeuristicTemplater, QuestionTemplater, QuestionType, SyntheticEvalConfig,
+        SyntheticEvalError, SyntheticEvalGenerator, SyntheticQa,
+    };
+
+    // ── v0.14.0 ────────────────────────────────────────────────────────────────
+
+    // Sparse retrieval exports (SparseVector aliased — hybrid_search already exports one)
+    #[cfg(feature = "sparse-retrieval")]
+    pub use crate::sparse_retrieval::{
+        SparseConfig, SparseEncoder, SparseHit, SparseIndex, SparseRetrievalError,
+        SparseVector as LearnedSparseVector,
+    };
+
+    // Self-query retriever exports (FieldType aliased — structured_extraction already exports one)
+    #[cfg(feature = "self-query")]
+    pub use crate::self_query::{
+        FieldSpec, FieldType as FilterFieldType, FilterCondition, FilterOp, FilterSchema,
+        ParsedFilter, SelfQueryConfig, SelfQueryError, SelfQueryParser, SelfQueryRetriever,
+        StructuredQuery,
+    };
+
+    // Summary index exports
+    #[cfg(feature = "summary-index")]
+    pub use crate::summary_index::{
+        DocumentSummary, ExtractiveSummarizer, Summarizer, SummaryConfig, SummaryHit, SummaryIndex,
+        SummaryIndexError,
+    };
+
+    // Rank fusion exports
+    #[cfg(feature = "rank-fusion")]
+    pub use crate::rank_fusion::{
+        FusionMethod, RankFusion, RankFusionConfig, RankFusionError, ScoreNormalization,
+    };
+
+    // Diversity rank exports
+    #[cfg(feature = "diversity-rank")]
+    pub use crate::diversity_rank::{
+        DiversityConfig, DiversityRankError, DiversityRanker, DiversitySelection, SimilarityKind,
+    };
+
+    // Source credibility exports
+    #[cfg(feature = "source-credibility")]
+    pub use crate::source_credibility::{
+        AuthoritySignals, CredibilityConfig, CredibilityScore, CredibilityScorer,
+        SourceCredibilityError, SourceGraph,
+    };
+
+    // Graph-of-Thoughts exports (ThoughtGenerator aliased — tree_of_thought already exports one)
+    #[cfg(feature = "graph-of-thought")]
+    pub use crate::graph_of_thought::{
+        GotConfig, GotError, GotOperation, GotOutput, GraphOfThoughtEngine, MockThoughtAggregator,
+        MockThoughtGenerator, MockThoughtScorer, Thought, ThoughtAggregator,
+        ThoughtGenerator as GotThoughtGenerator, ThoughtGraph, ThoughtScorer,
+    };
+
+    // Skeleton-of-Thought exports
+    #[cfg(feature = "skeleton-of-thought")]
+    pub use crate::skeleton_of_thought::{
+        MockPointExpander, MockSkeletonGenerator, PointExpander, SkeletonConfig, SkeletonGenerator,
+        SkeletonOfThoughtEngine, SkeletonOutput, SkeletonPoint, SotError,
+    };
+
+    // Program-of-Thoughts exports
+    #[cfg(feature = "program-of-thought")]
+    pub use crate::program_of_thought::{
+        Expr, Interpreter, MockProgramGenerator, Op, PotError, PotOutput, Program,
+        ProgramGenerator, ProgramOfThoughtEngine, Statement, parse_program,
+    };
+
+    // Fact-check exports
+    #[cfg(feature = "fact-check")]
+    pub use crate::fact_check::{
+        Evidence, FactCheckConfig, FactCheckError, FactCheckResult, FactChecker, Verdict,
+    };
+
+    // Noise filter exports
+    #[cfg(feature = "noise-filter")]
+    pub use crate::noise_filter::{
+        NoiseConfig, NoiseFilter, NoiseFilterError, NoiseReport, PassageAssessment,
+    };
+
+    // Answer calibration exports
+    #[cfg(feature = "answer-calibration")]
+    pub use crate::answer_calibration::{
+        AnswerCalibrationError, AnswerCalibrator, AnswerCalibratorConfig, CalibrationMetrics,
+        ConfidenceSignals, ReliabilityBin, brier_score, compute_metrics,
+        expected_calibration_error, maximum_calibration_error, reliability_bins,
+    };
+
+    // ── v0.15.0 ────────────────────────────────────────────────────────────────
+
+    // HippoRAG exports
+    #[cfg(feature = "hipporag")]
+    pub use crate::hippo_rag::{HippoConfig, HippoHit, HippoRagError, HippoRagIndex};
+
+    // LongRAG exports
+    #[cfg(feature = "long-rag")]
+    pub use crate::long_rag::{
+        GroupingStrategy, LongHit, LongRagConfig, LongRagError, LongRagRetriever, LongUnit,
+        LongUnitGrouper,
+    };
+
+    // DRAGIN exports
+    #[cfg(feature = "dragin")]
+    pub use crate::dragin::{
+        DraginConfig, DraginEngine, DraginError, DraginTrace, MockRetriever,
+        MockUncertaintyGenerator, RetrievalTrigger, Retriever, TokenInfo, UncertaintyGenerator,
+    };
+
+    // Astute RAG exports
+    #[cfg(feature = "astute-rag")]
+    pub use crate::astute_rag::{
+        AstuteConfig, AstuteConsolidator, AstuteError, ConsolidatedKnowledge, InternalKnowledge,
+        KnowledgeConflict, KnowledgeSource, KnowledgeStatement, MockInternalKnowledge,
+    };
+
+    // Self-Route exports
+    #[cfg(feature = "self-route")]
+    pub use crate::self_route::{
+        RouteAssessment, RouteDecision, SelfRouteConfig, SelfRouteError, SelfRouter,
+    };
+
+    // Speculative Drafting exports
+    #[cfg(feature = "speculative-drafting")]
+    pub use crate::speculative_drafting::{
+        DraftCandidate, DraftVerifier, Drafter, MockDraftVerifier, MockDrafter, SpecDraftConfig,
+        SpecDraftError, SpeculativeDrafter, SpeculativeOutput,
+    };
+
+    // MemoRAG exports
+    #[cfg(feature = "memorag")]
+    pub use crate::memorag::{MemoHit, MemoRagConfig, MemoRagEngine, MemoRagError, MemoryGist};
+
+    // Context Pruning exports
+    #[cfg(feature = "context-pruning")]
+    pub use crate::context_pruning::{
+        ContextPruningError, PruneConfig, PrunedContext, TokenPruner,
+    };
+
+    // Knowledge Conflict exports
+    #[cfg(feature = "knowledge-conflict")]
+    pub use crate::knowledge_conflict::{
+        ConflictDetector, ConflictKind, ConflictPolicy, ConflictResolution, ConflictResolver,
+        KnowledgeConflictConfig, KnowledgeConflictError, PassageConflict,
+    };
+
+    // RGB Eval exports
+    #[cfg(feature = "rgb-eval")]
+    pub use crate::rgb_eval::{
+        RgbAbility, RgbConfig, RgbError, RgbEvaluator, RgbScores, RgbTestCase,
+    };
+
+    // Nugget Eval exports
+    #[cfg(feature = "nugget-eval")]
+    pub use crate::nugget_eval::{
+        HeuristicNuggetExtractor, Nugget, NuggetConfig, NuggetEvalError, NuggetExtractor,
+        NuggetImportance, NuggetScore, NuggetScorer,
+    };
+
+    // A/B Eval exports
+    #[cfg(feature = "ab-eval")]
+    pub use crate::ab_eval::{AbConfig, AbError, AbEvaluator, AbResult, AbWinner};
 }
 
 pub use error::{OxiRagError, Result};

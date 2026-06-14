@@ -1,5 +1,152 @@
 # OxiRAG TODO
 
+## v0.15.0 — Next-Gen-Retrieval, Adaptive-Generation, Knowledge-Context & Eval-Benchmarking ✅
+
+**Released**: 2026-06-14 | **Tests**: 5,496 | **Warnings**: 0
+
+Twelve more cutting-edge RAG technique modules (mostly 2023-2024 papers) across four themes
+(pure-Rust heuristic, zero new deps). Full details in `CHANGELOG.md`. Per-module test counts:
+hippo 55, long-rag 53, dragin 65, astute 70, self-route 65, spec-draft 66, memorag 60,
+ctx-pruning 61, knowledge-conflict 61, rgb 54, nugget 71, ab-eval 62.
+
+**Theme 1 — Next-Gen Retrieval Architectures**
+- [x] **HippoRAG** (`hipporag`): Gutiérrez 2024 — Personalized PageRank over an entity graph for
+  single-step multi-hop retrieval. `HippoRagIndex.build()/search()`, PPR seeded from query entities.
+- [x] **LongRAG** (`long-rag`): Jiang 2024 — long retrieval units (group related chunks into fewer,
+  longer units) to cut unit count + boost recall. `LongUnitGrouper`, `LongRagRetriever`.
+- [x] **DRAGIN** (`dragin`): Su 2024 — Dynamic RAG on real-time Information Need: decide WHEN to
+  retrieve (token uncertainty / RIND) + WHAT (attention-salience query formulation / QFS).
+
+**Theme 2 — Adaptive Generation Strategies**
+- [x] **Astute RAG** (`astute-rag`): Wang 2024 — consolidate internal (parametric) vs external
+  (retrieved) knowledge, detect & resolve conflicts, prefer reliable source. `AstuteConsolidator`.
+- [x] **Self-Route** (`self-route`): Li 2024 — route between RAG and long-context based on
+  answerability; fall back to full-context when retrieval is insufficient. `SelfRouter.route()`.
+- [x] **Speculative Drafting** (`speculative-drafting`): Wang 2024 Speculative RAG — cluster docs,
+  draft multiple answers in parallel from diverse subsets, verify/score drafts. `SpeculativeDrafter`.
+
+**Theme 3 — Knowledge & Context Management**
+- [x] **MemoRAG** (`memorag`): Qian 2024 — global memory gist of the corpus generates retrieval clues,
+  then retrieves evidence. `MemoryGist`, `ClueGenerator`, `MemoRagEngine`.
+- [x] **Context Pruning** (`context-pruning`): LLMLingua-style token-level compression to a target
+  budget via token importance/perplexity. `TokenPruner.prune()`, compression ratio. (Distinct from
+  sentence-extractive `context_compression`.)
+- [x] **Knowledge Conflict** (`knowledge-conflict`): inter-passage contradiction detection + resolution
+  (recency/authority/majority policies). `ConflictDetector`, `ConflictResolver`.
+
+**Theme 4 — Evaluation & Benchmarking**
+- [x] **RGB Eval** (`rgb-eval`): Chen 2023 — 4-ability RAG benchmark: noise robustness, negative
+  rejection, information integration, counterfactual robustness. `RgbEvaluator`.
+- [x] **Nugget Eval** (`nugget-eval`): nugget-based answer scoring — decompose gold answer into
+  information nuggets, score by coverage (vital/okay weighting). `NuggetScorer`.
+- [x] **A/B Eval** (`ab-eval`): paired A/B pipeline comparison with bootstrap significance + win-rate.
+  `AbEvaluator.compare()`, `AbResult`.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`next-gen-retrieval`, `adaptive-generation`, `knowledge-context`,
+  `eval-benchmarking`); 12 modules + prelude re-exports (no collisions/aliases needed this round).
+- [x] `cargo build/clippy/nextest/doc --all-features --all-targets` → 0 errors, 0 warnings, 5,496 tests green.
+- [x] Bumped 0.14.0 → 0.15.0; updated CHANGELOG.md, TODO.md.
+
+---
+
+## v0.14.0 — Retrieval-Indexing, Ranking-Fusion, Structured-Reasoning & Verification-Robustness ✅
+
+**Released**: 2026-06-14 | **Tests**: 4,753 | **Warnings**: 0
+
+Twelve more cutting-edge RAG technique modules across four themes (pure-Rust heuristic
+implementations, zero new dependencies). Full details in `CHANGELOG.md`. Per-module test counts:
+sparse 56, self-query 65, summary 58, rank-fusion 55, diversity 60, credibility 75, GoT 55,
+SoT 48, PoT 74, fact-check 60, noise-filter 53, answer-calibration 81.
+
+**Theme 1 — Retrieval & Indexing**
+- [x] **Sparse Retrieval** (`sparse-retrieval`): SPLADE-style learned sparse term-weighting
+  (`log(1+ReLU(w))` saturation) + co-occurrence term expansion. `SparseEncoder`, `SparseIndex.search()`.
+- [x] **Self-Query** (`self-query`): self-querying retriever — parse a natural-language query into a
+  structured `MetadataFilter` + residual semantic query. `SelfQueryParser.parse()`, `SelfQueryRetriever`.
+- [x] **Summary Index** (`summary-index`): document-summary index — index by extractive summary, retrieve
+  the full parent document. `SummaryIndex.add_document()/search()`, `DocumentSummary`.
+
+**Theme 2 — Ranking & Fusion**
+- [x] **Rank Fusion** (`rank-fusion`): CombSUM/CombMNZ/Borda/ISR/weighted multi-list fusion (beyond RRF).
+  `RankFusion.fuse()`, `FusionMethod`, score normalization.
+- [x] **Diversity Rank** (`diversity-rank`): DPP-inspired diverse subset selection (global vs MMR greedy).
+  `DiversityRanker.select()`, kernel determinant gain.
+- [x] **Source Credibility** (`source-credibility`): authority scoring — citation PageRank-lite + recency +
+  metadata-authority signals. `CredibilityScorer.score()`, `SourceGraph`.
+
+**Theme 3 — Structured Reasoning**
+- [x] **Graph-of-Thoughts** (`graph-of-thought`): Besta 2023 — DAG of thoughts with aggregation/refinement
+  beyond ToT. `GraphOfThoughtEngine.run`, `ThoughtGraph`, aggregate/refine operations.
+- [x] **Skeleton-of-Thought** (`skeleton-of-thought`): Ning 2023 — generate answer skeleton then expand
+  points in parallel. `SkeletonOfThoughtEngine.run`, `SkeletonPoint`.
+- [x] **Program-of-Thoughts** (`program-of-thought`): Chen 2022 — separate reasoning (program steps) from
+  computation via a deterministic interpreter. `ProgramOfThoughtEngine.run`, `ProgramStep`, `Interpreter`.
+
+**Theme 4 — Verification & Robustness**
+- [x] **Fact Check** (`fact-check`): FEVER-style claim → evidence retrieval → SUPPORTS/REFUTES/NEI verdict.
+  `FactChecker.verify()`, `Verdict`, evidence aggregation.
+- [x] **Noise Filter** (`noise-filter`): RAAT-lite robustness — detect & downweight irrelevant/distracting
+  passages before generation. `NoiseFilter.filter()`, distractor scoring.
+- [x] **Answer Calibration** (`answer-calibration`): answer-level confidence calibration with verbalized +
+  agreement signals, ECE/Brier/reliability-diagram metrics. `AnswerCalibrator`, `CalibrationMetrics`.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`retrieval-indexing`, `ranking-fusion`, `structured-reasoning`,
+  `verification-robustness`); 12 modules + prelude re-exports (3 aliased to avoid collisions:
+  `SparseVector`→`LearnedSparseVector`, `FieldType`→`FilterFieldType`, `ThoughtGenerator`→`GotThoughtGenerator`).
+- [x] `cargo build/clippy/nextest --all-features --all-targets` → 0 errors, 0 warnings, 4,753 tests green.
+- [x] Bumped 0.13.0 → 0.14.0; updated CHANGELOG.md, TODO.md.
+
+---
+
+## v0.13.0 — Index-Representation, Rerank-Selection, Compositional-Reasoning & Calibration-Geometry ✅
+
+**Released**: 2026-06-14 | **Tests**: 4,013 | **Warnings**: 0
+
+Twelve new cutting-edge RAG technique modules across four themes (pure-Rust heuristic
+implementations, zero new dependencies). Full details in `CHANGELOG.md`.
+
+**Theme 1 — Index-Time Representation**
+- [x] **Late Chunking** (`late-chunking`): Jina-2024 context-aware chunk embeddings — pool contextual
+  token vectors *after* full-document encoding. `LateChunker.encode_document()`, Mean/Max pooling. 58 tests.
+- [x] **Proposition Retrieval** (`proposition-retrieval`): Dense-X (Chen 2023) atomic-proposition
+  decomposition + `PropositionIndex` → parent-doc retrieval. 59 tests.
+- [x] **Doc2Query Expansion** (`doc2query`): index-time hypothetical-query expansion (doc2query/HyPE).
+  `Doc2QueryExpander.expand()`, `ExpandedDocument`. 48 tests.
+
+**Theme 2 — Reranking & Result-Set Selection**
+- [x] **Listwise Reranking** (`listwise-rerank`): RankGPT (Sun 2023) sliding-window listwise permutation
+  reranking. `ListwiseReranker.rerank()`, `ListwiseJudge`, `WindowConfig`. 55 tests.
+- [x] **Autocut** (`autocut`): Weaviate relevance-gap truncation — `Jumps`/`RelativeThreshold`/`StdDev`/`Knee`.
+  `AutoCutter.cut()`, `AutoCutReport`. 59 tests.
+- [x] **Semantic Dedup** (`semantic-dedup`): SimHash + MinHash/LSH near-duplicate clustering & removal.
+  `SemanticDeduplicator.deduplicate()`, union-find single-linkage, `KeepPolicy`. 64 tests.
+
+**Theme 3 — Compositional Reasoning**
+- [x] **Self-Ask** (`self-ask`): Press-2022 explicit follow-up decomposition. `SelfAskEngine.run<M,A>`,
+  `FollowUp`, `SelfAskTrace`. 52 tests.
+- [x] **Self-Consistency** (`self-consistency`): Wang-2022 sample paths → cluster answers → marginalize.
+  `SelfConsistencyEngine.run<S>`, `VoteWeighting`, `AnswerCluster`. 67 tests.
+- [x] **Adaptive-RAG** (`adaptive-rag`): Jeong-2024 query-complexity classifier → retrieval-depth routing.
+  `ComplexityClassifier`, `AdaptiveRagRouter.route()`, `RoutingPlan`. 72 tests.
+
+**Theme 4 — Calibration, Uncertainty & Embedding Geometry**
+- [x] **Semantic Entropy** (`semantic-entropy`): Kuhn-2023 meaning-cluster entropy as uncertainty signal.
+  `SemanticEntropyEstimator.estimate()`, `MeaningCluster`. 66 tests.
+- [x] **Matryoshka** (`matryoshka`): Kusupati-2022 nested truncatable embeddings → two-stage coarse-to-fine
+  retrieval. `MatryoshkaEmbedding.truncate()`, `MatryoshkaRetriever.search()`. 68 tests.
+- [x] **Synthetic Eval** (`synthetic-eval`): RAGAS/ARES-style test-set generation — `SyntheticQa` tuples +
+  hard distractors. `SyntheticEvalGenerator.generate()`, `HeuristicTemplater`. 60 tests.
+
+**Integration & Release**
+- [x] 12 features + 4 theme umbrellas (`index-representation`, `rerank-selection`, `compositional-reasoning`,
+  `calibration-geometry`) in `Cargo.toml`; 12 cfg-gated modules + prelude re-exports in `lib.rs`.
+- [x] `cargo build/clippy/nextest --all-features --all-targets` → 0 errors, 0 warnings, 4,013 tests green.
+- [x] Bumped 0.12.0 → 0.13.0; updated CHANGELOG.md, TODO.md.
+
+---
+
 ## v0.12.0 — Reranking-Precision, Advanced-Reasoning, Memory-State & Eval-Optimization ✅
 
 **Released**: 2026-06-10 | **Tests**: 3,285 | **Warnings**: 0
