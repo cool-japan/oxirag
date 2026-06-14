@@ -1,5 +1,105 @@
 # OxiRAG TODO
 
+## v0.17.0 — ANN-Indexing, Generation-Refinement, Robustness-Privacy & Advanced-Eval ✅
+
+**Released**: 2026-06-14 | **Tests**: 6,945 | **Warnings**: 0
+
+Twelve more cutting-edge RAG technique modules across four themes (pure-Rust heuristic, zero new deps).
+Full details in `CHANGELOG.md`. Per-module test counts: PQ 71, IVF 54, PLAID 65, self-refine 70,
+chain-of-density 65, analogical 56, poisoning 66, anonymization 54, abstention 60, ragchecker 54,
+retrieval-diversity 60, ares 52.
+
+**Theme 1 — ANN Indexing & Late Interaction**
+- [x] **Product Quantization** (`product-quantization`): PQ — split vectors into subspaces, quantize each
+  to a learned codebook, approximate distance via lookup tables (ADC). `ProductQuantizer`, `PqIndex`.
+  Distinct from scalar `quantization` (INT8/INT4).
+- [x] **IVF Index** (`ivf-index`): inverted-file ANN — coarse quantizer (centroids) + inverted lists;
+  probe `nprobe` nearest cells. `IvfIndex.build()/search()`. Distinct from HNSW (`ann`).
+- [x] **PLAID** (`plaid`): ColBERTv2/PLAID centroid-pruned MaxSim late interaction — token-level scoring
+  with centroid-based candidate generation. `PlaidRetriever`. Distinct from basic `multi_vector`.
+
+**Theme 2 — Generation Refinement**
+- [x] **Self-Refine** (`self-refine`): Madaan 2023 — iterative self-feedback → refine loop (no external
+  memory/retrieval, unlike Reflexion). `SelfRefineEngine.run`.
+- [x] **Chain-of-Density** (`chain-of-density`): Adams 2023 — iteratively densify a fixed-length summary
+  by adding salient missing entities. `ChainOfDensityEngine`, `DensityStep`.
+- [x] **Analogical Prompting** (`analogical`): Yasunaga 2023 — self-generate relevant exemplars/knowledge
+  before solving. `AnalogicalEngine.run`.
+
+**Theme 3 — Robustness & Privacy**
+- [x] **Poisoning Defense** (`poisoning-defense`): detect adversarial/poisoned passages (keyword-stuffing,
+  anomalous repetition, consensus contradiction). `PoisoningDetector.scan()`.
+- [x] **Anonymization** (`anonymization`): PII pseudonymization with a consistent reversible mapping
+  (entity → placeholder, restorable). `Anonymizer.anonymize()/deanonymize()`. Distinct from guardrails PII.
+- [x] **Abstention** (`abstention`): selective prediction — decide when to REFUSE based on retrieval
+  support + confidence with a risk-coverage tradeoff. `AbstentionPolicy.decide()`.
+
+**Theme 4 — Advanced Evaluation**
+- [x] **RAGChecker** (`ragchecker`): Ru 2024 — claim-level diagnostics: retriever (claim recall/precision)
+  + generator (faithfulness, hallucination, noise sensitivity) over claim entailment. `RagChecker`.
+- [x] **Retrieval Diversity** (`retrieval-diversity`): diversity/coverage metrics — α-nDCG, subtopic
+  recall (S-recall), intra-list diversity. `DiversityMetrics`.
+- [x] **ARES Eval** (`ares-eval`): Saad-Falcon 2023 — automated eval with PPI (prediction-powered
+  inference) confidence intervals over judge predictions. `AresEvaluator`, `PpiInterval`.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`ann-indexing`, `generation-refinement`, `robustness-privacy`,
+  `advanced-eval`); 12 modules + prelude re-exports (1 aliased: `PiiKind`→`AnonPiiKind`).
+- [x] `cargo fmt` + `cargo build/clippy/nextest/doc --all-features --all-targets` → 0 errors, 0 warnings, 6,945 tests green.
+- [x] Bumped 0.16.0 → 0.17.0; updated CHANGELOG.md, TODO.md.
+
+---
+
+## v0.16.0 — Graph-Generative, Retrieval-Composition, Time-Lang-Personal & Grounding-Verification ✅
+
+**Released**: 2026-06-14 | **Tests**: 6,218 | **Warnings**: 0
+
+Twelve more cutting-edge RAG technique modules across four themes (pure-Rust heuristic, zero new deps).
+Full details in `CHANGELOG.md`. Per-module test counts: drift 54, entity-link 65, gen-retrieval 68,
+auto-merge 61, ensemble 59, gen-read 51, fresh 69, cross-lingual 74, personalized 55, quote 54,
+claim-decomp 56, FiD 56.
+
+**Theme 1 — Graph & Generative Retrieval**
+- [x] **DRIFT Search** (`drift-search`, dep `graph-summarization`): GraphRAG DRIFT (Microsoft 2024) —
+  global community search + local entity search + iterative follow-up drill-down. `DriftSearchEngine`.
+- [x] **Entity Linking** (`entity-linking`): mention → canonical KB entity disambiguation via alias map
+  + context scoring. `EntityLinker.link()`, `EntityCatalog`, alias resolution.
+- [x] **Generative Retrieval** (`generative-retrieval`): DSI-style — hierarchical semantic doc-id
+  assignment + constrained traversal "generation". `SemanticDocId`, `GenerativeRetriever`.
+
+**Theme 2 — Retrieval Composition**
+- [x] **Auto-Merging** (`auto-merging`, dep `chunking`): LlamaIndex auto-merging — collapse retrieved
+  child chunks into their parent when enough siblings are hit. `AutoMergingRetriever`.
+- [x] **Ensemble Retriever** (`ensemble-retriever`): weighted ensemble of pluggable retriever traits
+  with fusion. `EnsembleRetriever`, `RetrieverWeight`.
+- [x] **GenRead** (`gen-read`): generate-then-read (Yu 2023) — generate diverse contextual docs,
+  cluster, use as context. `GenReadEngine`, clustering.
+
+**Theme 3 — Time, Language & Personalization**
+- [x] **Fresh Retrieval** (`fresh-retrieval`): FreshLLM-style time-sensitivity detection + freshness
+  scoring + staleness flagging. `FreshnessAnalyzer`.
+- [x] **Cross-Lingual** (`cross-lingual`): cross-lingual matching via bilingual-lexicon normalization +
+  shared pseudo-embedding space. `CrossLingualRetriever`, `BilingualLexicon`.
+- [x] **Personalized RAG** (`personalized-rag`): user-profile-aware reranking blending relevance with
+  topic-interest profile + history. `UserProfile`, `PersonalizedReranker`.
+
+**Theme 4 — Grounding & Fine-grained Verification**
+- [x] **Quote Grounding** (`quote-grounding`): extract minimal verbatim supporting quotes per answer
+  claim (span-level grounding). `QuoteGrounder.ground()`.
+- [x] **Claim Decomposition** (`claim-decomposition`): FActScore-style atomic-fact decomposition of a
+  generated answer for fine-grained verification. `AtomicClaimExtractor`.
+- [x] **Fusion-in-Decoder** (`fusion-in-decoder`): FiD-style per-passage evidence extraction → weighted
+  cross-passage fusion with attribution. `FusionInDecoder.fuse()`.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`graph-generative`, `retrieval-composition`, `time-lang-personal`,
+  `grounding-verification`); 12 modules + prelude re-exports (2 aliased: `ChunkHierarchy`→`AutoMergeHierarchy`,
+  `ClaimExtractor`→`AtomicClaimExtractorTrait`).
+- [x] `cargo fmt` + `cargo build/clippy/nextest/doc --all-features --all-targets` → 0 errors, 0 warnings, 6,218 tests green.
+- [x] Bumped 0.15.0 → 0.16.0; updated CHANGELOG.md, TODO.md.
+
+---
+
 ## v0.15.0 — Next-Gen-Retrieval, Adaptive-Generation, Knowledge-Context & Eval-Benchmarking ✅
 
 **Released**: 2026-06-14 | **Tests**: 5,496 | **Warnings**: 0

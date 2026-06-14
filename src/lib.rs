@@ -399,6 +399,126 @@ pub mod nugget_eval;
 #[cfg(feature = "ab-eval")]
 pub mod ab_eval;
 
+// v0.16.0 — Theme 1: Graph & Generative Retrieval
+#[cfg(feature = "drift-search")]
+pub mod drift_search;
+
+#[cfg(feature = "entity-linking")]
+pub mod entity_linking;
+
+#[cfg(feature = "generative-retrieval")]
+pub mod generative_retrieval;
+
+// v0.16.0 — Theme 2: Retrieval Composition
+#[cfg(feature = "auto-merging")]
+pub mod auto_merging;
+
+#[cfg(feature = "ensemble-retriever")]
+pub mod ensemble_retriever;
+
+#[cfg(feature = "gen-read")]
+pub mod gen_read;
+
+// v0.16.0 — Theme 3: Time, Language & Personalization
+#[cfg(feature = "fresh-retrieval")]
+pub mod fresh_retrieval;
+
+#[cfg(feature = "cross-lingual")]
+pub mod cross_lingual;
+
+#[cfg(feature = "personalized-rag")]
+pub mod personalized_rag;
+
+// v0.16.0 — Theme 4: Grounding & Fine-grained Verification
+#[cfg(feature = "quote-grounding")]
+pub mod quote_grounding;
+
+#[cfg(feature = "claim-decomposition")]
+pub mod claim_decomposition;
+
+#[cfg(feature = "fusion-in-decoder")]
+pub mod fusion_in_decoder;
+
+// v0.17.0 — Theme 1: ANN Indexing & Late Interaction
+#[cfg(feature = "product-quantization")]
+pub mod product_quantization;
+
+#[cfg(feature = "ivf-index")]
+pub mod ivf_index;
+
+#[cfg(feature = "plaid")]
+pub mod plaid_retrieval;
+
+// v0.17.0 — Theme 2: Generation Refinement
+#[cfg(feature = "self-refine")]
+pub mod self_refine;
+
+#[cfg(feature = "chain-of-density")]
+pub mod chain_of_density;
+
+#[cfg(feature = "analogical")]
+pub mod analogical_prompting;
+
+// v0.17.0 — Theme 3: Robustness & Privacy
+#[cfg(feature = "poisoning-defense")]
+pub mod poisoning_defense;
+
+#[cfg(feature = "anonymization")]
+pub mod anonymization;
+
+#[cfg(feature = "abstention")]
+pub mod abstention;
+
+// v0.17.0 — Theme 4: Advanced Evaluation
+#[cfg(feature = "ragchecker")]
+pub mod ragchecker;
+
+#[cfg(feature = "retrieval-diversity")]
+pub mod retrieval_diversity;
+
+#[cfg(feature = "ares-eval")]
+pub mod ares_eval;
+
+// v0.18.0 — Theme 1: ANN & Vector Indexing
+#[cfg(feature = "hnsw")]
+pub mod hnsw_index;
+
+#[cfg(feature = "lsh")]
+pub mod lsh_index;
+
+#[cfg(feature = "scalar-quantization")]
+pub mod scalar_quantization;
+
+// v0.18.0 — Theme 2: Advanced Prompting & Reasoning
+#[cfg(feature = "step-back")]
+pub mod step_back;
+
+#[cfg(feature = "least-to-most")]
+pub mod least_to_most;
+
+#[cfg(feature = "self-discover")]
+pub mod self_discover;
+
+// v0.18.0 — Theme 3: Reranking & Retrieval Quality
+#[cfg(feature = "pairwise-rerank")]
+pub mod pairwise_rerank;
+
+#[cfg(feature = "multi-query")]
+pub mod multi_query;
+
+#[cfg(feature = "citation-verification")]
+pub mod citation_verification;
+
+// v0.18.0 — Theme 4: Evaluation & Safety
+#[cfg(feature = "faithfulness-eval")]
+pub mod faithfulness_eval;
+
+#[cfg(feature = "prompt-injection-defense")]
+pub mod prompt_injection_defense;
+
+#[cfg(feature = "query-difficulty")]
+pub mod query_difficulty;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -1165,6 +1285,211 @@ pub mod prelude {
     // A/B Eval exports
     #[cfg(feature = "ab-eval")]
     pub use crate::ab_eval::{AbConfig, AbError, AbEvaluator, AbResult, AbWinner};
+
+    // ── v0.16.0 ────────────────────────────────────────────────────────────────
+
+    // DRIFT search exports
+    #[cfg(feature = "drift-search")]
+    pub use crate::drift_search::{
+        CommunityReport, DriftAnswer, DriftConfig, DriftError, DriftSearchEngine, DriftStep,
+        DriftStepKind,
+    };
+
+    // Entity linking exports
+    #[cfg(feature = "entity-linking")]
+    pub use crate::entity_linking::{
+        CanonicalEntity, EntityCatalog, EntityLinkConfig, EntityLinkError, EntityLinker,
+        EntityMention, LinkedEntity,
+    };
+
+    // Generative retrieval exports
+    #[cfg(feature = "generative-retrieval")]
+    pub use crate::generative_retrieval::{
+        GenHit, GenRetrievalConfig, GenRetrievalError, GenerativeRetriever, SemanticDocId,
+    };
+
+    // Auto-merging exports (ChunkHierarchy aliased — parent_document already exports one)
+    #[cfg(feature = "auto-merging")]
+    pub use crate::auto_merging::{
+        AutoMergeConfig, AutoMergeError, AutoMergingRetriever,
+        ChunkHierarchy as AutoMergeHierarchy, ChunkNode, MergedHit,
+    };
+
+    // Ensemble retriever exports
+    #[cfg(feature = "ensemble-retriever")]
+    pub use crate::ensemble_retriever::{
+        EnsembleConfig, EnsembleError, EnsembleFusion, EnsembleRetriever, LexicalSubRetriever,
+        SubRetriever,
+    };
+
+    // GenRead exports
+    #[cfg(feature = "gen-read")]
+    pub use crate::gen_read::{
+        ContextGenerator, GenReadConfig, GenReadEngine, GenReadError, GenReadOutput, GeneratedDoc,
+        MockContextGenerator,
+    };
+
+    // Fresh retrieval exports
+    #[cfg(feature = "fresh-retrieval")]
+    pub use crate::fresh_retrieval::{
+        FreshConfig, FreshError, FreshnessAnalyzer, FreshnessAssessment, TimeSensitivity,
+    };
+
+    // Cross-lingual exports
+    #[cfg(feature = "cross-lingual")]
+    pub use crate::cross_lingual::{
+        BilingualLexicon, CrossLingualConfig, CrossLingualError, CrossLingualHit,
+        CrossLingualRetriever,
+    };
+
+    // Personalized RAG exports
+    #[cfg(feature = "personalized-rag")]
+    pub use crate::personalized_rag::{
+        PersonalizedConfig, PersonalizedError, PersonalizedReranker, UserProfile,
+    };
+
+    // Quote grounding exports
+    #[cfg(feature = "quote-grounding")]
+    pub use crate::quote_grounding::{GroundedQuote, QuoteConfig, QuoteError, QuoteGrounder};
+
+    // Claim decomposition exports (ClaimExtractor aliased — layer3_judge already exports one)
+    #[cfg(feature = "claim-decomposition")]
+    pub use crate::claim_decomposition::{
+        AtomicClaim, AtomicClaimExtractor, ClaimDecompConfig, ClaimDecompError,
+        ClaimExtractor as AtomicClaimExtractorTrait, HeuristicAtomicExtractor,
+    };
+
+    // Fusion-in-Decoder exports
+    #[cfg(feature = "fusion-in-decoder")]
+    pub use crate::fusion_in_decoder::{
+        FidConfig, FidError, FusedAnswer, FusionInDecoder, PassageEvidence,
+    };
+
+    // ── v0.17.0 ────────────────────────────────────────────────────────────────
+
+    // Product quantization exports
+    #[cfg(feature = "product-quantization")]
+    pub use crate::product_quantization::{
+        PqCode, PqConfig, PqError, PqHit, PqIndex, ProductQuantizer,
+    };
+
+    // IVF index exports
+    #[cfg(feature = "ivf-index")]
+    pub use crate::ivf_index::{IvfConfig, IvfError, IvfHit, IvfIndex};
+
+    // PLAID late-interaction exports
+    #[cfg(feature = "plaid")]
+    pub use crate::plaid_retrieval::{PlaidConfig, PlaidError, PlaidHit, PlaidRetriever};
+
+    // Self-Refine exports
+    #[cfg(feature = "self-refine")]
+    pub use crate::self_refine::{
+        Feedback, MockRefiner, RefineStep, Refiner, SelfRefineConfig, SelfRefineEngine,
+        SelfRefineError, SelfRefineOutput,
+    };
+
+    // Chain-of-Density exports
+    #[cfg(feature = "chain-of-density")]
+    pub use crate::chain_of_density::{
+        ChainOfDensityEngine, ChainOfDensityOutput, CodConfig, CodError, DensityStep,
+    };
+
+    // Analogical prompting exports
+    #[cfg(feature = "analogical")]
+    pub use crate::analogical_prompting::{
+        AnalogicalConfig, AnalogicalEngine, AnalogicalError, AnalogicalModel, AnalogicalOutput,
+        Exemplar, MockAnalogicalModel,
+    };
+
+    // Poisoning-defense exports
+    #[cfg(feature = "poisoning-defense")]
+    pub use crate::poisoning_defense::{
+        PoisonAssessment, PoisonConfig, PoisonError, PoisoningDetector,
+    };
+
+    // Anonymization exports (PiiKind aliased — guardrails already exports one)
+    #[cfg(feature = "anonymization")]
+    pub use crate::anonymization::{
+        AnonConfig, AnonError, AnonMapping, AnonymizedText, Anonymizer, PiiKind as AnonPiiKind,
+    };
+
+    // Abstention exports
+    #[cfg(feature = "abstention")]
+    pub use crate::abstention::{
+        AbstentionAssessment, AbstentionConfig, AbstentionDecision, AbstentionError,
+        AbstentionPolicy, RiskCoverage,
+    };
+
+    // RAGChecker exports
+    #[cfg(feature = "ragchecker")]
+    pub use crate::ragchecker::{
+        RagCheckResult, RagChecker, RagCheckerConfig, RagCheckerError, RagCheckerMetrics,
+    };
+
+    // Retrieval diversity exports
+    #[cfg(feature = "retrieval-diversity")]
+    pub use crate::retrieval_diversity::{
+        DiversityMetrics, DiversityScorer, RetrievalDiversityConfig, RetrievalDiversityError,
+    };
+
+    // ARES eval exports
+    #[cfg(feature = "ares-eval")]
+    pub use crate::ares_eval::{AresConfig, AresError, AresEvaluator, PpiInterval};
+
+    // ── v0.18.0 ────────────────────────────────────────────────────────────────
+    #[cfg(feature = "citation-verification")]
+    pub use crate::citation_verification::{
+        CitationCheck, CitationConfig, CitationError, CitationReport, CitationVerifier,
+        VerifiedCitation,
+    };
+    #[cfg(feature = "faithfulness-eval")]
+    pub use crate::faithfulness_eval::{
+        ClaimEntailment, FaithfulnessConfig, FaithfulnessError, FaithfulnessEvaluator,
+        FaithfulnessScore,
+    };
+    #[cfg(feature = "hnsw")]
+    pub use crate::hnsw_index::{HnswConfig, HnswError, HnswHit, HnswIndex};
+    #[cfg(feature = "least-to-most")]
+    pub use crate::least_to_most::{
+        LtmConfig, LtmEngine, LtmError, LtmResult, LtmSolver, MockLtmSolver, SubProblem,
+    };
+    #[cfg(feature = "lsh")]
+    pub use crate::lsh_index::{LshConfig, LshError, LshHit, LshIndex, MinHashIndex};
+    #[cfg(feature = "multi-query")]
+    pub use crate::multi_query::{
+        GeneratedQuery, MockQueryVariantGenerator, MultiQueryConfig, MultiQueryError,
+        MultiQueryGenerator, MultiQueryHit, MultiQueryResult, QueryVariantGenerator,
+    };
+    #[cfg(feature = "pairwise-rerank")]
+    pub use crate::pairwise_rerank::{
+        MockPairwiseComparer, PairwiseComparer, PairwiseConfig, PairwiseError, PairwiseHit,
+        PairwiseReranker, PairwiseScoredPair,
+    };
+    #[cfg(feature = "scalar-quantization")]
+    pub use crate::scalar_quantization::{
+        BinaryVector, QuantizedVector, ScalarQuantizer, SqConfig, SqError,
+    };
+    #[cfg(feature = "self-discover")]
+    pub use crate::self_discover::{
+        MockSelfDiscoverModel, ReasoningModule, ReasoningStructure, SelfDiscoverConfig,
+        SelfDiscoverEngine, SelfDiscoverError, SelfDiscoverModel, SelfDiscoverResult,
+    };
+    #[cfg(feature = "step-back")]
+    pub use crate::step_back::{
+        MockStepBackModel, StepBackConfig, StepBackEngine, StepBackError, StepBackModel,
+        StepBackResult,
+    };
+    // InjectionDetector aliased — guardrails already exports one
+    #[cfg(feature = "prompt-injection-defense")]
+    pub use crate::prompt_injection_defense::{
+        DefenseReport, DefenseStrategy, DocumentScanResult, InjectionCategory, InjectionPattern,
+        MatchedPattern, PromptInjectionConfig, PromptInjectionDetector, PromptInjectionError,
+    };
+    #[cfg(feature = "query-difficulty")]
+    pub use crate::query_difficulty::{
+        DifficultyBand, DifficultyConfig, DifficultyError, DifficultyPredictor, DifficultyScore,
+        DifficultySignals,
+    };
 }
 
 pub use error::{OxiRagError, Result};

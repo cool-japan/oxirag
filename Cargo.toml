@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.15.0"
+version = "0.18.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -312,6 +312,69 @@ next-gen-retrieval    = ["hipporag", "long-rag", "dragin"]
 adaptive-generation   = ["astute-rag", "self-route", "speculative-drafting"]
 knowledge-context     = ["memorag", "context-pruning", "knowledge-conflict"]
 eval-benchmarking     = ["rgb-eval", "nugget-eval", "ab-eval"]
+# v0.16.0 — Theme 1: Graph & Generative Retrieval
+drift-search          = ["graph-summarization"]
+entity-linking        = []
+generative-retrieval  = []
+# v0.16.0 — Theme 2: Retrieval Composition
+auto-merging          = ["chunking"]
+ensemble-retriever    = []
+gen-read              = []
+# v0.16.0 — Theme 3: Time, Language & Personalization
+fresh-retrieval       = []
+cross-lingual         = []
+personalized-rag      = []
+# v0.16.0 — Theme 4: Grounding & Fine-grained Verification
+quote-grounding       = []
+claim-decomposition   = []
+fusion-in-decoder     = []
+# v0.16.0 theme umbrellas
+graph-generative       = ["drift-search", "entity-linking", "generative-retrieval"]
+retrieval-composition  = ["auto-merging", "ensemble-retriever", "gen-read"]
+time-lang-personal     = ["fresh-retrieval", "cross-lingual", "personalized-rag"]
+grounding-verification = ["quote-grounding", "claim-decomposition", "fusion-in-decoder"]
+# v0.17.0 — Theme 1: ANN Indexing & Late Interaction
+product-quantization  = []
+ivf-index             = []
+plaid                 = []
+# v0.17.0 — Theme 2: Generation Refinement
+self-refine           = []
+chain-of-density      = []
+analogical            = []
+# v0.17.0 — Theme 3: Robustness & Privacy
+poisoning-defense     = []
+anonymization         = []
+abstention            = []
+# v0.17.0 — Theme 4: Advanced Evaluation
+ragchecker            = []
+retrieval-diversity   = []
+ares-eval             = []
+# v0.17.0 theme umbrellas
+ann-indexing          = ["product-quantization", "ivf-index", "plaid"]
+generation-refinement = ["self-refine", "chain-of-density", "analogical"]
+robustness-privacy    = ["poisoning-defense", "anonymization", "abstention"]
+advanced-eval         = ["ragchecker", "retrieval-diversity", "ares-eval"]
+# v0.18.0 — Theme 1: ANN & Vector Indexing
+hnsw                  = []
+lsh                   = []
+scalar-quantization   = []
+# v0.18.0 — Theme 2: Advanced Prompting & Reasoning
+step-back             = []
+least-to-most         = []
+self-discover         = []
+# v0.18.0 — Theme 3: Reranking & Retrieval Quality
+pairwise-rerank       = []
+multi-query           = []
+citation-verification = []
+# v0.18.0 — Theme 4: Evaluation & Safety
+faithfulness-eval     = []
+prompt-injection-defense = []
+query-difficulty      = []
+# v0.18.0 theme umbrellas
+vector-indexing       = ["hnsw", "lsh", "scalar-quantization"]
+advanced-prompting    = ["step-back", "least-to-most", "self-discover"]
+rerank-quality        = ["pairwise-rerank", "multi-query", "citation-verification"]
+eval-safety           = ["faithfulness-eval", "prompt-injection-defense", "query-difficulty"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

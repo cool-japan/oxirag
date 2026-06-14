@@ -5,6 +5,90 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-06-14
+
+Twelve more cutting-edge RAG technique modules across four themes — ANN Indexing & Late Interaction,
+Generation Refinement, Robustness & Privacy, and Advanced Evaluation — all pure-Rust heuristic
+implementations with zero new dependencies.
+
+### Added
+
+#### Theme 1 — ANN Indexing & Late Interaction
+
+- **Product Quantization** (feature `product-quantization`): Jégou et al. 2011. Splits vectors into subspaces, learns per-subspace codebooks via deterministic k-means-lite, encodes as codeword indices, and computes Asymmetric Distance (ADC) via lookup tables. `ProductQuantizer`, `PqIndex`. Distinct from scalar `quantization` (INT8/INT4). 71 tests.
+- **IVF Index** (feature `ivf-index`): inverted-file ANN. Coarse-quantizer centroids + inverted lists; search probes the `nprobe` nearest cells. `IvfIndex.build()/search()`. Distinct from HNSW graph ANN. 54 tests.
+- **PLAID** (feature `plaid`): ColBERTv2/PLAID late interaction (Santhanam et al. 2022). Per-token embeddings + MaxSim scoring with centroid-based candidate generation/pruning. `PlaidRetriever`. Distinct from basic `multi_vector`. 65 tests.
+
+#### Theme 2 — Generation Refinement
+
+- **Self-Refine** (feature `self-refine`): Madaan et al. 2023. Iterative self-feedback → refine loop with the same model (no external memory/retrieval, unlike Reflexion). `SelfRefineEngine.run`. 70 tests.
+- **Chain-of-Density** (feature `chain-of-density`): Adams et al. 2023. Iteratively densifies a fixed-length summary by incorporating salient missing entities while trimming filler. `ChainOfDensityEngine.summarize`, `DensityStep`. 65 tests.
+- **Analogical Prompting** (feature `analogical`): Yasunaga et al. 2023. Self-generates relevant exemplars + high-level knowledge before solving. `AnalogicalEngine.run`. Distinct from `prompt_optimization` (which selects from a pool). 56 tests.
+
+#### Theme 3 — Robustness & Privacy
+
+- **Poisoning Defense** (feature `poisoning-defense`): RAG-security detector for adversarial/poisoned passages — keyword-stuffing density, lexical-diversity (type/token), and consensus-anomaly signals combine into a poison risk. `PoisoningDetector.scan()/filter()`. Distinct from `noise_filter` (irrelevant distractors). 66 tests.
+- **Anonymization** (feature `anonymization`): PII pseudonymization via deterministic char-class scanning (emails, phones, person names) → consistent placeholders with a reversible mapping; `Anonymizer.anonymize()/deanonymize()`. Distinct from `guardrails` (irreversible redaction). 54 tests.
+- **Abstention** (feature `abstention`): selective prediction — answer-or-refuse from confidence + retrieval support, plus risk-coverage curve analysis. `AbstentionPolicy.assess()/risk_coverage()`. 60 tests.
+
+#### Theme 4 — Advanced Evaluation
+
+- **RAGChecker** (feature `ragchecker`): Ru et al. 2024. Claim-level diagnostics — retriever (claim recall, context precision) + generator (faithfulness, hallucination rate, correctness, noise sensitivity) via claim entailment. `RagChecker.check()`. 54 tests.
+- **Retrieval Diversity** (feature `retrieval-diversity`): diversity/coverage metrics — intra-list diversity, subtopic recall (S-recall), and novelty-discounted α-nDCG. `DiversityScorer.compute()`. 60 tests.
+- **ARES Eval** (feature `ares-eval`): Saad-Falcon et al. 2023. Automated eval with prediction-powered inference (PPI) — debiases a judge's mean on unlabeled data by its measured bias on a labeled set, yielding a tighter confidence interval. `AresEvaluator.ppi_estimate()`, `PpiInterval`. 52 tests.
+
+- **Four v0.17.0 theme umbrella features**: `ann-indexing`, `generation-refinement`, `robustness-privacy`, `advanced-eval`.
+
+### Codebase Statistics (v0.17.0)
+
+- **Tests**: 6,945 (all passing; +727 from v0.16.0's 6,218)
+- **Clippy Warnings**: 0 (`--all-features --all-targets -D warnings`)
+- **Rustdoc Warnings**: 0
+- **New features**: `product-quantization`, `ivf-index`, `plaid`, `self-refine`, `chain-of-density`, `analogical`, `poisoning-defense`, `anonymization`, `abstention`, `ragchecker`, `retrieval-diversity`, `ares-eval`, `ann-indexing`, `generation-refinement`, `robustness-privacy`, `advanced-eval`
+- **New modules**: `src/product_quantization/`, `src/ivf_index/`, `src/plaid_retrieval/`, `src/self_refine/`, `src/chain_of_density/`, `src/analogical_prompting/`, `src/poisoning_defense/`, `src/anonymization/`, `src/abstention/`, `src/ragchecker/`, `src/retrieval_diversity/`, `src/ares_eval/`
+
+## [0.16.0] - 2026-06-14
+
+Twelve more cutting-edge RAG technique modules across four themes — Graph & Generative Retrieval,
+Retrieval Composition, Time/Language/Personalization, and Grounding & Fine-grained Verification —
+all pure-Rust heuristic implementations with zero new dependencies.
+
+### Added
+
+#### Theme 1 — Graph & Generative Retrieval
+
+- **DRIFT Search** (feature `drift-search`): GraphRAG DRIFT (Microsoft 2024). Combines global community-summary search with local entity search via iterative follow-up sub-queries that drill down the community hierarchy. Self-contained `DriftSearchEngine.search()` over caller-supplied `CommunityReport`s. 54 tests.
+- **Entity Linking** (feature `entity-linking`): mention → canonical KB entity disambiguation. `EntityCatalog` with a case-insensitive alias index; `EntityLinker.link()` resolves ambiguous mentions by context-vs-description cosine, emitting NIL below a confidence floor. 65 tests.
+- **Generative Retrieval** (feature `generative-retrieval`): DSI-style (Tay et al. 2022). Assigns each doc a hierarchical semantic doc-id (cluster path) and "generates" the id via beam-search constrained traversal of the centroid tree. `GenerativeRetriever`, `SemanticDocId`. 68 tests.
+
+#### Theme 2 — Retrieval Composition
+
+- **Auto-Merging** (feature `auto-merging`): LlamaIndex auto-merging. Collapses retrieved child chunks into their parent when ≥ a threshold fraction of siblings are hit (recursively). `AutoMergingRetriever`, `ChunkHierarchy`. Distinct from `parent_document` (one-chunk expansion). 61 tests.
+- **Ensemble Retriever** (feature `ensemble-retriever`): orchestrates multiple pluggable `SubRetriever` traits with weights and fuses via `WeightedScore` or `WeightedRrf` — a doc surfaced by several retrievers ranks higher. Distinct from `rank_fusion` (which fuses given lists). 59 tests.
+- **GenRead** (feature `gen-read`): generate-then-read (Yu et al. 2023). Generates diverse contextual documents, clusters them, and uses one representative per cluster as the reading context (no retrieval). `GenReadEngine.run`. Distinct from HyDE. 51 tests.
+
+#### Theme 3 — Time, Language & Personalization
+
+- **Fresh Retrieval** (feature `fresh-retrieval`): FreshLLM-style (Vu et al. 2023). Classifies query time-sensitivity (Static/SlowChanging/FastChanging), scores document freshness by exponential age decay, flags stale answers, and reranks weighted by freshness demand. `FreshnessAnalyzer`. Distinct from `temporal` (unconditional decay). 69 tests.
+- **Cross-Lingual** (feature `cross-lingual`): cross-lingual retrieval via a caller-supplied `BilingualLexicon` (query-token translation) + diacritic normalization to a shared form. `CrossLingualRetriever.search()`. 74 tests.
+- **Personalized RAG** (feature `personalized-rag`): user-profile-aware reranking. `UserProfile` (topic interests + history) drives an affinity score blended with relevance. `PersonalizedReranker.rerank()`. Distinct from `relevance_feedback` (query-level Rocchio). 55 tests.
+
+#### Theme 4 — Grounding & Fine-grained Verification
+
+- **Quote Grounding** (feature `quote-grounding`): extracts the minimal verbatim supporting quote per answer claim (the best-overlap source sentence, trimmed to a token window). `QuoteGrounder.ground()` / `ungrounded()`. Distinct from `attribution` (citation alignment). 54 tests.
+- **Claim Decomposition** (feature `claim-decomposition`): FActScore-style (Min et al. 2023) decomposition of an answer into atomic, decontextualized claims (clause splitting + pronoun→subject resolution). `AtomicClaimExtractor.decompose()`. Distinct from `hallucination_detector` (claim scoring). 56 tests.
+- **Fusion-in-Decoder** (feature `fusion-in-decoder`): FiD-style (Izacard & Grave 2021). Extracts per-passage evidence independently then fuses across passages weighted by relevance (deduplicated) into an answer with multi-passage attribution. `FusionInDecoder.fuse()`. 56 tests.
+
+- **Four v0.16.0 theme umbrella features**: `graph-generative`, `retrieval-composition`, `time-lang-personal`, `grounding-verification`.
+
+### Codebase Statistics (v0.16.0)
+
+- **Tests**: 6,218 (all passing; +722 from v0.15.0's 5,496)
+- **Clippy Warnings**: 0 (`--all-features --all-targets -D warnings`)
+- **Rustdoc Warnings**: 0
+- **New features**: `drift-search`, `entity-linking`, `generative-retrieval`, `auto-merging`, `ensemble-retriever`, `gen-read`, `fresh-retrieval`, `cross-lingual`, `personalized-rag`, `quote-grounding`, `claim-decomposition`, `fusion-in-decoder`, `graph-generative`, `retrieval-composition`, `time-lang-personal`, `grounding-verification`
+- **New modules**: `src/drift_search/`, `src/entity_linking/`, `src/generative_retrieval/`, `src/auto_merging/`, `src/ensemble_retriever/`, `src/gen_read/`, `src/fresh_retrieval/`, `src/cross_lingual/`, `src/personalized_rag/`, `src/quote_grounding/`, `src/claim_decomposition/`, `src/fusion_in_decoder/`
+
 ## [0.15.0] - 2026-06-14
 
 Twelve more cutting-edge RAG technique modules (mostly 2023-2024 papers) across four themes —
