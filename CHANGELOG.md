@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-06-14
+
+Twelve cutting-edge RAG modules across four themes — ANN & Vector Indexing, Advanced Prompting & Reasoning,
+Reranking & Retrieval Quality, and Evaluation & Safety — all pure-Rust heuristic implementations with zero
+new dependencies. +809 tests (6,945 → 7,754), 137 module directories.
+
+### Added
+
+- **`hnsw_index`** (`hnsw`): Hierarchical Navigable Small World graph ANN index with deterministic level
+  assignment, multi-layer greedy search, and `ef_construction`/`ef_search` beam search.
+- **`lsh_index`** (`lsh`): Locality-Sensitive Hashing with random-hyperplane LSH (cosine) and banded
+  MinHash (Jaccard); deterministic hyperplane generation via FNV-1a.
+- **`scalar_quantization`** (`scalar-quantization`): int8 and binary scalar quantization with calibration,
+  encode/decode, asymmetric dot product, and Hamming distance.
+- **`step_back`** (`step-back`): Step-Back Prompting — abstract a query to a higher-level question,
+  retrieve on it, then synthesize the answer.
+- **`least_to_most`** (`least-to-most`): Least-to-Most decomposition — split complex queries into ordered
+  sub-problems, solve sequentially with prior answers as context.
+- **`self_discover`** (`self-discover`): Self-Discover — SELECT/ADAPT/IMPLEMENT atomic reasoning modules
+  into a structured plan; includes built-in bank of 8 reasoning modules.
+- **`pairwise_rerank`** (`pairwise-rerank`): Tournament-style pairwise reranking (monoT5/duoT5-inspired)
+  accumulating wins across rounds; `PairwiseReranker`.
+- **`multi_query`** (`multi-query`): Multi-Query expansion — generate N query variants, retrieve for each,
+  fuse with RRF; `MultiQueryGenerator`.
+- **`citation_verification`** (`citation-verification`): Verify claimed spans are grounded in source
+  passages via token overlap and n-gram substring matching; `CitationVerifier`, `VerifiedCitation`.
+- **`faithfulness_eval`** (`faithfulness-eval`): RAGAS-style faithfulness scoring — decompose answer into
+  atomic claims, entail each against context, aggregate; `FaithfulnessEvaluator`.
+- **`prompt_injection_defense`** (`prompt-injection-defense`): Detect injection/jailbreak text in retrieved
+  context with 40+ patterns; configurable Quarantine/Sanitize/Flag/ScoreOnly strategies;
+  `PromptInjectionDetector`.
+- **`query_difficulty`** (`query-difficulty`): Predict query difficulty band (Easy/Medium/Hard/Ambiguous)
+  from negation, multi-hop, ambiguity, rarity, and length signals; `DifficultyPredictor`.
+- **Theme umbrellas**: `vector-indexing`, `advanced-prompting`, `rerank-quality`, `eval-safety`.
+
 ## [0.17.0] - 2026-06-14
 
 Twelve more cutting-edge RAG technique modules across four themes — ANN Indexing & Late Interaction,

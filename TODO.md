@@ -1,5 +1,31 @@
 # OxiRAG TODO
 
+## v0.18.0 — Vector-Indexing, Advanced-Prompting, Rerank-Quality & Eval-Safety ✅
+
+**Released**: 2026-06-14 | **Tests**: 7,754 | **Warnings**: 0
+
+Twelve cutting-edge RAG modules, four themes, zero new deps, 137 module dirs.
+
+**Theme 1 — ANN & Vector Indexing**
+- [x] **HNSW Index** (`hnsw`): Hierarchical Navigable Small World ANN — multi-layer graph, greedy beam search with `ef_construction`/`ef_search`. `HnswIndex`.
+- [x] **LSH Index** (`lsh`): Locality-Sensitive Hashing — random-hyperplane (cosine) + banded MinHash (Jaccard). `LshIndex`, `MinHashIndex`.
+- [x] **Scalar Quantization** (`scalar-quantization`): int8/binary quantization — calibrate, encode, decode, asymmetric dot, Hamming distance. `ScalarQuantizer`.
+
+**Theme 2 — Advanced Prompting & Reasoning**
+- [x] **Step-Back Prompting** (`step-back`): Abstract query → retrieve → synthesize. `StepBackEngine`.
+- [x] **Least-to-Most** (`least-to-most`): Decompose → solve sequentially with prior answers. `LtmEngine`.
+- [x] **Self-Discover** (`self-discover`): SELECT/ADAPT/IMPLEMENT atomic reasoning modules. `SelfDiscoverEngine`.
+
+**Theme 3 — Reranking & Retrieval Quality**
+- [x] **Pairwise Rerank** (`pairwise-rerank`): Tournament-style pairwise comparison with win accumulation. `PairwiseReranker`.
+- [x] **Multi-Query** (`multi-query`): Generate N query variants + RRF fusion. `MultiQueryGenerator`.
+- [x] **Citation Verification** (`citation-verification`): Verify claim grounding via token overlap + n-gram. `CitationVerifier`.
+
+**Theme 4 — Evaluation & Safety**
+- [x] **Faithfulness Eval** (`faithfulness-eval`): RAGAS claim-level faithfulness via NLI-lite. `FaithfulnessEvaluator`.
+- [x] **Prompt Injection Defense** (`prompt-injection-defense`): 40+ pattern detection, Quarantine/Sanitize/Flag strategies. `PromptInjectionDetector`.
+- [x] **Query Difficulty** (`query-difficulty`): Predict Easy/Medium/Hard/Ambiguous band. `DifficultyPredictor`.
+
 ## v0.17.0 — ANN-Indexing, Generation-Refinement, Robustness-Privacy & Advanced-Eval ✅
 
 **Released**: 2026-06-14 | **Tests**: 6,945 | **Warnings**: 0
