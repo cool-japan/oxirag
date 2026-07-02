@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -438,6 +438,27 @@ graph-knowledge-rag      = ["g-retriever", "think-on-graph", "lightrag"]
 late-interaction         = ["coil-retrieval", "muvera", "instruction-embed"]
 structured-knowledge     = ["table-rag", "structrag", "chain-of-table"]
 retrieval-control        = ["setwise-rerank", "skr", "crud-rag"]
+# v0.22.0 — Theme 1: Classical IR Reimagined
+learning-to-rank         = []
+rp-tree-index            = []
+bm25f-retrieval          = []
+# v0.22.0 — Theme 2: Multi-Agent & Principled Reasoning
+multi-agent-debate       = []
+constitutional-critique  = []
+tool-retrieval           = []
+# v0.22.0 — Theme 3: Domain-Specialized Retrieval
+code-retrieval           = []
+extractive-qa            = []
+hard-negative-mining     = []
+# v0.22.0 — Theme 4: Retrieval Governance
+active-learning-retrieval = []
+belief-revision          = []
+shard-selection          = []
+# v0.22.0 theme umbrellas
+classical-ir                  = ["learning-to-rank", "rp-tree-index", "bm25f-retrieval"]
+multi-agent-reasoning         = ["multi-agent-debate", "constitutional-critique", "tool-retrieval"]
+domain-specialized-retrieval  = ["code-retrieval", "extractive-qa", "hard-negative-mining"]
+retrieval-governance          = ["active-learning-retrieval", "belief-revision", "shard-selection"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

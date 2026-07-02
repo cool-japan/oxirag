@@ -639,6 +639,46 @@ pub mod skr;
 #[cfg(feature = "crud-rag")]
 pub mod crud_rag;
 
+// v0.22.0 — Theme 1: Classical IR Reimagined
+#[cfg(feature = "learning-to-rank")]
+pub mod learning_to_rank;
+
+#[cfg(feature = "rp-tree-index")]
+pub mod rp_tree_index;
+
+#[cfg(feature = "bm25f-retrieval")]
+pub mod bm25f_retrieval;
+
+// v0.22.0 — Theme 2: Multi-Agent & Principled Reasoning
+#[cfg(feature = "multi-agent-debate")]
+pub mod multi_agent_debate;
+
+#[cfg(feature = "constitutional-critique")]
+pub mod constitutional_critique;
+
+#[cfg(feature = "tool-retrieval")]
+pub mod tool_retrieval;
+
+// v0.22.0 — Theme 3: Domain-Specialized Retrieval
+#[cfg(feature = "code-retrieval")]
+pub mod code_retrieval;
+
+#[cfg(feature = "extractive-qa")]
+pub mod extractive_qa;
+
+#[cfg(feature = "hard-negative-mining")]
+pub mod hard_negative_mining;
+
+// v0.22.0 — Theme 4: Retrieval Governance
+#[cfg(feature = "active-learning-retrieval")]
+pub mod active_learning_retrieval;
+
+#[cfg(feature = "belief-revision")]
+pub mod belief_revision;
+
+#[cfg(feature = "shard-selection")]
+pub mod shard_selection;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -1814,6 +1854,80 @@ pub mod prelude {
     pub use crate::think_on_graph::{
         TogBeamPath, TogConfig, TogDecision, TogEngine, TogEntity, TogError, TogExploration,
         TogKnowledgeGraph, TogRelation, TogResult, TogTriple,
+    };
+    // ── v0.22.0 ────────────────────────────────────────────────────────────────
+    // 1 alias: extractive_qa::QuestionType collides with synthetic_eval::QuestionType
+    // (already in the v0.19.0 block above) — aliased to disambiguate; unaliased access
+    // remains available via crate::extractive_qa::QuestionType. All other 125 names are
+    // module-prefixed and collision-free.
+    #[cfg(feature = "active-learning-retrieval")]
+    pub use crate::active_learning_retrieval::{
+        ActiveLearningConfig, ActiveLearningError, ActiveLearningResult, ActiveLearningSelector,
+        PoolItem, SelectionBatch, UncertaintyMeasure, UncertaintySample,
+    };
+    #[cfg(feature = "belief-revision")]
+    pub use crate::belief_revision::{
+        BeliefHypothesis, BeliefRevisionConfig, BeliefRevisionEngine, BeliefRevisionError,
+        BeliefRevisionResult, BeliefState, EvidenceUpdate, LikelihoodRatio,
+    };
+    #[cfg(feature = "bm25f-retrieval")]
+    pub use crate::bm25f_retrieval::{
+        Bm25fConfig, Bm25fDocument, Bm25fError, Bm25fField, Bm25fFieldWeight, Bm25fHit, Bm25fIndex,
+        Bm25fResult,
+    };
+    #[cfg(feature = "code-retrieval")]
+    pub use crate::code_retrieval::{
+        CodeRetrievalConfig, CodeRetrievalEngine, CodeRetrievalError, CodeRetrievalHit,
+        CodeRetrievalIndex, CodeRetrievalLanguageHint, CodeRetrievalResult, CodeRetrievalSymbol,
+        CodeRetrievalUnit, CodeRetrievalUnitKind, parse_source,
+    };
+    #[cfg(feature = "constitutional-critique")]
+    pub use crate::constitutional_critique::{
+        ConstitutionalConfig, ConstitutionalCritique, ConstitutionalEngine, ConstitutionalError,
+        ConstitutionalMatch, ConstitutionalPrinciple, ConstitutionalResult, ConstitutionalReviser,
+        ConstitutionalRevision, ConstitutionalTraceEntry, ConstitutionalTrigger,
+        MockConstitutionalReviser,
+    };
+    #[cfg(feature = "extractive-qa")]
+    pub use crate::extractive_qa::{
+        AnswerSpan, ExtractiveQaConfig, ExtractiveQaEngine, ExtractiveQaError, ExtractiveQaResult,
+        QuestionType as ExtractiveQuestionType, SpanCandidate, SpanScore,
+    };
+    #[cfg(feature = "hard-negative-mining")]
+    pub use crate::hard_negative_mining::{
+        EmbeddingVersion, HardNegativeConfig, HardNegativeDocument, HardNegativeError,
+        HardNegativeMiner, HardNegativePositivePair, HardNegativeQueryOverlap,
+        HardNegativeQueryResult, HardNegativeResult, HardNegativeSample, HardNegativeStaleness,
+        MiningRound,
+    };
+    #[cfg(feature = "learning-to-rank")]
+    pub use crate::learning_to_rank::{
+        LTR_DEFAULT_FEATURE_DIM, LTR_FEATURE_BM25, LTR_FEATURE_EMBEDDING_SIM, LTR_FEATURE_LENGTH,
+        LTR_FEATURE_POPULARITY, LTR_FEATURE_RECENCY, LtrConfig, LtrDocument, LtrEngine, LtrError,
+        LtrFeatureExtractor, LtrFeatureVector, LtrModel, LtrResult, LtrTrainingPair,
+        LtrTrainingSet,
+    };
+    #[cfg(feature = "multi-agent-debate")]
+    pub use crate::multi_agent_debate::{
+        DebateArgument, DebateConfig, DebateEngine, DebateError, DebateJudge, DebateJudgeWeights,
+        DebateParticipant, DebatePersona, DebatePositionScore, DebateResult, DebateRound,
+        DebateVerdict, MockDebateJudge, MockDebatePersona,
+    };
+    #[cfg(feature = "rp-tree-index")]
+    pub use crate::rp_tree_index::{
+        RpTreeConfig, RpTreeError, RpTreeForest, RpTreeHit, RpTreeHyperplane, RpTreeIndex,
+        RpTreeMetric, RpTreeNode, RpTreeResult,
+    };
+    #[cfg(feature = "shard-selection")]
+    pub use crate::shard_selection::{
+        ShardDescriptor, ShardSelectionConfig, ShardSelectionEngine, ShardSelectionError,
+        ShardSelectionResult, ShardSelectionScore, ShardSelector, ShardTermStats,
+    };
+    #[cfg(feature = "tool-retrieval")]
+    pub use crate::tool_retrieval::{
+        ArgumentGrounder, ArgumentGroundingStatus, GroundedArgument, ToolMatch, ToolParameter,
+        ToolParameterType, ToolRetrievalConfig, ToolRetrievalEngine, ToolRetrievalError,
+        ToolRetrievalIndex, ToolRetrievalResult, ToolSpecEntry,
     };
 }
 

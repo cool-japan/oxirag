@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-07-02
+
+Twelve cutting-edge RAG modules across four themes — Classical IR Reimagined, Multi-Agent & Principled
+Reasoning, Domain-Specialized Retrieval, and Retrieval Governance — all pure-Rust heuristic
+implementations with zero new dependencies. +835 tests (10,123 → 10,958), 185 module directories.
+
+### Added
+
+- **`learning_to_rank`** (`learning-to-rank`): Feature-based Learning-to-Rank (RankNet-lite) — combines
+  BM25/recency/embedding-similarity/popularity/length signals via a **genuinely trained** pairwise
+  logistic-regression model (real gradient descent, convex RankNet loss, numerically stable sigmoid),
+  proven to converge with closed-form gradient checks. `LtrEngine`, `LtrModel`, `LtrFeatureVector`.
+  Distinct from `cross_encoder`'s fixed/default-weight text-interaction combiner (never trained). 70 tests.
+- **`rp_tree_index`** (`rp-tree-index`): Random-projection tree forest ANN (Annoy-style) — `n_trees`
+  independent recursive equidistant-hyperplane-split binary trees + shared priority-queue multi-tree
+  backtracking search, exact re-rank on the merged candidate set. Recall demonstrably improves with
+  tree count (measured 23/40 → 32/40 at 1 vs 8 trees). `RpTreeForest`, `RpTreeIndex`. Distinct from
+  `lsh_index`'s flat hash bucketing and `hnsw_index`'s proximity graph. 59 tests.
+- **`bm25f_retrieval`** (`bm25f-retrieval`): Classical BM25F — field-weighted multi-field documents,
+  each field its own weight and length-normalization `b`, combined into one pseudo-frequency **before**
+  BM25 saturation (the defining BM25F trick). `Bm25fIndex`, `Bm25fDocument`, `Bm25fField`. Distinct
+  from `hybrid_search`'s single-field BM25 and `sparse_retrieval`'s SPLADE learned-sparse. 61 tests.
+- **`multi_agent_debate`** (`multi-agent-debate`): Adversarial multi-persona debate — 2+ personas argue
+  opposing positions across rounds, each seeing and rebutting the full prior transcript, judged by a
+  separate judge persona. `DebateEngine`, `DebatePersona`, `DebateJudge`. Distinct from
+  `self_consistency`'s independent-sample majority vote (no dialogue) and ToT/GoT's single-agent
+  branching search (no adversarial personas). 93 tests.
+- **`constitutional_critique`** (`constitutional-critique`): Constitutional-AI-style critique-and-revise
+  — a fixed, named principle list (5 built-in: avoid_harm/be_truthful/respect_privacy/be_respectful/
+  avoid_illegal_activity) applied one at a time, each producing a targeted critique + revision that
+  carries forward to later principles. `ConstitutionalEngine`, `ConstitutionalPrinciple`. Distinct from
+  `self_refine`'s open-ended critique (no fixed principles) and `guardrails`' detection/blocking (not an
+  iterative revise loop). 86 tests.
+- **`tool_retrieval`** (`tool-retrieval`): Semantic tool/API-spec retrieval + argument grounding — a
+  registry of `ToolSpecEntry` (name/description/JSON-schema-like params) matched by description
+  embedding + lexical overlap (not name substring), with type-aware argument extraction
+  (String/Number/Boolean/Enum) that explicitly flags ungrounded required parameters. `ToolRetrievalEngine`,
+  `ArgumentGrounder`. Adds the semantic-retrieval + arg-grounding layer `agentic`'s `Tool`/`ToolRegistry`
+  lacks, without redefining it. 71 tests.
+- **`code_retrieval`** (`code-retrieval`): AST/structure-aware code search — a lightweight brace/
+  keyword/indentation structural tokenizer (function defs, imports, identifiers, call sites) blended
+  with text similarity; structural signal demonstrably changes ranking vs pure text (adversarial test:
+  shared-vocabulary-only vs shared-identifiers-only candidates swap rank as blend weight moves).
+  `CodeRetrievalEngine`, `CodeRetrievalUnit`. Distinct from `program_of_thought`'s AST-for-execution
+  (tiny arithmetic DSL, not a code search corpus). 72 tests.
+- **`extractive_qa`** (`extractive-qa`): SQuAD-style extractive span answering — question-type-aware
+  (`Who`/`What`/`When`/`Where`/`HowMany`/`HowMuch`/`Why`/`Which`) boundary scoring over bounded
+  candidate spans, blended with surrounding-context overlap and a length prior. `ExtractiveQaEngine`,
+  `AnswerSpan`. Distinct from `quote_grounding`'s claim→supporting-quote substantiation framing
+  (question→answer-span is a different task despite both extracting contiguous spans) and
+  `self_ask`/`long_rag`'s generation. 88 tests.
+- **`hard_negative_mining`** (`hard-negative-mining`): ANCE-style asynchronous hard-negative mining —
+  periodic corpus re-ranking under a version-parameterized embedding function, mining top-ranked-
+  but-not-relevant docs as training/calibration signal, with an explicit staleness/overlap metric
+  measuring how much the mined set drifts as the embedding version changes. `HardNegativeMiner`,
+  `MiningRound`. Distinct from `synthetic_eval`'s one-shot lexical eval-set distractors and
+  `distillation`'s negative-free Q&A collection. 51 tests.
+- **`active_learning_retrieval`** (`active-learning-retrieval`): Uncertainty-sampling pool selection —
+  margin sampling and Shannon-entropy sampling (both verified against hand-computed ground truth, e.g.
+  uniform-3-way entropy = ln 3) rank a pool of unlabeled items by informativeness, with an optional
+  greedy diversity filter. `ActiveLearningSelector`, `UncertaintyMeasure`. Distinct from `skr`'s
+  per-query retrieve gate and `dragin`'s token-level trigger (neither ranks a pool). 60 tests.
+- **`belief_revision`** (`belief-revision`): Bayesian belief updating over retrieved evidence — an
+  explicit posterior over candidate hypotheses updated via genuine log-odds likelihood-ratio Bayes
+  updates (numerically stable `logsumexp`), proven correct against hand-computed two-hypothesis Bayes
+  rule and stable under 150+ sequential updates where naive linear-space underflows to zero.
+  `BeliefState`, `BeliefRevisionEngine`. Distinct from `knowledge_conflict`'s fixed-policy pairwise
+  resolution and `conformal_rag`'s static coverage-guaranteed set (neither is an evolving posterior).
+  70 tests.
+- **`shard_selection`** (`shard-selection`): CORI-style pre-query collection selection — ranks corpus
+  shards by predicted relevance from lightweight resource-description statistics (term/document
+  frequency digests) **before** querying any of them; the classical distributed-IR resource-selection
+  problem. `ShardSelector`, `ShardDescriptor`. Explicitly out of scope: post-query score
+  calibration/merging, already covered by `ensemble_retriever`/`rank_fusion`/`collections`. 63 tests.
+
+### Theme umbrellas
+
+- `classical-ir` = `learning-to-rank` + `rp-tree-index` + `bm25f-retrieval`
+- `multi-agent-reasoning` = `multi-agent-debate` + `constitutional-critique` + `tool-retrieval`
+- `domain-specialized-retrieval` = `code-retrieval` + `extractive-qa` + `hard-negative-mining`
+- `retrieval-governance` = `active-learning-retrieval` + `belief-revision` + `shard-selection`
+
 ## [0.21.0] - 2026-07-02
 
 Twelve cutting-edge RAG modules across four themes — Graph-Structured Knowledge RAG, Fine-Grained &

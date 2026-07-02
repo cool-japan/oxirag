@@ -1,5 +1,64 @@
 # OxiRAG TODO
 
+## v0.22.0 — Classical IR Reimagined, Multi-Agent Reasoning, Domain-Specialized Retrieval & Retrieval Governance ✅
+
+**Released**: 2026-07-02 | **Tests**: 10,958 | **Warnings**: 0
+
+Twelve cutting-edge RAG modules, four themes, zero new deps, 185 module dirs. +835 tests from v0.21.0.
+
+**Theme 1 — Classical IR Reimagined**
+- [x] **Learning-to-Rank** (`learning-to-rank`): trained pairwise-logistic RankNet-lite over numeric
+  retrieval signals (BM25/recency/embedding-sim/popularity/length), convergence proven via closed-form
+  gradient checks. `LtrEngine`. 70 tests.
+- [x] **RP-Tree Index** (`rp-tree-index`): Annoy-style random-projection tree forest, priority-queue
+  multi-tree search + exact re-rank; recall improves with tree count (measured). `RpTreeIndex`. 59 tests.
+- [x] **BM25F** (`bm25f-retrieval`): field-weighted multi-field BM25, per-field weight/`b`, combined
+  pseudo-frequency before saturation. `Bm25fIndex`. 61 tests.
+
+**Theme 2 — Multi-Agent & Principled Reasoning**
+- [x] **Multi-Agent Debate** (`multi-agent-debate`): adversarial opposing personas rebut across rounds
+  over the full prior transcript, judged by a separate judge. `DebateEngine`. 93 tests.
+- [x] **Constitutional Critique** (`constitutional-critique`): fixed named-principle critique-and-revise
+  loop, later principles see earlier revisions (proven sequential). `ConstitutionalEngine`. 86 tests.
+- [x] **Tool Retrieval** (`tool-retrieval`): semantic tool/API-spec retrieval + type-aware argument
+  grounding, scoped around (not reimplementing) `agentic::Tool`. `ToolRetrievalEngine`. 71 tests.
+
+**Theme 3 — Domain-Specialized Retrieval**
+- [x] **Code Retrieval** (`code-retrieval`): structural brace/keyword/indentation tokenizer blended with
+  text similarity; structural signal proven to flip ranking adversarially. `CodeRetrievalEngine`. 72 tests.
+- [x] **Extractive QA** (`extractive-qa`): SQuAD-style question-type-aware span-boundary extraction, no
+  generation. `ExtractiveQaEngine`. 88 tests.
+- [x] **Hard Negative Mining** (`hard-negative-mining`): ANCE-style async re-mining under a
+  version-parameterized embedding, staleness/overlap metric measures drift. `HardNegativeMiner`. 51 tests.
+
+**Theme 4 — Retrieval Governance**
+- [x] **Active Learning Retrieval** (`active-learning-retrieval`): margin + entropy uncertainty sampling
+  over an unlabeled pool, verified against hand-computed ground truth. `ActiveLearningSelector`. 60 tests.
+- [x] **Belief Revision** (`belief-revision`): genuine Bayesian log-odds posterior updates, numerically
+  stable under 150+ sequential updates, proven vs hand-computed Bayes rule. `BeliefRevisionEngine`. 70 tests.
+- [x] **Shard Selection** (`shard-selection`): CORI-style pre-query resource selection from shard
+  statistics; explicitly does not merge/calibrate (that's `ensemble_retriever`/`rank_fusion`/
+  `collections`). `ShardSelector`. 63 tests.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`classical-ir`, `multi-agent-reasoning`, `domain-specialized-retrieval`,
+  `retrieval-governance`); 12 modules + 126 prelude re-exports, **1 alias needed**
+  (`extractive_qa::QuestionType` → `ExtractiveQuestionType`, collides with the pre-existing
+  `synthetic_eval::QuestionType`) — found via the same systematic name-grep check used every cycle.
+- [x] `cargo fmt` + `cargo build/clippy/nextest/doc --all-features --all-targets -D warnings` → 0 errors,
+  0 warnings, 10,958 tests + 168 doctests green.
+- [x] Bumped 0.21.0 → 0.22.0; updated CHANGELOG.md, TODO.md.
+- [x] Process note: pre-validated via 3 parallel recon passes over ~50 existing modules before writing
+  any code — dropped 3 confirmed duplicates (`rocchio_feedback`≈`relevance_feedback`,
+  `sentence_window_retrieval`≈`parent_document`'s reserved `WindowConfig`, `multimodal_rag`≈
+  `layer1_echo`'s real CLIP provider) and re-scoped 1 (`federated_retrieval`→`shard_selection`, narrowed
+  to pre-query selection since post-query merge/calibration already existed 3x over). One subagent
+  (`rp_tree_index`, first attempt) failed immediately by trying to spawn its own sub-subagents instead
+  of doing the work (0 tool uses, 6s) — re-dispatched with an explicit "do this yourself" instruction
+  and it completed cleanly on retry. Orchestrator ran on Sonnet 5, not Opus per `/ucont` Rule 0 (no user
+  response to the model-switch prompt within the wait window; proceeded per "best judgment," matching
+  how v0.19.0–v0.21.0 already ran this session) — compensated with the same rigorous recon process.
+
 ## v0.21.0 — Graph-Knowledge RAG, Late-Interaction Retrieval, Tabular/Structured Knowledge & Retrieval Control ✅
 
 **Released**: 2026-07-02 | **Tests**: 10,123 | **Warnings**: 0
