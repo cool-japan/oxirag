@@ -1,5 +1,54 @@
 # OxiRAG TODO
 
+## v0.21.0 — Graph-Knowledge RAG, Late-Interaction Retrieval, Tabular/Structured Knowledge & Retrieval Control ✅
+
+**Released**: 2026-07-02 | **Tests**: 10,123 | **Warnings**: 0
+
+Twelve cutting-edge RAG modules, four themes, zero new deps, 173 module dirs. +817 tests from v0.20.0.
+
+**Theme 1 — Graph-Structured Knowledge RAG**
+- [x] **G-Retriever** (`g-retriever`): subgraph retrieval as Prize-Collecting Steiner Tree — genuine
+  Goemans–Williamson primal-dual + Johnson–Minkoff–Phillips strong pruning. `GRetrieverEngine`. 57 tests.
+- [x] **Think-on-Graph** (`think-on-graph`): bounded-width beam search over KG paths with relevance
+  pruning + sufficiency early-stop. `TogEngine`. 59 tests.
+- [x] **LightRAG** (`lightrag`): dual-keyword-type (low entity + high thematic) Local/Global/Hybrid
+  retrieval over an incrementally-deduped graph+vector index, not community-based. `LightRagEngine`. 67 tests.
+
+**Theme 2 — Fine-Grained & Late-Interaction Retrieval**
+- [x] **COIL** (`coil-retrieval`): contextualized inverted lists — exact-lexical-gated per-occurrence
+  contextual dot-products + optional CLS term. `CoilRetriever`. 59 tests.
+- [x] **MUVERA** (`muvera`): multi-vector → single-vector MIPS via Fixed Dimensional Encodings (SimHash
+  partition + JL projection + repetitions) approximating Chamfer. `MuveraEncoder`/`MuveraIndex`. 68 tests.
+- [x] **Instruction-Embed** (`instruction-embed`): INSTRUCTOR/TART instruction-conditioned embeddings
+  (`base ⊙ gate + shift`) so one corpus ranks differently per task. `InstructionEmbedder`. 99 tests.
+
+**Theme 3 — Tabular & Structured Knowledge**
+- [x] **TableRAG** (`table-rag`): two-stage schema-retrieval + cell-retrieval over large tables with
+  distinct-value capping and sub-table assembly. `TableRagEngine`. 70 tests.
+- [x] **StructRAG** (`structrag`): router infers the optimal structure (table/graph/tree/catalogue/
+  algorithm), restructures passages into it, reasons over it. `StructRagRouter`/`StructRagEngine`. 85 tests.
+- [x] **Chain-of-Table** (`chain-of-table`): symbolic table-operation chain (add_column/select/group_by/
+  sort_by/aggregate) evolving a relational table state. `ChainOfTableEngine`. 82 tests.
+
+**Theme 4 — Reranking, Adaptive Control & Evaluation**
+- [x] **Setwise Rerank** (`setwise-rerank`): k-way set comparison as the sort primitive inside
+  heapsort/bubblesort (k=2 matches pairwise bound). `SetwiseReranker`. 52 tests.
+- [x] **SKR** (`skr`): memory-based kNN retrieve-or-not gate over a labeled self-knowledge pool +
+  maintenance API. `SkrGate`/`SelfKnowledgePool`. 55 tests.
+- [x] **CRUD-RAG** (`crud-rag`): eval harness partitioned by Create/Read/Update/Delete operations with
+  genuine ROUGE-L/BLEU/EM-F1/coverage metrics. `CrudRagHarness`. 64 tests.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`graph-knowledge-rag`, `late-interaction`, `structured-knowledge`,
+  `retrieval-control`); 12 modules + 142 prelude re-exports, **zero aliasing needed** (all names
+  module-prefixed and collision-free — verified via systematic name-grep).
+- [x] `cargo fmt` + `cargo build/clippy/nextest/doc --all-features --all-targets -D warnings` → 0 errors,
+  0 warnings, 10,123 tests + 153 doctests green.
+- [x] Bumped 0.20.0 → 0.21.0; updated CHANGELOG.md, TODO.md.
+- [x] Process note: shared-branch git-reset hazard did NOT recur this cycle — Phase-0 wiring + all 12
+  untracked module dirs survived intact (verified before Phase F). Subagent briefs forbidding git
+  commands worked (2 agents ran only read-only `git log`/`status`, non-mutating).
+
 ## v0.20.0 — Learned Quantization, Reasoning Architectures, Context Efficiency & Robust Eval ✅
 
 **Released**: 2026-07-02 | **Tests**: 9,306 | **Warnings**: 0

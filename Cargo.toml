@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.20.0"
+version = "0.21.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -417,6 +417,27 @@ advanced-quantization    = ["anisotropic-vq", "itq-hashing", "residual-vq"]
 reasoning-architectures  = ["rewoo", "searchain", "buffer-of-thoughts"]
 context-efficiency       = ["llmlingua", "memory-paging", "uprise-retrieval"]
 robust-eval              = ["conformal-rag", "chainpoll", "membership-inference"]
+# v0.21.0 — Theme 1: Graph-Structured Knowledge RAG
+g-retriever           = []
+think-on-graph        = []
+lightrag              = []
+# v0.21.0 — Theme 2: Fine-Grained & Late-Interaction Retrieval
+coil-retrieval        = []
+muvera                = []
+instruction-embed     = []
+# v0.21.0 — Theme 3: Tabular & Structured Knowledge
+table-rag             = []
+structrag             = []
+chain-of-table        = []
+# v0.21.0 — Theme 4: Reranking, Adaptive Control & Evaluation
+setwise-rerank        = []
+skr                   = []
+crud-rag              = []
+# v0.21.0 theme umbrellas
+graph-knowledge-rag      = ["g-retriever", "think-on-graph", "lightrag"]
+late-interaction         = ["coil-retrieval", "muvera", "instruction-embed"]
+structured-knowledge     = ["table-rag", "structrag", "chain-of-table"]
+retrieval-control        = ["setwise-rerank", "skr", "crud-rag"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

@@ -599,6 +599,46 @@ pub mod chainpoll;
 #[cfg(feature = "membership-inference")]
 pub mod membership_inference;
 
+// v0.21.0 — Theme 1: Graph-Structured Knowledge RAG
+#[cfg(feature = "g-retriever")]
+pub mod g_retriever;
+
+#[cfg(feature = "think-on-graph")]
+pub mod think_on_graph;
+
+#[cfg(feature = "lightrag")]
+pub mod lightrag;
+
+// v0.21.0 — Theme 2: Fine-Grained & Late-Interaction Retrieval
+#[cfg(feature = "coil-retrieval")]
+pub mod coil_retrieval;
+
+#[cfg(feature = "muvera")]
+pub mod muvera;
+
+#[cfg(feature = "instruction-embed")]
+pub mod instruction_embed;
+
+// v0.21.0 — Theme 3: Tabular & Structured Knowledge
+#[cfg(feature = "table-rag")]
+pub mod table_rag;
+
+#[cfg(feature = "structrag")]
+pub mod structrag;
+
+#[cfg(feature = "chain-of-table")]
+pub mod chain_of_table;
+
+// v0.21.0 — Theme 4: Reranking, Adaptive Control & Evaluation
+#[cfg(feature = "setwise-rerank")]
+pub mod setwise_rerank;
+
+#[cfg(feature = "skr")]
+pub mod skr;
+
+#[cfg(feature = "crud-rag")]
+pub mod crud_rag;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -1702,6 +1742,78 @@ pub mod prelude {
     #[cfg(feature = "uprise-retrieval")]
     pub use crate::uprise_retrieval::{
         PromptExemplar, UpriseConfig, UpriseError, UpriseHit, UpriseIndex, UpriseRetriever,
+    };
+    // ── v0.21.0 ────────────────────────────────────────────────────────────────
+    // No aliasing needed: all 142 public names are module-prefixed and collision-free.
+    // chain_of_table's generic free fns (apply/apply_with_config/format_number) are
+    // intentionally NOT re-exported here (reachable via crate::chain_of_table::*).
+    #[cfg(feature = "chain-of-table")]
+    pub use crate::chain_of_table::{
+        ChainOfTableConfig, ChainOfTableEngine, ChainOfTableError, ChainOfTableResult, CotAddRule,
+        CotAggregate, CotAnswer, CotAnswerValue, CotCell, CotColumn, CotColumnType, CotComparator,
+        CotEnabledOperations, CotOperationKind, CotOperationTrace, CotPredicate, CotRow,
+        CotTableOperation, CotTableState, cot_cell_cmp,
+    };
+    #[cfg(feature = "coil-retrieval")]
+    pub use crate::coil_retrieval::{
+        CoilConfig, CoilDocument, CoilError, CoilInvertedIndex, CoilPosting, CoilResult,
+        CoilRetriever, CoilScoreMode, CoilTokenVector,
+    };
+    #[cfg(feature = "crud-rag")]
+    pub use crate::crud_rag::{
+        CrudCase, CrudMetric, CrudOperation, CrudRagConfig, CrudRagError, CrudRagHarness,
+        CrudRagReport, CrudRagResult, CrudScore,
+    };
+    #[cfg(feature = "g-retriever")]
+    pub use crate::g_retriever::{
+        GRetrieverConfig, GRetrieverEngine, GRetrieverEntity, GRetrieverError, GRetrieverRelation,
+        GRetrieverResult, GRetrieverRootMode, GRetrieverSubgraph, PcstEdge, PcstForest, PcstNode,
+        PcstSolver,
+    };
+    #[cfg(feature = "instruction-embed")]
+    pub use crate::instruction_embed::{
+        InstructionEmbedConfig, InstructionEmbedError, InstructionEmbedResult, InstructionEmbedder,
+        InstructionEmbedding, InstructionIndex, InstructionRegistry, TaskInstruction,
+    };
+    #[cfg(feature = "lightrag")]
+    pub use crate::lightrag::{
+        LightRagChunk, LightRagConfig, LightRagDualKeywords, LightRagEngine, LightRagEntity,
+        LightRagEntityKind, LightRagError, LightRagIndex, LightRagIndexStats, LightRagMode,
+        LightRagRelation, LightRagResult,
+    };
+    #[cfg(feature = "muvera")]
+    pub use crate::muvera::{
+        DEFAULT_MUVERA_SEED, FixedDimEncoding, MAX_K_SIM, MuveraConfig, MuveraDocument,
+        MuveraEncoder, MuveraError, MuveraIndex, MuveraResult, MuveraSimilarity,
+    };
+    #[cfg(feature = "setwise-rerank")]
+    pub use crate::setwise_rerank::{
+        SetwiseCandidate, SetwiseComparison, SetwiseConfig, SetwiseError, SetwiseRankEntry,
+        SetwiseRanking, SetwiseReranker, SetwiseResult, SetwiseSortStrategy,
+    };
+    #[cfg(feature = "skr")]
+    pub use crate::skr::{
+        SelfKnowledgePool, SkrConfig, SkrDecision, SkrError, SkrExemplar, SkrGate, SkrNeighbor,
+        SkrResult, SkrRetrievalChoice,
+    };
+    #[cfg(feature = "structrag")]
+    pub use crate::structrag::{
+        StructRagAlgorithm, StructRagCatalogue, StructRagCatalogueItem, StructRagConfig,
+        StructRagEngine, StructRagError, StructRagGraph, StructRagGraphEdge, StructRagGraphNode,
+        StructRagKnowledgeStructure, StructRagPassage, StructRagReasoner, StructRagRestructurer,
+        StructRagResult, StructRagRouter, StructRagRoutingDecision, StructRagStep,
+        StructRagStructureKind, StructRagTable, StructRagTableRow, StructRagTree,
+        StructRagTreeNode,
+    };
+    #[cfg(feature = "table-rag")]
+    pub use crate::table_rag::{
+        CellProbe, TableColumnSpec, TableColumnType, TableRagConfig, TableRagEngine, TableRagError,
+        TableRagIndex, TableRagResult, TableRagSubTable, TableRagTable, TableSchema,
+    };
+    #[cfg(feature = "think-on-graph")]
+    pub use crate::think_on_graph::{
+        TogBeamPath, TogConfig, TogDecision, TogEngine, TogEntity, TogError, TogExploration,
+        TogKnowledgeGraph, TogRelation, TogResult, TogTriple,
     };
 }
 

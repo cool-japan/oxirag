@@ -5,6 +5,86 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-07-02
+
+Twelve cutting-edge RAG modules across four themes — Graph-Structured Knowledge RAG, Fine-Grained &
+Late-Interaction Retrieval, Tabular & Structured Knowledge, and Reranking/Adaptive-Control/Evaluation
+— all pure-Rust heuristic implementations with zero new dependencies. +817 tests (9,306 → 10,123),
+173 module directories.
+
+### Added
+
+- **`g_retriever`** (`g-retriever`): G-Retriever (He et al. 2024) — subgraph retrieval framed as a
+  **Prize-Collecting Steiner Tree** optimization. Genuine Goemans–Williamson primal-dual moat-growing
+  approximation (union-find cluster merges + prize-budget deactivation) followed by
+  Johnson–Minkoff–Phillips strong pruning; supports rooted/unrooted modes, edge prizes via the
+  virtual-midpoint reduction, and a size cap. `GRetrieverEngine`, `PcstSolver`, `GRetrieverSubgraph`.
+  Distinct from `knowledge_graph_qa`'s plain BFS expansion. 57 tests.
+- **`think_on_graph`** (`think-on-graph`): Think-on-Graph / ToG (Sun et al. 2023) — LLM-guided
+  bounded-width **beam search over KG reasoning paths**: relation exploration → entity exploration →
+  relevance prune to width `W` → coverage-based sufficiency check with early stop, over its own
+  self-contained graph. `TogEngine`, `TogBeamPath`, `TogKnowledgeGraph`. Distinct from `multi_hop`'s
+  exhaustive unpruned edge-following. 59 tests.
+- **`lightrag`** (`lightrag`): LightRAG (Guo et al. 2024) — **dual-keyword-type** retrieval (low-level
+  entity/relation keys vs high-level theme/concept keys) driving Local/Global/Hybrid paths over an
+  incrementally-deduped graph+vector hybrid index (entities merged by canonical key, relations by
+  unordered endpoint pair). `LightRagEngine`, `LightRagIndex`, `LightRagDualKeywords`. Distinct from
+  `drift_search`'s community-hierarchy coarse→fine (explicitly not community-based). 67 tests.
+- **`coil_retrieval`** (`coil-retrieval`): COIL (Gao et al. 2021) — **contextualized inverted lists**:
+  postings keyed by surface token, a query token scores a doc only where the exact surface token also
+  occurs (exact-lexical gating) via a max per-occurrence contextualized-embedding dot-product, plus an
+  optional CLS semantic term (COIL-tok/COIL-full). `CoilRetriever`, `CoilInvertedIndex`, `CoilPosting`.
+  Distinct from `plaid_retrieval`'s soft all-to-all MaxSim and `sparse_retrieval`'s SPLADE expansion.
+  59 tests.
+- **`muvera`** (`muvera`): MUVERA (Dhulipala et al. 2024) — reduces **multi-vector retrieval to
+  single-vector MIPS** via Fixed Dimensional Encodings: SimHash space partition, per-cluster
+  query-sum/document-average aggregation with Hamming-nearest empty-cell fill, ±1 JL inner projection,
+  and repetition concatenation, so one dot-product approximates Chamfer/MaxSim. `MuveraEncoder`,
+  `MuveraIndex`, `FixedDimEncoding`. Distinct from `plaid_retrieval` (keeps MaxSim) and `matryoshka`
+  (nested dims). 68 tests.
+- **`instruction_embed`** (`instruction-embed`): Instruction-conditioned embeddings (INSTRUCTOR/TART,
+  Su et al. 2023) — prepends a task instruction to query and document before embedding
+  (`combined = base ⊙ gate + shift`, instruction-seeded), so one corpus ranks differently per task
+  intent; instruction registry + instruction-aware index. `InstructionEmbedder`, `InstructionIndex`,
+  `TaskInstruction`. Distinct from `self_query` (metadata parse) and `matryoshka` (nested dims). 99 tests.
+- **`table_rag`** (`table-rag`): TableRAG (Chen et al. 2024) — two-stage retrieval over large tables:
+  **schema retrieval** (query vs column names/types) + **cell retrieval** (query expanded into
+  (column, cell-value) probes against a capped distinct-value dictionary that bounds cost independent
+  of row count), assembling a compact provenance-tracked sub-table. `TableRagEngine`, `TableSchema`,
+  `CellProbe`. Distinct from `structured_extraction`'s text→records direction. 70 tests.
+- **`structrag`** (`structrag`): StructRAG (Li et al. 2024) — **infers the optimal knowledge structure**
+  (Table/Graph/Tree/Catalogue/Algorithm) for a task via a router, **restructures** retrieved passages
+  into a genuinely-populated structure of that kind, then reasons over it. `StructRagRouter`,
+  `StructRagRestructurer`, `StructRagEngine`, `StructRagKnowledgeStructure`. Distinct from
+  `structured_extraction`'s fixed-schema extraction. 85 tests.
+- **`chain_of_table`** (`chain-of-table`): Chain-of-Table (Wang et al. 2024) — tabular reasoning by
+  planning + executing a **chain of symbolic table-transformation operations** (`f_add_column`,
+  `f_select_row`/`f_select_column`, `f_group_by`, `f_sort_by`, `f_aggregate`) that evolve an in-memory
+  relational table state until the answer is extractable. `ChainOfTableEngine`, `CotTableOperation`,
+  `CotTableState`. Distinct from `program_of_thought`'s arithmetic-scalar DSL. 82 tests.
+- **`setwise_rerank`** (`setwise-rerank`): Setwise reranking (Zhuang et al. 2024) — uses a **k-way set
+  comparison** as the sort primitive inside heapsort/bubblesort, cutting comparison count from pairwise
+  O(n²) toward O(n log n) (the k=2 full sort provably matches the pairwise `n(n-1)/2` bound).
+  `SetwiseReranker`, `SetwiseComparison`, `SetwiseSortStrategy`. Distinct from `pairwise_rerank`
+  (round-robin tournament) and `listwise_rerank` (RankGPT window permute). 52 tests.
+- **`skr`** (`skr`): Self-Knowledge guided Retrieval (Wang et al. 2023) — a **memory-based kNN gate**
+  deciding retrieve-or-not from a labeled pool of (question, was-answerable-without-retrieval)
+  exemplars via similarity-weighted vote, with a pool-maintenance API (FIFO-capped). `SkrGate`,
+  `SelfKnowledgePool`, `SkrDecision`. Distinct from `adaptive_rag`'s stateless complexity tiers and
+  `self_route`'s answerability routing. 55 tests.
+- **`crud_rag`** (`crud-rag`): CRUD-RAG (Lyu et al. 2024) — a RAG evaluation harness partitioned by the
+  **Create/Read/Update/Delete** operation taxonomy, each with genuine hand-derived lexical metrics
+  (ROUGE-L + BLEU for Create; EM + token-F1 for Read; correction-similarity + error-span detection for
+  Update; key-point coverage − redundancy for Delete). `CrudRagHarness`, `CrudOperation`,
+  `CrudRagReport`. Distinct from `rgb_eval`'s four-ability taxonomy. 64 tests.
+
+### Theme umbrellas
+
+- `graph-knowledge-rag` = `g-retriever` + `think-on-graph` + `lightrag`
+- `late-interaction` = `coil-retrieval` + `muvera` + `instruction-embed`
+- `structured-knowledge` = `table-rag` + `structrag` + `chain-of-table`
+- `retrieval-control` = `setwise-rerank` + `skr` + `crud-rag`
+
 ## [0.20.0] - 2026-07-02
 
 Twelve cutting-edge RAG modules across four themes — Learned Vector Compression, Decoupled &
