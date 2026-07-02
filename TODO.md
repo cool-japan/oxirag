@@ -1,5 +1,107 @@
 # OxiRAG TODO
 
+## v0.20.0 — Learned Quantization, Reasoning Architectures, Context Efficiency & Robust Eval ✅
+
+**Released**: 2026-07-02 | **Tests**: 9,306 | **Warnings**: 0
+
+Twelve cutting-edge RAG modules, four themes, zero new deps, 161 module dirs.
+
+**Theme 1 — Learned Vector Compression**
+- [x] **Anisotropic VQ** (`anisotropic-vq`): ScaNN-style parallel/orthogonal-weighted quantization
+  loss — weighted-least-squares centroid update, not a plain mean. `AnisotropicQuantizer`.
+- [x] **ITQ** (`itq-hashing`): Iterative Quantization — PCA + alternating minimization learning an
+  orthogonal rotation via orthogonal Procrustes (pure-Rust Jacobi SVD). `ItqHasher`.
+- [x] **Residual VQ** (`residual-vq`): Sequential multi-stage codebook cascade over residuals, with
+  additive lookup-table distance estimation and optional beam search. `ResidualQuantizer`.
+
+**Theme 2 — Decoupled & Persistent Reasoning Architectures**
+- [x] **ReWOO** (`rewoo`): Single upfront Planner pass with placeholder evidence variables, one
+  retrieval call per step, zero interleaving. `RewooPlanner`/`RewooWorker`/`RewooSolver`.
+- [x] **Search-in-the-Chain** (`searchain`): Upfront global reasoning chain + Interactive
+  Reasoning-Verification with transitive multi-level backtracking. `SearChainEngine`.
+- [x] **Buffer of Thoughts** (`buffer-of-thoughts`): Persistent, growing meta-buffer of distilled
+  thought templates, retrieved by problem-structure similarity. `ThoughtBuffer`/`BotEngine`.
+
+**Theme 3 — Prompt & Context Efficiency**
+- [x] **LLMLingua** (`llmlingua`): Self-fit interpolated n-gram surrogate LM drives coarse-to-fine
+  perplexity-based pruning with proportional water-filling budget allocation. `PerplexityCompressor`.
+- [x] **Memory Paging** (`memory-paging`): MemGPT-style OS-inspired paging between bounded main
+  context and unbounded archival storage, self-directed eviction. `ContextPager`.
+- [x] **UPRISE Retrieval** (`uprise-retrieval`): Cross-task prompt-exemplar retrieval reranked by
+  EMA-updated outcome quality. `UpriseRetriever`.
+
+**Theme 4 — Statistical Calibration & Privacy Robustness**
+- [x] **Conformal RAG** (`conformal-rag`): Split conformal prediction — distribution-free
+  finite-sample quantile threshold with a proven marginal coverage guarantee. `ConformalCalibrator`.
+- [x] **ChainPoll** (`chainpoll`): Deterministic multi-formulation chain-of-thought hallucination
+  polling (not stochastic sampling) with majority-vote calibration. `ChainPollScorer`.
+- [x] **Membership Inference** (`membership-inference`): Canary-based privacy audit with a genuine
+  rank-based (Mann-Whitney U) AUC leakage score + defense. `CanaryAuditor`.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`advanced-quantization`, `reasoning-architectures`,
+  `context-efficiency`, `robust-eval`); 12 modules + prelude re-exports (2 aliased:
+  `searchain::Generator`→`SearchainGenerator`, `searchain::Retriever`→`SearchainRetriever` —
+  `dragin` already exports bare `Retriever`; `Generator` aliased alongside it for symmetry).
+- [x] `cargo fmt` + `cargo build/clippy/nextest/doc --all-features --all-targets` → 0 errors, 0
+  warnings, 9,306 tests green (+537 from v0.19.0).
+- [x] Bumped 0.19.0 → 0.20.0; updated CHANGELOG.md, TODO.md.
+- [x] Process note: multiple subagents independently observed a concurrent process repeatedly
+  running `git reset` back to HEAD during this session (visible in `git reflog`), transiently
+  wiping tracked-file changes (Cargo.toml/lib.rs wiring) but never touching untracked module
+  directories — no code was lost, all 12 modules verified intact and green after the fact.
+
+## v0.19.0 — Scalable-Indexing, Query-Transformation, Reasoning-Compression & Trust-Eval ✅
+
+**Released**: 2026-07-02 | **Tests**: 8,769 | **Warnings**: 0
+
+Twelve cutting-edge RAG modules, four themes, zero new deps, 149 module dirs.
+
+**Theme 1 — Scalable Indexing & Quantization**
+- [x] **DiskANN / Vamana** (`disk-ann`): Single-layer graph ANN — medoid entry, `RobustPrune(α)`
+  occlusion pruning, two-pass build. `DiskAnnIndex`, `VamanaGraph`.
+- [x] **SPANN** (`spann`): Balanced-clustering memory-disk hybrid ANN — boundary-closure replication +
+  RNG-rule pruning. `SpannIndex`.
+- [x] **RaBitQ** (`rabitq`): Randomized-rotation 1-bit quantization with an unbiased distance estimator
+  + error bound. `RaBitQuantizer`, `RaBitQIndex`.
+
+**Theme 2 — Query Transformation & Clarification**
+- [x] **RQ-RAG** (`rq-rag`): Learn-to-refine query router — Rewrite/Decompose/Disambiguate/Respond.
+  `QueryRefinementEngine`.
+- [x] **Tree of Clarifications** (`tree-of-clarifications`): Ambiguous-question disambiguation tree with
+  recursive pruning + aggregated answer. `ToCEngine`.
+- [x] **Query2Doc** (`query2doc`): Pseudo-document expansion — repetition-weighted query + generated
+  doc. `Query2DocExpander`.
+
+**Theme 3 — Retrieval-Augmented Reasoning & Compression**
+- [x] **RAT** (`retrieval-augmented-thoughts`): Per-thought-step revision conditioned on step-targeted
+  retrieval. `RatEngine`.
+- [x] **RECOMP** (`recomp`): Dual extractive/abstractive-lite compressors + selective-augmentation gate.
+  `RecompPipeline`.
+- [x] **FILCO** (`filco`): Sentence-granularity content filtering — STRINC/lexical/CXMI-lite measures.
+  `FilcoFilter`.
+
+**Theme 4 — Hallucination Detection & Trustworthy Eval**
+- [x] **SelfCheckGPT** (`selfcheckgpt`): Zero-resource sampling-consistency hallucination scoring —
+  n-gram/NLI-lite/QA-lite variants. `SelfCheckScorer`.
+- [x] **eRAG** (`erag`): Per-document downstream-task retriever evaluation + Kendall/Spearman
+  correlation. `ERagEvaluator`.
+- [x] **EigenScore** (`eigenscore`): Differential-entropy hallucination detection via a pure-Rust Jacobi
+  eigensolver. `EigenScoreDetector`.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`scalable-indexing`, `query-transformation`, `reasoning-compression`,
+  `trust-eval`); 12 modules + prelude re-exports (2 aliased: `QueryRefiner`→`RqRagQueryRefiner`,
+  `MockRefiner`→`RqRagMockRefiner` — `corrective_rag`/`self_refine` already export those names).
+- [x] Fixed 3 unrelated pre-existing doctest regressions found during verification (edition-2024
+  `gen` reserved keyword in `retrieval_loop::generator`, a stale borrow in `advanced_retrieval::mmr`,
+  and 3 stale `chunking::strategies` doctests missing `.with_min_chunk_size(1)`).
+- [x] `cargo fmt` + `cargo build/clippy/nextest/doc --all-features --all-targets` → 0 errors, 0
+  warnings, 8,769 tests green (+1,015 from v0.18.0).
+- [x] Bumped 0.18.0 → 0.19.0; updated CHANGELOG.md, TODO.md.
+
+---
+
 ## v0.18.0 — Vector-Indexing, Advanced-Prompting, Rerank-Quality & Eval-Safety ✅
 
 **Released**: 2026-06-14 | **Tests**: 7,754 | **Warnings**: 0

@@ -519,6 +519,86 @@ pub mod prompt_injection_defense;
 #[cfg(feature = "query-difficulty")]
 pub mod query_difficulty;
 
+// v0.19.0 — Theme 1: Scalable Indexing & Quantization
+#[cfg(feature = "disk-ann")]
+pub mod disk_ann;
+
+#[cfg(feature = "spann")]
+pub mod spann;
+
+#[cfg(feature = "rabitq")]
+pub mod rabitq;
+
+// v0.19.0 — Theme 2: Query Transformation & Clarification
+#[cfg(feature = "rq-rag")]
+pub mod rq_rag;
+
+#[cfg(feature = "tree-of-clarifications")]
+pub mod tree_of_clarifications;
+
+#[cfg(feature = "query2doc")]
+pub mod query2doc;
+
+// v0.19.0 — Theme 3: Retrieval-Augmented Reasoning & Compression
+#[cfg(feature = "retrieval-augmented-thoughts")]
+pub mod retrieval_augmented_thoughts;
+
+#[cfg(feature = "recomp")]
+pub mod recomp;
+
+#[cfg(feature = "filco")]
+pub mod filco;
+
+// v0.19.0 — Theme 4: Hallucination Detection & Trustworthy Eval
+#[cfg(feature = "selfcheckgpt")]
+pub mod selfcheckgpt;
+
+#[cfg(feature = "erag")]
+pub mod erag;
+
+#[cfg(feature = "eigenscore")]
+pub mod eigenscore;
+
+// v0.20.0 — Theme 1: Learned Vector Compression
+#[cfg(feature = "anisotropic-vq")]
+pub mod anisotropic_vq;
+
+#[cfg(feature = "itq-hashing")]
+pub mod itq_hashing;
+
+#[cfg(feature = "residual-vq")]
+pub mod residual_vq;
+
+// v0.20.0 — Theme 2: Decoupled & Persistent Reasoning Architectures
+#[cfg(feature = "rewoo")]
+pub mod rewoo;
+
+#[cfg(feature = "searchain")]
+pub mod searchain;
+
+#[cfg(feature = "buffer-of-thoughts")]
+pub mod buffer_of_thoughts;
+
+// v0.20.0 — Theme 3: Prompt & Context Efficiency
+#[cfg(feature = "llmlingua")]
+pub mod llmlingua;
+
+#[cfg(feature = "memory-paging")]
+pub mod memory_paging;
+
+#[cfg(feature = "uprise-retrieval")]
+pub mod uprise_retrieval;
+
+// v0.20.0 — Theme 4: Statistical Calibration & Privacy Robustness
+#[cfg(feature = "conformal-rag")]
+pub mod conformal_rag;
+
+#[cfg(feature = "chainpoll")]
+pub mod chainpoll;
+
+#[cfg(feature = "membership-inference")]
+pub mod membership_inference;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -1489,6 +1569,139 @@ pub mod prelude {
     pub use crate::query_difficulty::{
         DifficultyBand, DifficultyConfig, DifficultyError, DifficultyPredictor, DifficultyScore,
         DifficultySignals,
+    };
+
+    // ── v0.19.0 ────────────────────────────────────────────────────────────────
+    #[cfg(feature = "disk-ann")]
+    pub use crate::disk_ann::{
+        DiskAnnConfig, DiskAnnError, DiskAnnHit, DiskAnnIndex, DiskAnnMetric, VamanaGraph,
+    };
+    #[cfg(feature = "eigenscore")]
+    pub use crate::eigenscore::{
+        EigenScoreConfig, EigenScoreDetector, EigenScoreError, EigenScoreResult,
+        symmetric_eigenvalues,
+    };
+    #[cfg(feature = "erag")]
+    pub use crate::erag::{
+        AggregationMethod, DownstreamTask, ERagBatchReport, ERagCase, ERagConfig, ERagError,
+        ERagEvaluator, ERagReport, MockDownstreamTask, PerDocScore, RougeLiteUtility,
+        UtilityMetric, kendall_tau, spearman_rho,
+    };
+    #[cfg(feature = "filco")]
+    pub use crate::filco::{
+        FilcoConfig, FilcoError, FilcoFilter, FilcoReport, FilterMeasure, ScoredSentence,
+    };
+    #[cfg(feature = "query2doc")]
+    pub use crate::query2doc::{
+        MockPseudoDocGenerator, PseudoDocGenerator, PseudoDocument, Query2DocConfig,
+        Query2DocError, Query2DocExpander, Query2DocVariant,
+    };
+    #[cfg(feature = "rabitq")]
+    pub use crate::rabitq::{
+        RaBitQCode, RaBitQConfig, RaBitQError, RaBitQHit, RaBitQIndex, RaBitQMetric, RaBitQuantizer,
+    };
+    #[cfg(feature = "recomp")]
+    pub use crate::recomp::{
+        AbstractiveSummaryCompressor, CompressorStrategy, ExtractiveSummaryCompressor,
+        RecompConfig, RecompDecision, RecompError, RecompOutcome, RecompPipeline,
+    };
+    #[cfg(feature = "retrieval-augmented-thoughts")]
+    pub use crate::retrieval_augmented_thoughts::{
+        MockRatGenerator, MockRatRetriever, RatConfig, RatEngine, RatError, RatGenerator,
+        RatRetriever, RatThought, RatTrace,
+    };
+    // QueryRefiner/MockRefiner aliased — corrective_rag/self_refine already export those
+    #[cfg(feature = "rq-rag")]
+    pub use crate::rq_rag::{
+        AMBIGUITY_SENSE_TABLE, DEFAULT_COLLOQUIAL_MARKERS, MockRefiner as RqRagMockRefiner,
+        QueryRefinementEngine, QueryRefiner as RqRagQueryRefiner, RefinementAction, RefinementPlan,
+        RqRagConfig, RqRagError,
+    };
+    #[cfg(feature = "selfcheckgpt")]
+    pub use crate::selfcheckgpt::{
+        SelfCheckConfig, SelfCheckError, SelfCheckScore, SelfCheckScorer, SelfCheckVariant,
+        SentenceCheck,
+    };
+    #[cfg(feature = "spann")]
+    pub use crate::spann::{
+        Posting, SpannConfig, SpannError, SpannHit, SpannIndex, SpannMetric, SpannStats,
+    };
+    #[cfg(feature = "tree-of-clarifications")]
+    pub use crate::tree_of_clarifications::{
+        ClarificationAnswerer, ClarificationNode, ClarificationRetriever, ClarificationTree,
+        Disambiguator, MockClarificationAnswerer, MockClarificationRetriever, MockDisambiguator,
+        ToCConfig, ToCEngine, ToCError, aggregate,
+    };
+
+    // ── v0.20.0 ────────────────────────────────────────────────────────────────
+    #[cfg(feature = "anisotropic-vq")]
+    pub use crate::anisotropic_vq::{
+        AnisotropicCode, AnisotropicQuantizer, AnisotropicVqConfig, AnisotropicVqError,
+        AnisotropicVqHit, AnisotropicVqIndex, AnisotropicVqMetric, DEFAULT_ANISOTROPIC_VQ_SEED,
+        MAX_CODEBOOK_SIZE, anisotropic_loss, decompose_residual,
+    };
+    #[cfg(feature = "buffer-of-thoughts")]
+    pub use crate::buffer_of_thoughts::{
+        BotConfig, BotEngine, BotError, BotGenerator, BotSolveResult, DEFAULT_TEMPLATE_TEXT,
+        DistillAction, EvictionPolicy, MockBotGenerator, ProblemSignature, SolveOutcome,
+        ThoughtBuffer, ThoughtTemplate,
+    };
+    #[cfg(feature = "chainpoll")]
+    pub use crate::chainpoll::{
+        ChainOfThoughtJudge, ChainPollConfig, ChainPollError, ChainPollFormulationVerdict,
+        ChainPollResult, ChainPollScorer, MockChainPollJudge, PollFormulation, PollFraming,
+    };
+    #[cfg(feature = "conformal-rag")]
+    pub use crate::conformal_rag::{
+        ConformalCalibrator, ConformalConfig, ConformalError, ConformalMember,
+        LexicalOverlapScorer, MondrianConformalCalibrator, NonconformityScorer, PredictionKind,
+        PredictionSet,
+    };
+    #[cfg(feature = "itq-hashing")]
+    pub use crate::itq_hashing::{
+        DEFAULT_ITQ_SEED, ItqCode, ItqConfig, ItqError, ItqHasher, ItqHit, ItqIndex,
+    };
+    #[cfg(feature = "llmlingua")]
+    pub use crate::llmlingua::{
+        BudgetController, CompressionResult, CompressionTarget, LlmLinguaConfig, LlmLinguaError,
+        PerplexityCompressor, PerplexityModel, SegmentStats,
+    };
+    #[cfg(feature = "membership-inference")]
+    pub use crate::membership_inference::{
+        Canary, CanaryAuditor, CanaryKind, CanaryPair, CanaryPairSignal, LeakageReport,
+        MembershipDefense, MembershipInferenceConfig, MembershipInferenceError, MockRagProbe,
+        ProbeResult, RagProbe, RiskLevel,
+    };
+    #[cfg(feature = "memory-paging")]
+    pub use crate::memory_paging::{
+        ArchivalStore, ContextPager, MainContext, MemoryPage, MemoryPagingConfig,
+        MemoryPagingError, PagingAction, PagingOutcome, PagingPolicy,
+    };
+    #[cfg(feature = "residual-vq")]
+    pub use crate::residual_vq::{
+        ResidualCode, ResidualQuantizer, ResidualVqConfig, ResidualVqError, ResidualVqHit,
+        ResidualVqIndex,
+    };
+    #[cfg(feature = "rewoo")]
+    pub use crate::rewoo::{
+        MockRewooGenerator, MockRewooPlanSource, MockRewooRetriever, PlaceholderVar, RewooAction,
+        RewooConfig, RewooError, RewooEvidence, RewooGenerator, RewooOutcome, RewooPipeline,
+        RewooPlan, RewooPlanSource, RewooPlanner, RewooRetriever, RewooSolver, RewooStep,
+        RewooWorker, evaluate_expression, substitute_placeholders,
+    };
+    // Retriever aliased — dragin already exports that bare trait name; Generator aliased
+    // alongside it for naming symmetry (no current collision, but bare "Generator" is
+    // generic enough to risk future ones).
+    #[cfg(feature = "searchain")]
+    pub use crate::searchain::{
+        AnswerAssemblyStrategy, ChainGenerator, ChainNode, Generator as SearchainGenerator,
+        MockChainGenerator, MockSearchainGenerator, MockSearchainRetriever, NodeVerdict,
+        Retriever as SearchainRetriever, SearChainConfig, SearChainEngine, SearChainError,
+        SearChainResult, SearChainStatus,
+    };
+    #[cfg(feature = "uprise-retrieval")]
+    pub use crate::uprise_retrieval::{
+        PromptExemplar, UpriseConfig, UpriseError, UpriseHit, UpriseIndex, UpriseRetriever,
     };
 }
 

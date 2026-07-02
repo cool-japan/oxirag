@@ -189,7 +189,10 @@ impl ChunkStrategy for FixedSizeChunker {
 /// use oxirag::types::Document;
 ///
 /// let doc = Document::new("First sentence. Second sentence. Third sentence.");
-/// let config = ChunkConfig::default().with_chunk_size(40).with_chunk_overlap(10);
+/// let config = ChunkConfig::default()
+///     .with_chunk_size(40)
+///     .with_chunk_overlap(10)
+///     .with_min_chunk_size(1);
 /// let chunks = SentenceChunker.chunk(&doc, &config);
 /// assert!(!chunks.is_empty());
 /// # }
@@ -380,7 +383,10 @@ impl ChunkStrategy for SentenceChunker {
 /// use oxirag::types::Document;
 ///
 /// let doc = Document::new("Paragraph one.\n\nParagraph two.\n\nParagraph three.");
-/// let config = ChunkConfig::default().with_chunk_size(30).with_chunk_overlap(5);
+/// let config = ChunkConfig::default()
+///     .with_chunk_size(30)
+///     .with_chunk_overlap(5)
+///     .with_min_chunk_size(1);
 /// let chunks = RecursiveChunker.chunk(&doc, &config);
 /// assert!(!chunks.is_empty());
 /// # }
@@ -622,7 +628,10 @@ impl ChunkStrategy for RecursiveChunker {
 ///
 /// let md = "# Introduction\n\nHello world.\n\n## Details\n\nMore text here.";
 /// let doc = Document::new(md);
-/// let config = ChunkConfig::default().with_chunk_size(80).with_chunk_overlap(10);
+/// let config = ChunkConfig::default()
+///     .with_chunk_size(80)
+///     .with_chunk_overlap(10)
+///     .with_min_chunk_size(1);
 /// let chunks = MarkdownChunker.chunk(&doc, &config);
 /// assert!(chunks.len() >= 2);
 /// # }

@@ -146,8 +146,8 @@ impl FlareGenerator for MockFlareGenerator {
 /// # use oxirag::retrieval_loop::generator::{FlareGenerator, TemplateGenerator};
 /// # #[tokio::main]
 /// # async fn main() {
-/// let gen = TemplateGenerator::new("Q: {query}\nCtx: {context}");
-/// let out = gen.generate("What is Rust?", "Rust is a language.").await.unwrap();
+/// let generator = TemplateGenerator::new("Q: {query}\nCtx: {context}");
+/// let out = generator.generate("What is Rust?", "Rust is a language.").await.unwrap();
 /// assert!(out.contains("What is Rust?"));
 /// assert!(out.contains("Rust is a language."));
 /// # }

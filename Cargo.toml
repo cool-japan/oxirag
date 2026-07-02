@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.18.0"
+version = "0.20.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -375,6 +375,48 @@ vector-indexing       = ["hnsw", "lsh", "scalar-quantization"]
 advanced-prompting    = ["step-back", "least-to-most", "self-discover"]
 rerank-quality        = ["pairwise-rerank", "multi-query", "citation-verification"]
 eval-safety           = ["faithfulness-eval", "prompt-injection-defense", "query-difficulty"]
+# v0.19.0 — Theme 1: Scalable Indexing & Quantization
+disk-ann              = []
+spann                 = []
+rabitq                = []
+# v0.19.0 — Theme 2: Query Transformation & Clarification
+rq-rag                = []
+tree-of-clarifications = []
+query2doc             = []
+# v0.19.0 — Theme 3: Retrieval-Augmented Reasoning & Compression
+retrieval-augmented-thoughts = []
+recomp                = []
+filco                 = []
+# v0.19.0 — Theme 4: Hallucination Detection & Trustworthy Eval
+selfcheckgpt          = []
+erag                  = []
+eigenscore            = []
+# v0.19.0 theme umbrellas
+scalable-indexing     = ["disk-ann", "spann", "rabitq"]
+query-transformation  = ["rq-rag", "tree-of-clarifications", "query2doc"]
+reasoning-compression = ["retrieval-augmented-thoughts", "recomp", "filco"]
+trust-eval            = ["selfcheckgpt", "erag", "eigenscore"]
+# v0.20.0 — Theme 1: Learned Vector Compression
+anisotropic-vq        = []
+itq-hashing           = []
+residual-vq           = []
+# v0.20.0 — Theme 2: Decoupled & Persistent Reasoning Architectures
+rewoo                 = []
+searchain             = []
+buffer-of-thoughts    = []
+# v0.20.0 — Theme 3: Prompt & Context Efficiency
+llmlingua             = []
+memory-paging         = []
+uprise-retrieval      = []
+# v0.20.0 — Theme 4: Statistical Calibration & Privacy Robustness
+conformal-rag         = []
+chainpoll             = []
+membership-inference  = []
+# v0.20.0 theme umbrellas
+advanced-quantization    = ["anisotropic-vq", "itq-hashing", "residual-vq"]
+reasoning-architectures  = ["rewoo", "searchain", "buffer-of-thoughts"]
+context-efficiency       = ["llmlingua", "memory-paging", "uprise-retrieval"]
+robust-eval              = ["conformal-rag", "chainpoll", "membership-inference"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

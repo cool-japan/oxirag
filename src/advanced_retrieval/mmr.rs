@@ -92,7 +92,7 @@ impl MmrConfig {
 /// .into_iter()
 /// .collect();
 ///
-/// let reranked = reranker.rerank(results, &q_emb, &doc_embeddings);
+/// let reranked = reranker.rerank(&results, &q_emb, &doc_embeddings);
 /// assert_eq!(reranked.len(), 2);
 /// # }
 /// ```

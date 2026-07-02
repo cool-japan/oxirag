@@ -5,6 +5,139 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-07-02
+
+Twelve cutting-edge RAG modules across four themes — Learned Vector Compression, Decoupled &
+Persistent Reasoning Architectures, Prompt & Context Efficiency, and Statistical Calibration &
+Privacy Robustness — all pure-Rust heuristic implementations with zero new dependencies. +537
+tests (8,769 → 9,306), 161 module directories.
+
+### Added
+
+- **`anisotropic_vq`** (`anisotropic-vq`): ScaNN-style Anisotropic Vector Quantization (Guo et al.
+  2020) — decomposes quantization residual into components parallel/orthogonal to each vector's own
+  direction, reweights the loss (parallel error penalized more), and fits codewords via a weighted
+  Lloyd variant whose centroid update solves a per-cluster weighted-least-squares linear system (not
+  a simple mean). `AnisotropicQuantizer`, `AnisotropicVqIndex`. Distinct from uniform-MSE
+  `product_quantization` and random-rotation `rabitq`. 38 tests.
+- **`itq_hashing`** (`itq-hashing`): Iterative Quantization (Gong & Lazebnik 2011) — PCA projection
+  followed by an alternating-minimization loop that *learns* an optimal orthogonal rotation via the
+  orthogonal Procrustes problem (closed-form via a from-scratch pure-Rust one-sided Jacobi SVD), unlike
+  `rabitq`'s fixed random rotation. `ItqHasher`, `ItqIndex`. 60 tests.
+- **`residual_vq`** (`residual-vq`): Residual/Multi-stage Vector Quantization — a cascade of `M`
+  k-means codebooks where stage *k* encodes the residual left by stages `0..k`, with additive
+  lookup-table distance estimation and an optional beam-search encoder. Distinct from
+  `product_quantization`'s parallel subspace split. `ResidualQuantizer`, `ResidualVqIndex`. 30 tests.
+- **`rewoo`** (`rewoo`): ReWOO decoupled reasoning (Xu et al. 2023) — a single upfront Planner call
+  emits a plan with placeholder evidence variables (`#E1`, `#E2`, ...); a Worker resolves each via
+  exactly one retrieval call per step (zero interleaving, unlike `agentic`'s ReAct loop); a Solver
+  substitutes resolved evidence into the final answer. `RewooPlanner`, `RewooWorker`, `RewooSolver`.
+  60 tests.
+- **`searchain`** (`searchain`): Search-in-the-Chain (Xu et al. 2024) — builds a complete global
+  reasoning chain upfront, then runs an Interactive-Reasoning-Verification pass that marks each node
+  Verified/Unverified/Conflicting and **backtracks** (with transitive multi-level cascade) to
+  re-verify dependents when an earlier node is invalidated. `SearChainEngine`, `NodeVerdict`. Distinct
+  from `knowledge_conflict` (no chain/backtrack) and `query_planning` (no verify-then-backtrack pass).
+  35 tests.
+- **`buffer_of_thoughts`** (`buffer-of-thoughts`): Buffer of Thoughts (Yang et al. 2024) — a
+  persistent, growing meta-buffer of distilled "thought templates" retrieved by problem-structure
+  similarity, instantiated for new problems, and replenished by distilling successful solutions back
+  in. `ThoughtBuffer`, `BotEngine`. Distinct from `self_discover`'s static module bank. 70 tests.
+- **`llmlingua`** (`llmlingua`): LLMLingua-style prompt compression (Jiang et al. 2023) — a self-fit,
+  properly-normalized interpolated n-gram surrogate language model drives coarse (segment-level) then
+  fine (token-level) perplexity-based pruning, with a proportional water-filling `BudgetController`
+  allocating retention by information density. `PerplexityCompressor`, `PerplexityModel`. 30 tests.
+- **`memory_paging`** (`memory-paging`): MemGPT-style virtual context management (Packer et al. 2023)
+  — OS-inspired paging between a bounded `MainContext` and unbounded `ArchivalStore`, with
+  function-call-triggered page-in/page-out and self-directed LRU/importance eviction under context
+  pressure. `ContextPager`, `MemoryPage`. Distinct from `long_term_memory` (no paging) and
+  `memory_compression` (recursive summarization, no page-in/page-out). 63 tests.
+- **`uprise_retrieval`** (`uprise-retrieval`): UPRISE-style universal prompt retrieval (Cheng et al.
+  2023) — retrieves reusable few-shot exemplars from a cross-task pool via embedding similarity,
+  reranked by an outcome-quality signal updated via exponential moving average. `UpriseIndex`,
+  `UpriseRetriever`. 48 tests.
+- **`conformal_rag`** (`conformal-rag`): Split conformal prediction for calibrated RAG confidence —
+  a distribution-free finite-sample quantile threshold (`⌈(n+1)(1−α)⌉`-th order statistic, with a
+  float-precision snap guard) over calibration-set nonconformity scores, yielding prediction sets with
+  a proven marginal coverage guarantee. `ConformalCalibrator`, `MondrianConformalCalibrator`. Distinct
+  from `abstention`'s heuristic confidence-margin threshold. 22 tests.
+- **`chainpoll`** (`chainpoll`): ChainPoll hallucination detection (Friel & Sanyal 2023) — polls a
+  claim's grounding across a fixed, deterministic bank of structurally distinct prompt formulations
+  (including inverted framings) and majority-votes, calibrated so unanimous/narrow votes map to
+  extreme/mid scores. `ChainPollScorer`. Distinct from `selfcheckgpt`'s stochastic-sampling
+  consistency. 41 tests.
+- **`membership_inference`** (`membership-inference`): Canary-based membership-inference privacy audit
+  for RAG corpora — injects member/non-member canary documents, runs shadow queries, and computes a
+  genuine rank-based (Mann-Whitney U) AUC separability score between the two groups, plus a
+  verbatim-redaction/confidence-quantization defense. `CanaryAuditor`, `MembershipDefense`. 40 tests.
+- **Theme umbrellas**: `advanced-quantization`, `reasoning-architectures`, `context-efficiency`,
+  `robust-eval`.
+
+## [0.19.0] - 2026-07-02
+
+Twelve cutting-edge RAG modules across four themes — Scalable Indexing & Quantization, Query
+Transformation & Clarification, Retrieval-Augmented Reasoning & Compression, and Hallucination
+Detection & Trustworthy Eval — all pure-Rust heuristic implementations with zero new dependencies.
++1,015 tests (7,754 → 8,769), 149 module directories.
+
+### Added
+
+- **`disk_ann`** (`disk-ann`): DiskANN/Vamana graph ANN index (Subramanya et al. 2019) — single-layer
+  graph with medoid entry point, `RobustPrune(α)` occlusion-based edge selection, two-pass build
+  (α=1.0 then configured α), bounded out-degree, beam-search greedy traversal. `VamanaGraph`,
+  `DiskAnnIndex`. Distinct from multi-layer `hnsw_index`. 80 tests.
+- **`spann`** (`spann`): SPANN memory-disk hybrid ANN (Chen et al. 2021) — balanced k-means clustering
+  with posting-length-limited cluster splitting, boundary-closure replication, and RNG-rule replica
+  pruning. `SpannIndex`, `Posting`. Distinct from plain `ivf_index`. 77 tests.
+- **`rabitq`** (`rabitq`): RaBitQ randomized-rotation 1-bit quantization (Gao & Long 2024) — FNV-seeded
+  deterministic orthogonal rotation, hypercube-vertex codebook, unbiased inner-product/L2 distance
+  estimator with a documented error bound. `RaBitQuantizer`, `RaBitQIndex`. Distinct from
+  `scalar_quantization`/`product_quantization`. 82 tests.
+- **`rq_rag`** (`rq-rag`): RQ-RAG learn-to-refine query router (Chan et al. 2024) — classifies a query
+  into Rewrite/Decompose/Disambiguate/Respond and dispatches to the matching refinement strategy.
+  `QueryRefinementEngine`, `RefinementPlan`. 100 tests.
+- **`tree_of_clarifications`** (`tree-of-clarifications`): Tree of Clarifications (Kim et al. 2023) —
+  builds a disambiguation tree for ambiguous questions, retrieves/answers each branch, recursively
+  prunes low-relevance branches, aggregates surviving leaves into a long-form answer. `ToCEngine`,
+  `ClarificationTree`. 87 tests.
+- **`query2doc`** (`query2doc`): Query2Doc pseudo-document expansion (Wang et al. 2023) — generates a
+  hypothetical passage and concatenates a repetition-weighted original query with it for sparse/dense
+  retrieval. `Query2DocExpander`, `PseudoDocument`. Distinct from HyDE and index-time `doc2query`.
+  72 tests.
+- **`retrieval_augmented_thoughts`** (`retrieval-augmented-thoughts`): RAT (Wang et al. 2024) —
+  generates an initial chain-of-thought, then revises each thought step left-to-right conditioned on
+  retrieval targeted at that step. `RatEngine`, `RatTrace`. Distinct from whole-answer
+  `iterative_rag`. 82 tests.
+- **`recomp`** (`recomp`): RECOMP dual context compressors (Xu et al. 2023) — extractive sentence
+  selection and template-based abstractive-lite summarization, gated by a selective-augmentation
+  relevance check that can skip low-value retrieval. `RecompPipeline`, `RecompDecision`. 84 tests.
+- **`filco`** (`filco`): FILCO sentence-granularity content filtering (Wang et al. 2023) — three
+  measures (STRINC string-inclusion, lexical overlap, CXMI-lite conditional utility) to keep only
+  generation-useful sentences. `FilcoFilter`, `FilterMeasure`. Distinct from passage-level
+  `noise_filter`. 84 tests.
+- **`selfcheckgpt`** (`selfcheckgpt`): SelfCheckGPT zero-resource hallucination detection (Manakul et
+  al. 2023) — n-gram, NLI-lite, and QA-lite sampling-consistency variants scoring each sentence's
+  corroboration across K stochastic samples. `SelfCheckScorer`, `SelfCheckVariant`. 78 tests.
+- **`erag`** (`erag`): eRAG retriever evaluation via per-document downstream utility (Salemi & Zamani
+  2024) — runs the downstream task on each retrieved document individually, aggregates utility, and
+  correlates (Kendall's τ, Spearman's ρ) with end-to-end quality across a case batch. `ERagEvaluator`,
+  `kendall_tau`, `spearman_rho`. 79 tests.
+- **`eigenscore`** (`eigenscore`): INSIDE/EigenScore hallucination detection (Chen et al. 2024) — a
+  pure-Rust cyclic Jacobi eigensolver computes the differential entropy of the regularized covariance
+  of K sampled-response embeddings. `EigenScoreDetector`, `symmetric_eigenvalues`. 110 tests.
+- **Theme umbrellas**: `scalable-indexing`, `query-transformation`, `reasoning-compression`,
+  `trust-eval`.
+
+### Fixed
+
+- **`advanced_retrieval::mmr`**: fixed a stale doctest passing an owned `Vec<SearchResult>` where
+  `MmrReranker::rerank` expects `&[SearchResult]`.
+- **`retrieval_loop::generator`**: fixed a doctest using `gen` as a local variable name, which became a
+  reserved keyword under edition 2024.
+- **`chunking::strategies`**: fixed three stale doctests (`SentenceChunker`, `RecursiveChunker`,
+  `MarkdownChunker`) that omitted `.with_min_chunk_size(1)`, causing short example text to be filtered
+  below the default `min_chunk_size` of 50 and produce zero chunks.
+
 ## [0.18.0] - 2026-06-14
 
 Twelve cutting-edge RAG modules across four themes — ANN & Vector Indexing, Advanced Prompting & Reasoning,
