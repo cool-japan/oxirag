@@ -236,7 +236,7 @@ impl CodeRetrievalEngine {
 
     /// Parse a single source item into structural units, using this engine's
     /// configuration. A thin convenience wrapper over
-    /// [`parse_source`](crate::code_retrieval::parse_source).
+    /// [`parse_source`].
     #[must_use]
     pub fn parse(&self, source_id: &str, text: &str) -> Vec<CodeRetrievalUnit> {
         parse_source(source_id, text, &self.config)

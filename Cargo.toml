@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.22.0"
+version = "0.23.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -459,6 +459,27 @@ classical-ir                  = ["learning-to-rank", "rp-tree-index", "bm25f-ret
 multi-agent-reasoning         = ["multi-agent-debate", "constitutional-critique", "tool-retrieval"]
 domain-specialized-retrieval  = ["code-retrieval", "extractive-qa", "hard-negative-mining"]
 retrieval-governance          = ["active-learning-retrieval", "belief-revision", "shard-selection"]
+# v0.23.0 — Theme 1: Efficient Search & Index Maintenance
+filtered-vector-search  = []
+dynamic-pruning         = []
+index-maintenance       = []
+# v0.23.0 — Theme 2: Probabilistic Information Retrieval
+language-model-retrieval = []
+click-model             = []
+bandit-ranker           = []
+# v0.23.0 — Theme 3: Collaborative Generation
+replug                  = []
+mixture-of-agents       = []
+chain-of-agents         = []
+# v0.23.0 — Theme 4: Privacy & Provenance
+kv-cache-compression    = []
+watermarking            = []
+knowledge-unlearning    = []
+# v0.23.0 theme umbrellas
+efficient-search         = ["filtered-vector-search", "dynamic-pruning", "index-maintenance"]
+probabilistic-ir         = ["language-model-retrieval", "click-model", "bandit-ranker"]
+collaborative-generation = ["replug", "mixture-of-agents", "chain-of-agents"]
+privacy-provenance       = ["kv-cache-compression", "watermarking", "knowledge-unlearning"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]
@@ -481,6 +502,22 @@ opt-level = "z"
 name = "oxirag-server"
 path = "src/bin/oxirag-server.rs"
 required-features = ["rest-server"]
+
+[[example]]
+name = "candle_slm_example"
+required-features = ["speculator"]
+
+[[example]]
+name = "lora_training_example"
+required-features = ["distillation"]
+
+[[example]]
+name = "otel_tracing"
+required-features = ["otel"]
+
+[[test]]
+name = "trait_bounds_native"
+required-features = ["prefix-cache"]
 
 [[bench]]
 name = "benchmarks"

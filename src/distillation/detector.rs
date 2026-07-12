@@ -397,8 +397,8 @@ mod tests {
         let ranked = detector.rank_by_priority(&candidates);
 
         // High should be first (highest priority)
-        assert!(ranked[0].frequency == 10);
-        assert!(ranked[2].frequency == 2);
+        assert_eq!(ranked[0].frequency, 10);
+        assert_eq!(ranked[2].frequency, 2);
     }
 
     #[test]

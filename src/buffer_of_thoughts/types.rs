@@ -22,8 +22,8 @@
 //!   `"list_like"`, and a token-count bucket: `"short_form"`, `"medium_form"`,
 //!   or `"long_form"`).
 //!
-//! Both sets are computed by keyword/shape detectors ([`detect_operation_tags`]
-//! and [`detect_structural_features`]) that operate on lower-cased, tokenized
+//! Both sets are computed by keyword/shape detectors (`detect_operation_tags`
+//! and `detect_structural_features`) that operate on lower-cased, tokenized
 //! text — never on raw problem strings — so two superficially different
 //! problems of the *same kind* (e.g. "What is the sum of 12 and 7?" and "What
 //! is the sum of 30 and 5?") produce identical or near-identical signatures.
@@ -293,7 +293,7 @@ fn jaccard(a: &[String], b: &[String]) -> f32 {
 // ── ProblemSignature ──────────────────────────────────────────────────────────
 
 /// A structural fingerprint of the *kind* of problem a
-/// [`ThoughtTemplate`](crate::buffer_of_thoughts::types::ThoughtTemplate)
+/// [`ThoughtTemplate`]
 /// applies to — never the literal problem text.
 ///
 /// See the module documentation for the full signature scheme.
@@ -611,7 +611,7 @@ pub trait BotGenerator {
     /// to decide, e.g., which operation tag to bake into the generalized
     /// strategy description. The returned text should contain a literal
     /// `{problem}` placeholder and, where appropriate, `{op1}`, `{op2}`, …
-    /// placeholders so [`crate::buffer_of_thoughts::types::instantiate_template`]
+    /// placeholders so `instantiate_template`
     /// can re-specialize it for future problems of the same kind.
     fn distill(&self, problem: &str, answer: &str, signature: &ProblemSignature) -> String;
 }

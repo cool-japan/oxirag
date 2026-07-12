@@ -13,7 +13,7 @@ use thiserror::Error;
 /// readings.
 ///
 /// Each entry pairs a lowercase trigger term with the distinct senses in
-/// which it commonly appears. When [`super::MockRefiner::disambiguate`]
+/// which it commonly appears. When [`MockRefiner::disambiguate`](super::QueryRefiner::disambiguate)
 /// detects one of these terms in a query, it emits one refined variant per
 /// listed sense, faithfully modelling RQ-RAG's "ambiguous entity/term with
 /// multiple plausible readings" refinement action.

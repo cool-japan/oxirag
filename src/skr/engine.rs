@@ -354,7 +354,7 @@ impl SkrGate {
     /// similarity-weighted (or, with [`SkrConfig::weight_by_similarity`]
     /// disabled, plain-majority) vote of their
     /// [`SkrExemplar::answerable_without_retrieval`] labels — see
-    /// [`weighted_known_score`]. When the resulting "known" score meets
+    /// `weighted_known_score`. When the resulting "known" score meets
     /// [`SkrConfig::decision_threshold`], the decision is
     /// [`SkrRetrievalChoice::Skip`]; otherwise
     /// [`SkrRetrievalChoice::Retrieve`].

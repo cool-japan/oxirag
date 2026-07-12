@@ -5,6 +5,106 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2026-07-11
+
+Twelve cutting-edge RAG modules across four themes — Constrained & Mutable Search, Probabilistic IR &
+Counterfactual Learning, Ensemble & Collaborative Generation, and Privacy, Provenance & Context
+Governance — all pure-Rust implementations with zero new dependencies. +587 tests (10,958 → 11,545),
+197 module directories.
+
+### Added
+
+- **`filtered_vector_search`** (`filtered-vector-search`): ACORN/Filtered-DiskANN predicate-constrained
+  ANN — a self-contained Vamana graph with predicate-aware traversal that routes THROUGH non-matching
+  nodes (two-hop expansion) plus a selectivity estimator (histograms + value counts) that picks
+  pre-/post-/in-filter. `FilteredVectorIndex`, `FilterPredicate`, `AttrValue`, `FilterStrategy`.
+  Measured: at 1% selectivity, naive post-filter recall@10 collapses to 0.090 (its s·m ceiling) while
+  in-filter reaches 0.960 and pre-filter 1.000. Distinct from the crate's only prior filtered search (a
+  fixed-10× over-fetch post-filter on a legacy HNSW clone). 68 tests.
+- **`dynamic_pruning`** (`dynamic-pruning`): WAND / BlockMax-WAND / MaxScore top-k early termination
+  over a real term→sorted-posting-list BM25 inverted index with block-max metadata. Returns top-k
+  BIT-IDENTICAL to exhaustive scoring while skipping postings (measured BlockMaxWand 409 vs Wand 528 vs
+  Exhaustive 5,543 postings, 13.5× fewer). `DynamicPruningIndex`, `PruningStrategy`, `PruningStats`.
+  Distinct from `sparse_retrieval`/`bm25f_retrieval` (exhaustive forward scans, no posting lists).
+  44 tests.
+- **`index_maintenance`** (`index-maintenance`): FreshDiskANN-style mutable proximity-graph ANN —
+  tombstone deletion (traversed through, excluded from results), in-place insert with backward-edge
+  repair, and a bridging+Vamana-refinement consolidation pass. Measured: under 30% delete + 30% insert
+  churn, naive hard-delete degrades to recall@10 0.875 with 49 orphans, while tombstone+consolidate
+  holds 0.963 with 0 orphans. `MaintainableIndex`, `ConsolidationReport`. Distinct from the 17
+  build-once/append-only ANN modules. 19 tests.
+- **`language_model_retrieval`** (`language-model-retrieval`): Query-likelihood LM retrieval with
+  Dirichlet, Jelinek-Mercer, and absolute-discounting smoothing, the DFR family (PL2, DPH), and RM3
+  relevance-model feedback built on the LM (log-sum-exp-stable query posteriors). Hand-computed scores
+  verified to 1e-12. `LmRetrievalIndex`, `LmSmoothing`, `DfrModel`, `Rm3Config`. Distinct from
+  BM25/BM25F/SPLADE/COIL (the crate's only prior scorers) and from `relevance_feedback`'s Rocchio /
+  `query_expansion`'s TF-PRF (neither is a probabilistic LM). 42 tests.
+- **`click_model`** (`click-model`): Position-Based, Cascade, and Dynamic-Bayesian-Network click models
+  fit by EM (log-likelihood proven monotone), whose examination probabilities become propensities
+  driving IPS / SNIPS / doubly-robust debiased ranking. Measured: raw CTR ranks a position-biased
+  mediocre doc above an excellent one; the IPS-debiased ranker recovers the true order.
+  `PositionBasedModel`, `CascadeClickModel`, `DbnClickModel`, `CounterfactualEstimator`. Distinct from
+  supervised `learning_to_rank` (explicit labels, no bias handling). 65 tests.
+- **`bandit_ranker`** (`bandit-ranker`): Online rank exploration via LinUCB (Sherman-Morrison rank-1
+  inverse updates, matched to a direct inverse within 8.97e-19), Thompson sampling (Cholesky
+  posterior), and ε-greedy, with cumulative-regret tracking (measured sublinear) and replay-based
+  off-policy evaluation. Deterministic seeded SplitMix64 — no `rand`. `LinUcbRanker`,
+  `ThompsonSamplingRanker`, `BanditRegretTracker`. Distinct from `ab_eval` (offline paired test) and
+  `active_learning_retrieval` (offline uncertainty sampling). 80 tests.
+- **`replug`** (`replug`): REPLUG output-distribution ensembling — `p(y|q) = Σ_i λ(d_i|q)·p(y|d_i⊕q)`
+  with `λ=softmax(sim/τ)`, a mixture of DISTRIBUTIONS (not logits; the geometric-pool difference is a
+  regression test), plus REPLUG-LSR retriever feedback via KL. Defines its own token-distribution trait
+  (no crate API exposed one). `ReplugEngine`, `ReplugLanguageModel`, `ReplugLsrSignal`. Distinct from
+  `ensemble_retriever`/`rank_fusion`/`answer_aggregator`/`fusion_in_decoder` (which combine
+  retrievers/lists/strings, never distributions). 53 tests.
+- **`mixture_of_agents`** (`mixture-of-agents`): Layered Mixture-of-Agents — N proposers per layer, an
+  aggregator that SYNTHESIZES (coverage-preserving merge, not selection), and the synthesis seeds the
+  next layer's proposers. `MoaEngine`, `MoaSynthesisAggregator`, `MoaTrace`. Distinct from
+  `multi_agent_debate` (adversarial, fixed positions, judge picks a winner) and `self_consistency` (no
+  inter-agent communication, vote-only). 75 tests.
+- **`chain_of_agents`** (`chain-of-agents`): Chain-of-Agents long-context reading — sequential worker
+  agents over input chunks, each passing an evolving bounded communication unit forward, then a
+  manager that reads only the final unit. Ablation proves the unit is load-bearing (zeroing it fails a
+  first-chunk↔last-chunk question the full chain answers). `CoaEngine`, `CoaCommunicationUnit`,
+  `CoaManager`. Distinct from `skeleton_of_thought` (parallel) and `graph_summarization` (map-reduce).
+  36 tests.
+- **`kv_cache_compression`** (`kv-cache-compression`): Attention-score-driven KV-cache token eviction —
+  H2O heavy-hitter (accumulated attention mass), StreamingLLM attention sinks, and SnapKV
+  observation-window voting, over a real scaled-dot-product-attention KV tensor. Measured: at a 25%
+  budget, H2O/SnapKV deviate 0.0048 from full attention vs naive RecencyLRU's 1.0066 (~210×); deleting
+  StreamingLLM sink tokens vs middle tokens gives a ~25,000× output-deviation asymmetry.
+  `KvCacheCompressor`, `KvEvictionPolicy`, `KvCacheTensor`. Distinct from `prefix_cache` (prompt-blob
+  LRU) and `hidden_states` (whole-entry LRU). 31 tests.
+- **`watermarking`** (`watermarking`): Kirchenbauer green-list LLM watermarking — hash-seeded
+  (deterministic) green/red vocab partition, soft (δ-bias) and hard variants, z-score detection
+  `z=(|s|_G−γT)/√(Tγ(1−γ))` with a self-implemented normal CDF. Measured: true-positive z=34.6, and the
+  false-positive rate is calibrated to the normal tail (empirical 0.0537 vs theoretical 0.05 at
+  z≥1.645). `WatermarkGenerator`, `WatermarkDetector`, `WatermarkMode`. Distinct from
+  `attribution`/`quote_grounding`/`citation_verification` (retrieved-source attribution, not
+  generation-time provenance). 47 tests.
+- **`knowledge_unlearning`** (`knowledge-unlearning`): GDPR/right-to-be-forgotten unlearning —
+  deletion-request scope resolution (near-duplicate MinHash detection + derived-artifact cascade),
+  deletion, and a post-deletion leakage re-audit that escalates until clean or honestly reports
+  non-convergence. Measured: delete-by-id alone leaves a paraphrase leaking at score 0.569; the full
+  engine catches the carrier and re-audits clean, leaving unrelated docs untouched. `UnlearningEngine`,
+  `UnlearnableStore`, `UnlearningCertificate`. Distinct from `membership_inference` (audit+redact only)
+  and `collections`/`layer1_echo` deletion (no leakage verification). 27 tests.
+
+### Theme umbrellas
+
+- `efficient-search` = `filtered-vector-search` + `dynamic-pruning` + `index-maintenance`
+- `probabilistic-ir` = `language-model-retrieval` + `click-model` + `bandit-ranker`
+- `collaborative-generation` = `replug` + `mixture-of-agents` + `chain-of-agents`
+- `privacy-provenance` = `kv-cache-compression` + `watermarking` + `knowledge-unlearning`
+
+Also fixed: `layer2_speculator::candle_slm` per-token log-probabilities were the max raw logit
+(unnormalized) rather than the sampled token's log-softmax value — now correct. Toolchain-drift
+cleanup: fixed new-lint clippy errors (`manual_assert_eq`, `question_mark`,
+`useless_borrows_in_formatting`) and 61 rustdoc intra-doc-link warnings across 26 files; added
+`required-features` for the `candle_slm_example`/`lora_training_example`/`otel_tracing` examples and
+the `trait_bounds_native` test. `cargo fmt` + `build`/`clippy`/`nextest`/`doc` all `--all-features
+--all-targets -D warnings` → 0 errors, 0 warnings, 11,545 tests passing.
+
 ## [0.22.0] - 2026-07-02
 
 Twelve cutting-edge RAG modules across four themes — Classical IR Reimagined, Multi-Agent & Principled

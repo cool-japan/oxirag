@@ -20,7 +20,7 @@
 //!    **sum** of the query tokens that fall in it; for the **document** side,
 //!    each cell holds the **average** (centroid) of the document tokens that
 //!    fall in it. Empty document cells optionally borrow the centroid of the
-//!    Hamming-nearest non-empty cell (see [`nearest_occupied_bucket`]). This
+//!    Hamming-nearest non-empty cell (see `nearest_occupied_bucket`). This
 //!    sum-vs-average asymmetry is exactly what makes the dot product telescope
 //!    into `Σ_{q∈Q} ⟨q, centroid(cell(q))⟩ ≈ Σ_{q∈Q} max_{d∈D} ⟨q, d⟩`.
 //! 3. **Inner projection.** Each `d`-dimensional cell block is optionally

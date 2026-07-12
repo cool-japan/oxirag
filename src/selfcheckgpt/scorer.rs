@@ -3,7 +3,7 @@
 //!
 //! This file also hosts the small set of text-processing helpers
 //! (tokenisation, sentence splitting, Jaccard overlap) shared by
-//! [`super::ngram`], [`super::nli_lite`], and [`super::qa_lite`].
+//! `ngram`, `nli_lite`, and `qa_lite`.
 
 use std::collections::HashSet;
 

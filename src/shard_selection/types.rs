@@ -187,7 +187,7 @@ pub struct ShardSelectionScore {
     pub shard_id: String,
     /// The shard's overall CORI belief score for the query: the arithmetic
     /// mean of the per-query-term-occurrence belief values (see
-    /// [`crate::shard_selection::ShardSelectionEngine::term_belief`]).
+    /// `ShardSelectionEngine::term_belief`).
     /// Always within `[belief_floor, belief_floor + belief_scale]` (the
     /// default configuration bounds this to `[0.4, 1.0]`).
     pub score: f64,

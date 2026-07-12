@@ -4,7 +4,7 @@
 //! The engine ties together the three pieces documented elsewhere in this
 //! module:
 //!
-//! 1. **Surrogate LM** ([`PerplexityModel`](super::ngram_model::PerplexityModel))
+//! 1. **Surrogate LM** ([`PerplexityModel`])
 //!    — a smoothed n-gram model fit on the input, giving every token a
 //!    surprisal (bits of information) `-log2 P(token | history)`.
 //! 2. **Stage A — coarse pruning** — split into segments, rank by information
@@ -12,7 +12,7 @@
 //!    first (never below [`LlmLinguaConfig::min_segments_retained`], and only
 //!    while enough tokens remain to still meet the budget).
 //! 3. **Stage B — fine pruning** — the
-//!    [`BudgetController`](super::budget::BudgetController) allocates the token
+//!    [`BudgetController`] allocates the token
 //!    budget across the survivors *proportionally to density*, then within each
 //!    survivor the lowest-surprisal, unprotected tokens are dropped up to that
 //!    segment's local allowance.

@@ -9,16 +9,16 @@
 //!
 //! The six operations:
 //!
-//! * `f_add_column` — [`apply_add_column`]: derive a new column per row via a
+//! * `f_add_column` — `apply_add_column`: derive a new column per row via a
 //!   [`CotAddRule`].
-//! * `f_select_row` — [`apply_select_row`]: keep rows satisfying a
+//! * `f_select_row` — `apply_select_row`: keep rows satisfying a
 //!   [`CotPredicate`].
-//! * `f_select_column` — [`apply_select_column`]: project to a subset of
+//! * `f_select_column` — `apply_select_column`: project to a subset of
 //!   columns.
-//! * `f_group_by` — [`apply_group_by`]: tag the table as grouped and reorder
+//! * `f_group_by` — `apply_group_by`: tag the table as grouped and reorder
 //!   rows so equal group values are contiguous.
-//! * `f_sort_by` — [`apply_sort_by`]: order rows by a column.
-//! * `f_aggregate` — [`apply_aggregate`]: reduce a column with an aggregation,
+//! * `f_sort_by` — `apply_sort_by`: order rows by a column.
+//! * `f_aggregate` — `apply_aggregate`: reduce a column with an aggregation,
 //!   yielding a scalar (flat table) or one row per group (grouped table).
 
 use std::cmp::Ordering;

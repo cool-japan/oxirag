@@ -1,5 +1,89 @@
 # OxiRAG TODO
 
+## v0.23.0 — Constrained & Mutable Search, Probabilistic IR, Collaborative Generation & Privacy-Provenance ✅
+
+**Released**: 2026-07-11 | **Tests**: 11,545 | **Warnings**: 0
+
+Twelve cutting-edge RAG modules, four themes, zero new deps, 197 module dirs. +587 tests from v0.22.0.
+
+Pre-validated by 4 parallel recon passes over the existing 185 modules. Recon **dropped 2 candidates**:
+an NSG/MRNG index (near-duplicate — `disk_ann`'s `RobustPrune` at `alpha=1.0` *is* the MRNG rule) and a
+standalone RM3 module (near-duplicate of `relevance_feedback.rs` Rocchio + `query_expansion/prf.rs`
+TF-PRF; folded into `language_model_retrieval` instead, where it is non-duplicative). Differential
+privacy was deferred (needs an RNG; conflicts with the crate's deterministic no-`rand` convention).
+
+**Theme 1 — Constrained & Mutable Search** (`efficient-search`)
+- [x] **Filtered Vector Search** (`filtered-vector-search`): ACORN/Filtered-DiskANN predicate-aware graph
+  traversal (routes *through* non-matching nodes) + selectivity estimator picking pre-/post-/in-filter.
+  Measured: at 1% selectivity, naive post-filter recall@10 collapses to 0.090 (its s·m ceiling) while
+  in-filter reaches 0.960, pre-filter 1.000. `FilteredVectorIndex`. 68 tests.
+- [x] **Dynamic Pruning** (`dynamic-pruning`): WAND / BlockMax-WAND / MaxScore over a real
+  term→posting-list BM25 inverted index. Top-k **bit-identical** to exhaustive (409 vs 528 vs 5,543
+  postings — 13.5× fewer). `DynamicPruningIndex`. 44 tests.
+- [x] **Index Maintenance** (`index-maintenance`): FreshDiskANN tombstone delete + backward-edge-repair
+  insert + bridging/Vamana-refine consolidation. Under 30%+30% churn, naive hard-delete degrades to
+  0.875 recall (49 orphans) while tombstone+consolidate holds 0.963 (0 orphans). `MaintainableIndex`. 19 tests.
+
+**Theme 2 — Probabilistic IR & Counterfactual Learning** (`probabilistic-ir`)
+- [x] **Language-Model Retrieval** (`language-model-retrieval`): query-likelihood (Dirichlet /
+  Jelinek-Mercer / absolute-discounting) + DFR (PL2, DPH) + RM3 relevance-model feedback on the LM.
+  Hand-computed scores verified to 1e-12. `LmRetrievalIndex`. 42 tests.
+- [x] **Click Model** (`click-model`): PBM / Cascade / DBN fit by EM (log-likelihood proven monotone);
+  examination probs → propensities → IPS/SNIPS/doubly-robust debiasing. Raw CTR is fooled by position
+  bias; the IPS-debiased ranker recovers the true order. `PositionBasedModel`, etc. 65 tests.
+- [x] **Bandit Ranker** (`bandit-ranker`): LinUCB (Sherman-Morrison, matched to a direct inverse within
+  8.97e-19) + Thompson (Cholesky posterior) + ε-greedy; measured-sublinear regret; replay OPE.
+  Deterministic SplitMix64, no `rand`. `LinUcbRanker`, `ThompsonSamplingRanker`. 80 tests.
+
+**Theme 3 — Ensemble & Collaborative Generation** (`collaborative-generation`)
+- [x] **REPLUG** (`replug`): output-distribution ensembling `p(y|q) = Σ λ·p(y|d⊕q)`, a mixture of
+  DISTRIBUTIONS not logits (geometric-pool difference is a regression test), + LSR KL retriever feedback.
+  Ensemble outranks every individual document. `ReplugEngine`. 53 tests.
+- [x] **Mixture-of-Agents** (`mixture-of-agents`): layered proposers → aggregator **synthesizes**
+  (coverage-preserving, not selection) → seeds next layer. `MoaEngine`. 75 tests.
+- [x] **Chain-of-Agents** (`chain-of-agents`): sequential chunk workers passing an evolving communication
+  unit → manager. Ablation proves the unit is load-bearing (zeroing it fails a first↔last-chunk question
+  the full chain answers). `CoaEngine`. 36 tests.
+
+**Theme 4 — Privacy, Provenance & Context Governance** (`privacy-provenance`)
+- [x] **KV-Cache Compression** (`kv-cache-compression`): H2O / StreamingLLM / SnapKV attention-score
+  token eviction over a real SDPA KV tensor. At 25% budget, H2O/SnapKV deviate 0.0048 from full
+  attention vs naive-LRU 1.0066 (~210×); sink-vs-middle deletion is a ~25,000× asymmetry.
+  `KvCacheCompressor`. 31 tests.
+- [x] **Watermarking** (`watermarking`): Kirchenbauer green-list biasing (hash-seeded ⇒ deterministic),
+  soft/hard, z-score detection with self-implemented normal CDF. True-positive z=34.6; FPR calibrated to
+  the normal tail (0.0537 vs 0.05 at z≥1.645). `WatermarkGenerator`, `WatermarkDetector`. 47 tests.
+- [x] **Knowledge Unlearning** (`knowledge-unlearning`): GDPR right-to-be-forgotten — near-dup+artifact
+  scope resolution → delete → leakage re-audit → escalate or **honestly report non-convergence**.
+  Delete-by-id alone leaks a paraphrase at 0.569; full engine re-audits clean. `UnlearningEngine`. 27 tests.
+
+**Bug fix (surfaced by recon)**
+- [x] `layer2_speculator/candle_slm.rs` returned `last_logits.max(0)` (max **raw logit**, unnormalized)
+  as a "logprob" — in both `generate_internal` and `get_logprobs`. Fixed via a shared
+  `sampled_token_logprob` helper (log-softmax, then the sampled token's value); tests/vectors stay aligned.
+
+**Integration & Release**
+- [x] 12 features + 4 umbrellas (`efficient-search`, `probabilistic-ir`, `collaborative-generation`,
+  `privacy-provenance`); 12 modules + prelude re-exports, **0 aliases needed** (210 public names cross-
+  checked; proactive module-prefixing held — matches the v0.21.0 zero-alias result).
+- [x] Toolchain-drift cleanup (toolchain updated 2026-07-07 since v0.22.0): 7 new clippy errors in 5
+  files (`manual_assert_eq`/`question_mark`/`useless_borrows_in_formatting`) + 61 rustdoc intra-doc-link
+  warnings across 26 files, all fixed at root cause (no `#[allow]`). Added missing `required-features`
+  for 3 examples + `trait_bounds_native` test (pre-existing packaging gap).
+- [x] `cargo fmt` + build/clippy/nextest/doc `--all-features --all-targets -D warnings` → 0 errors,
+  0 warnings, 11,545 tests + 192 doctests green.
+- [x] Bumped 0.22.0 → 0.23.0; updated CHANGELOG.md, TODO.md.
+- [x] Process note: entered via `/ucont` on Opus (Rule 0 satisfied — orchestrator ran on Opus 4.8 this
+  cycle, unlike v0.19–v0.22 which fell back to Sonnet). Recon-first paid off again (2 duplicates dropped
+  pre-coding). Zero git-reset hazard (no-git-mutation briefs held) and zero cross-module collisions (each
+  of 12 impl agents owned exactly one dir; Phase-0 pre-wired all shared files). All 6 opus modules caught
+  real bugs their own measurement-based tests exposed — bugs that assertion-only tests would have shipped:
+  dynamic_pruning (non-associative f64 tie-reordering; also mutation-tested its own suite and corrected a
+  wrong proof comment), filtered_vector_search (two-hop gate derived from γ fought itself; integer-
+  histogram misrouting the planner), click_model (PBM scale non-identifiability; textbook-DR invalid on
+  latent examination), index_maintenance (bridge-alone degrades navigability — needs Vamana refine),
+  bandit_ranker (`max_by_key` tie-break bug), watermarking (degenerate γ p-value = 0.5 not 1.0).
+
 ## v0.22.0 — Classical IR Reimagined, Multi-Agent Reasoning, Domain-Specialized Retrieval & Retrieval Governance ✅
 
 **Released**: 2026-07-02 | **Tests**: 10,958 | **Warnings**: 0

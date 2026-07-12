@@ -37,7 +37,7 @@ pub type Bm25fResult<T> = Result<T, Bm25fError>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bm25fField {
     /// The field's name, used to look up its
-    /// [`Bm25fFieldWeight`](crate::bm25f_retrieval::Bm25fFieldWeight) in the
+    /// [`Bm25fFieldWeight`] in the
     /// index configuration and to group its length statistics with
     /// same-named fields across the corpus.
     pub name: String,

@@ -116,7 +116,7 @@ pub fn surface_tokens(segment: &str) -> Vec<String> {
 /// Normalises a surface token into the symbol used by the language model:
 /// lower-cased, with leading/trailing non-alphanumeric characters stripped.
 ///
-/// A token with no alphanumeric content collapses to [`PUNCT_SYMBOL`] so the
+/// A token with no alphanumeric content collapses to `PUNCT_SYMBOL` so the
 /// normalised stream stays aligned one-to-one with the surface stream.
 #[must_use]
 pub fn normalize_token(surface: &str) -> String {

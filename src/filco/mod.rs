@@ -25,7 +25,7 @@
 //!   with the query, or contains a capitalized/numeric token that the query
 //!   also implies. This is a deterministic, model-free stand-in for "does
 //!   this sentence look like it carries the answer" — see
-//!   [`measures::strinc_heuristic_score`] for the full rationale.
+//!   `measures::strinc_heuristic_score` for the full rationale.
 //! - **Strict / paper-faithful** (used by [`FilcoFilter::filter_with_answer`]
 //!   when the answer *is* known, e.g. building training data): a sentence is
 //!   kept exactly when it contains the expected answer as a case-insensitive

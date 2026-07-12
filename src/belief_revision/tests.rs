@@ -782,7 +782,7 @@ fn determinism_identical_posterior_across_runs() {
     // And exactly equal element-by-element (bitwise via ==).
     for ((id_a, p_a), (id_b, p_b)) in first.iter().zip(&second) {
         assert_eq!(id_a, id_b);
-        assert!(p_a == p_b);
+        assert_eq!(p_a, p_b);
     }
 }
 

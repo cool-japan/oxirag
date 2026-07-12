@@ -5,7 +5,7 @@
 //! [`GRetrieverEntity`] nodes and [`GRetrieverRelation`] edges into a
 //! Prize-Collecting Steiner Tree instance — nodes carry query-relevance
 //! *prizes*, edges carry *costs* — solves it with the
-//! [`PcstSolver`](super::pcst::PcstSolver), and maps the resulting
+//! [`PcstSolver`], and maps the resulting
 //! [`PcstForest`](super::types::PcstForest) back into a
 //! [`GRetrieverSubgraph`].
 //!

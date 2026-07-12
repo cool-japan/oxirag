@@ -55,7 +55,7 @@ impl GuardrailEngine {
                 kind: format!("pii_{}", m.kind.label()),
                 span: (m.start, m.end),
                 severity: Severity::High,
-                message: format!("PII detected ({}): \"{}\"", m.kind.label(), &m.matched),
+                message: format!("PII detected ({}): \"{}\"", m.kind.label(), m.matched),
             });
         }
 

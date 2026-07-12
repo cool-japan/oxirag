@@ -317,7 +317,7 @@ impl EvidenceUpdate {
     /// evidence gets a likelihood near `1`, one sharing no vocabulary gets the
     /// `floor`, and no hypothesis ever gets exactly `0` (which would trigger
     /// the `log(0) = -inf` trap). `floor` is `min_likelihood` when it lies in
-    /// `(0, 1)`, otherwise [`DEFAULT_MIN_LIKELIHOOD`].
+    /// `(0, 1)`, otherwise `DEFAULT_MIN_LIKELIHOOD`.
     #[must_use]
     pub fn from_text_support(
         description: impl Into<String>,

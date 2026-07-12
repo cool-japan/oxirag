@@ -514,11 +514,8 @@ impl PagedCache {
         let mut result = Vec::with_capacity(entry.total_tokens);
 
         for &page_id in &entry.page_ids {
-            if let Some(page) = page_table.get_page(page_id) {
-                result.extend_from_slice(&page.data);
-            } else {
-                return None;
-            }
+            let page = page_table.get_page(page_id)?;
+            result.extend_from_slice(&page.data);
         }
 
         result.truncate(entry.total_tokens);

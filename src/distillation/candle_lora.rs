@@ -943,7 +943,7 @@ mod tests {
 
         // out1 and out3 should be similar (LoRA enabled)
         // out2 should be different (LoRA disabled)
-        assert!(out1.dims() == out2.dims());
-        assert!(out1.dims() == out3.dims());
+        assert_eq!(out1.dims(), out2.dims());
+        assert_eq!(out1.dims(), out3.dims());
     }
 }

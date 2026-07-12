@@ -26,7 +26,7 @@
 //!
 //! # Algorithm
 //!
-//! 1. **Single-tree construction** ([`tree`], recursive). A point set of at
+//! 1. **Single-tree construction** (`tree`, recursive). A point set of at
 //!    most [`RpTreeConfig::leaf_size`] members becomes a leaf. Otherwise two
 //!    distinct points are sampled with a seeded `splitmix64` draw, their
 //!    equidistant hyperplane is formed, and the points are partitioned by the
@@ -34,10 +34,10 @@
 //!    points on one side, or coincident samples) fall back to further sampled
 //!    pairs and finally a deterministic median-by-rank split, and a
 //!    [`RpTreeConfig::max_depth`] cap guarantees termination.
-//! 2. **Forest** ([`forest`]). [`RpTreeConfig::n_trees`] trees are grown, each
+//! 2. **Forest** (`forest`). [`RpTreeConfig::n_trees`] trees are grown, each
 //!    from a seed derived from the forest seed and the tree index, so no two
 //!    trees split identically.
-//! 3. **Search** ([`forest`]). All trees are descended together through one
+//! 3. **Search** (`forest`). All trees are descended together through one
 //!    shared max-priority queue keyed on the running minimum margin; visited
 //!    leaves feed a deduplicated candidate set, which is re-scored exactly to
 //!    yield the true top-`k`.

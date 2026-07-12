@@ -5,14 +5,14 @@
 //!
 //! Wang et al. (2023) define STRINC, at *training* time, as a simple
 //! substring test: a sentence is a positive filtering example if it contains
-//! the gold answer string. [`strinc_strict_score`] implements exactly that
+//! the gold answer string. `strinc_strict_score` implements exactly that
 //! paper-faithful check and is used by
 //! [`super::filter::FilcoFilter::filter_with_answer`] when the caller already
 //! knows the expected answer (e.g. building training data, or re-scoring a
 //! generated answer against its supporting context).
 //!
 //! At *inference* time there is no gold answer to test against, so
-//! [`strinc_heuristic_score`] approximates the same intuition — "does this
+//! `strinc_heuristic_score` approximates the same intuition — "does this
 //! sentence contain a plausible answer span?" — with two deterministic,
 //! model-free signals, and keeps a sentence if *either* fires:
 //!
@@ -34,7 +34,7 @@
 //!
 //! # Lexical overlap
 //!
-//! [`lexical_overlap_score`] is the Jaccard similarity between the sentence's
+//! `lexical_overlap_score` is the Jaccard similarity between the sentence's
 //! token set and the query's token set — a direct, symmetric, corpus-free
 //! measure of surface overlap.
 //!
@@ -43,7 +43,7 @@
 //! The paper's CXMI measures how much a sentence changes a language model's
 //! estimated likelihood of producing the correct answer, conditioned on the
 //! query: `CXMI(sentence) = log P(answer | query, sentence) - log P(answer | query)`.
-//! Computing that requires a language model. [`cxmi_lite_score`] instead
+//! Computing that requires a language model. `cxmi_lite_score` instead
 //! substitutes a **deterministic pseudo-likelihood proxy** —
 //! `relevance(query, context)`, an IDF-weighted recall of the query's tokens
 //! within `context` computed over the passage set's own sentence corpus (the

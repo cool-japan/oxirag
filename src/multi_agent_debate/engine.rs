@@ -137,7 +137,7 @@ pub(crate) fn salient_term(text: &str) -> Option<String> {
 /// No live model is involved: [`MockDebatePersona::argue`] builds argument
 /// text from the question, the assigned position, and — from round `1`
 /// onward — a deterministically selected "salient" content term
-/// ([`fnv1a`]-based, via [`salient_term`]) taken from the immediately
+/// (`fnv1a`-based, via `salient_term`) taken from the immediately
 /// preceding round's opposing argument, so the produced text is a genuine
 /// (if templated) reaction to what the opponent just said, not a canned
 /// string repeated every round. Self-reported confidence is the Jaccard

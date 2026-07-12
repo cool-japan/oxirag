@@ -679,6 +679,46 @@ pub mod belief_revision;
 #[cfg(feature = "shard-selection")]
 pub mod shard_selection;
 
+// v0.23.0 — Theme 1: Efficient Search & Index Maintenance
+#[cfg(feature = "filtered-vector-search")]
+pub mod filtered_vector_search;
+
+#[cfg(feature = "dynamic-pruning")]
+pub mod dynamic_pruning;
+
+#[cfg(feature = "index-maintenance")]
+pub mod index_maintenance;
+
+// v0.23.0 — Theme 2: Probabilistic Information Retrieval
+#[cfg(feature = "language-model-retrieval")]
+pub mod language_model_retrieval;
+
+#[cfg(feature = "click-model")]
+pub mod click_model;
+
+#[cfg(feature = "bandit-ranker")]
+pub mod bandit_ranker;
+
+// v0.23.0 — Theme 3: Collaborative Generation
+#[cfg(feature = "replug")]
+pub mod replug;
+
+#[cfg(feature = "mixture-of-agents")]
+pub mod mixture_of_agents;
+
+#[cfg(feature = "chain-of-agents")]
+pub mod chain_of_agents;
+
+// v0.23.0 — Theme 4: Privacy & Provenance
+#[cfg(feature = "kv-cache-compression")]
+pub mod kv_cache_compression;
+
+#[cfg(feature = "watermarking")]
+pub mod watermarking;
+
+#[cfg(feature = "knowledge-unlearning")]
+pub mod knowledge_unlearning;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -1928,6 +1968,94 @@ pub mod prelude {
         ArgumentGrounder, ArgumentGroundingStatus, GroundedArgument, ToolMatch, ToolParameter,
         ToolParameterType, ToolRetrievalConfig, ToolRetrievalEngine, ToolRetrievalError,
         ToolRetrievalIndex, ToolRetrievalResult, ToolSpecEntry,
+    };
+    // ── v0.23.0 ────────────────────────────────────────────────────────────────
+    // No aliasing needed: all 210 public names are module-prefixed and collision-free.
+    #[cfg(feature = "bandit-ranker")]
+    pub use crate::bandit_ranker::{
+        BanditArm, BanditArmSet, BanditArmStats, BanditConfig, BanditContext, BanditError,
+        BanditLinearModel, BanditLoggedEvent, BanditOffPolicyEstimate, BanditOffPolicyEvaluator,
+        BanditRankedArm, BanditRanker, BanditRanking, BanditRegretTracker, BanditResult,
+        BanditStats, EpsilonGreedyRanker, LinUcbRanker, LinalgError, SplitMix64Rng,
+        ThompsonSamplingRanker,
+    };
+    #[cfg(feature = "chain-of-agents")]
+    pub use crate::chain_of_agents::{
+        CoaCommunicationUnit, CoaConfig, CoaEngine, CoaError, CoaEvidence, CoaLexicalManager,
+        CoaLexicalWorker, CoaManager, CoaTrace, CoaWorker, CoaWorkerStep, MIN_CHUNK_SIZE,
+    };
+    #[cfg(feature = "click-model")]
+    pub use crate::click_model::{
+        CascadeClickModel, ClickImpression, ClickLog, ClickLogSimulator, ClickModel,
+        ClickModelConfig, ClickModelError, ClickModelFit, ClickModelResult, ClickRankingPolicy,
+        ClickRewardModel, ClickSession, ClickSimulationModel, ClickSplitMix64,
+        CounterfactualEstimate, CounterfactualEstimator, CounterfactualStrategy, DbnClickModel,
+        DebiasedRanker, DebiasedRankerConfig, DebiasedRankerFit, DoublyRobustEstimator,
+        IpsEstimator, PbmIdentifiability, PositionBasedModel, PropensityEstimates, SnipsEstimator,
+        TableClickPolicy, cascade_examined_depth, naive_click_through_rates, policy_positions,
+        position_gain,
+    };
+    #[cfg(feature = "dynamic-pruning")]
+    pub use crate::dynamic_pruning::{
+        DynamicPruningError, DynamicPruningIndex, DynamicPruningResult, PruningBlock,
+        PruningConfig, PruningHit, PruningPosting, PruningPostingList, PruningSearchResult,
+        PruningStats, PruningStrategy, bm25_idf, bm25_term_score,
+    };
+    #[cfg(feature = "filtered-vector-search")]
+    pub use crate::filtered_vector_search::{
+        AttrValue, FilterBound, FilterPredicate, FilterStrategy, FilteredAttributeStats,
+        FilteredDistanceMetric, FilteredHit, FilteredMetadata, FilteredNumericHistogram,
+        FilteredSearchConfig, FilteredSearchError, FilteredSearchStats, FilteredVectorIndex,
+        FilteredVectorRecord, SelectivityEstimate, SelectivityEstimator, StrategySelector,
+    };
+    #[cfg(feature = "index-maintenance")]
+    pub use crate::index_maintenance::{
+        ConsolidationReport, MaintainableIndex, MaintenanceConfig, MaintenanceError,
+        MaintenanceHit, MaintenanceMetric, MaintenanceStats,
+    };
+    #[cfg(feature = "knowledge-unlearning")]
+    pub use crate::knowledge_unlearning::{
+        UnlearnableStore, UnlearningArtifactKind, UnlearningArtifactLink,
+        UnlearningArtifactRegistry, UnlearningAuditEvidence, UnlearningAuditRound,
+        UnlearningAuditor, UnlearningCertificate, UnlearningConfig, UnlearningEngine,
+        UnlearningError, UnlearningLeakageVerdict, UnlearningMemoryStore,
+        UnlearningNearDuplicateDetector, UnlearningRequest, UnlearningResult, UnlearningScope,
+        UnlearningScopeItem, UnlearningScopeReason, UnlearningScopeResolver, UnlearningStatus,
+        UnlearningTarget,
+    };
+    #[cfg(feature = "kv-cache-compression")]
+    pub use crate::kv_cache_compression::{
+        KvAttentionOutput, KvAttentionStats, KvCacheCompressor, KvCacheTensor, KvCompressionConfig,
+        KvCompressionError, KvCompressionReport, KvEvictionPolicy, KvResult, KvScoreNormalization,
+        KvSnapPooling, plan_h2o, plan_recency_lru, plan_snap_kv, plan_streaming_llm, pool_scores,
+        scaled_dot_product_attention,
+    };
+    #[cfg(feature = "language-model-retrieval")]
+    pub use crate::language_model_retrieval::{
+        DfrModel, LM_MIN_PROBABILITY, LmCollectionModel, LmDocumentStats, LmHit, LmRelevanceModel,
+        LmRetrievalConfig, LmRetrievalError, LmRetrievalIndex, LmRetrievalResult, LmScoringModel,
+        LmSmoothing, LmSmoothingComponents, PL2_MIN_TFN, Rm3Config, Rm3ExpandedQuery, Rm3Term,
+        dph_term_score, lm_log_sum_exp, lm_query_posteriors, lm_tokenize, pl2_term_score,
+    };
+    #[cfg(feature = "mixture-of-agents")]
+    pub use crate::mixture_of_agents::{
+        MoaAggregator, MoaConfig, MoaContextMode, MoaEngine, MoaError, MoaLayer, MoaLayerStats,
+        MoaProposer, MoaResponse, MoaSynthesisAggregator, MoaTrace, MockMoaProposer,
+    };
+    #[cfg(feature = "replug")]
+    pub use crate::replug::{
+        ReplugConfig, ReplugContextRule, ReplugDecoding, ReplugDocument, ReplugDocumentGradient,
+        ReplugEngine, ReplugEnsembleOutput, ReplugError, ReplugLanguageModel, ReplugLsrSignal,
+        ReplugResult, ReplugRng, ReplugStaticLanguageModel, ReplugStats, ReplugStep,
+        replug_arg_max, replug_entropy_from_log_probs, replug_kl_divergence,
+        replug_log_linear_pool, replug_log_softmax, replug_log_sum_exp, replug_mixture_log_probs,
+        replug_promote_logits, replug_softmax, replug_temperature_log_softmax,
+        replug_temperature_softmax,
+    };
+    #[cfg(feature = "watermarking")]
+    pub use crate::watermarking::{
+        WatermarkConfig, WatermarkDetection, WatermarkDetector, WatermarkError, WatermarkGenerator,
+        WatermarkHasher, WatermarkMode, WatermarkResult, WatermarkTokenId,
     };
 }
 

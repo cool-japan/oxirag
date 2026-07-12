@@ -8,17 +8,17 @@
 //!
 //! The module provides four building blocks:
 //!
-//! 1. [`jacobi_symmetric`] — the cyclic-Jacobi eigenvalue algorithm extended to
+//! 1. `jacobi_symmetric` — the cyclic-Jacobi eigenvalue algorithm extended to
 //!    accumulate **eigenvectors** (the sibling `eigenscore` module's solver
 //!    returns only eigenvalues and is not exported, so ITQ carries its own).
 //!    Powers PCA (top-`k` eigenvectors of the `D x D` covariance) and the SVD
 //!    below.
-//! 2. [`svd_square`] — a `k x k` singular value decomposition built on the
+//! 2. `svd_square` — a `k x k` singular value decomposition built on the
 //!    symmetric eigendecomposition of `M^T M`, with graceful handling of
 //!    near-zero singular values via orthonormal basis completion.
-//! 3. [`orthogonal_procrustes`] — the closed-form solver `R = U V^T` of the
+//! 3. `orthogonal_procrustes` — the closed-form solver `R = U V^T` of the
 //!    orthogonal Procrustes problem `min ‖B − Z R‖_F  s.t.  R^T R = I`.
-//! 4. [`random_orthogonal`] — a deterministic, `rand`-free pseudo-random
+//! 4. `random_orthogonal` — a deterministic, `rand`-free pseudo-random
 //!    orthogonal matrix (FNV-1a → Box–Muller → modified Gram–Schmidt), used to
 //!    initialize the alternating minimization.
 //!

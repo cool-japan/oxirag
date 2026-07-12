@@ -91,9 +91,9 @@ pub enum DebateError {
 /// `[0.0, argument_count_weight + confidence_weight + rebuttal_weight]`.
 ///
 /// This is deliberately a plain, freestanding config struct rather than a
-/// field consulted directly by [`DebateEngine`], since judging strategy is
+/// field consulted directly by [`DebateEngine`](crate::multi_agent_debate::DebateEngine), since judging strategy is
 /// owned by whichever [`DebateJudge`] implementation is supplied to
-/// [`DebateEngine::run`] (mirroring how
+/// [`DebateEngine::run`](crate::multi_agent_debate::DebateEngine::run) (mirroring how
 /// [`crate::searchain::MockSearchainGenerator`] owns its own
 /// `AnswerAssemblyStrategy` rather than reading it from
 /// `crate::searchain::SearChainConfig`): a
@@ -369,7 +369,7 @@ pub struct DebatePositionScore {
     /// `0`).
     pub rebuttal_engagement: f32,
     /// The weighted combination of the three fields above, per the judge's
-    /// [`DebateJudgeWeights`](crate::multi_agent_debate::DebateJudgeWeights).
+    /// [`DebateJudgeWeights`].
     pub total_score: f32,
 }
 

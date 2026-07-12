@@ -45,7 +45,7 @@ impl FilcoFilter {
     ///
     /// When [`FilcoConfig::measure`] is [`FilterMeasure::StrInc`], this uses
     /// the heuristic (no known answer) variant — see
-    /// [`super::measures::strinc_heuristic_score`] for the exact signals. To
+    /// `measures::strinc_heuristic_score` for the exact signals. To
     /// use the strict, paper-faithful STRINC check against a known answer
     /// span, call [`Self::filter_with_answer`] instead.
     ///

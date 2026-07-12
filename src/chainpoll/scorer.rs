@@ -3,7 +3,7 @@
 //!
 //! This file owns the entire mechanism that makes `ChainPoll` what it is:
 //!
-//! 1. [`FORMULATION_BANK`] -- a fixed, ordered bank of
+//! 1. `FORMULATION_BANK` -- a fixed, ordered bank of
 //!    [`ChainPollConfig::MAX_FORMULATIONS`] prompt templates, each a
 //!    structurally distinct phrasing/ordering/perspective of "is this claim
 //!    grounded in the context?" paired with its [`PollFraming`]. No
@@ -204,7 +204,7 @@ impl ChainPollScorer {
     /// `num_formulations <= ChainPollConfig::MAX_FORMULATIONS`, and the
     /// `formulation_bank_boundaries_match_max_formulations` test enforces
     /// that [`ChainPollConfig::MAX_FORMULATIONS`] equals
-    /// [`FORMULATION_BANK`]'s length, so the slice below is always in
+    /// `FORMULATION_BANK`'s length, so the slice below is always in
     /// bounds.
     pub fn generate_formulations(
         &self,

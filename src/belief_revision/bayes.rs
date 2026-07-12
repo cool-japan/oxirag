@@ -8,18 +8,18 @@
 //! and the whole distribution collapses to `NaN`. Working in log space turns
 //! those products into sums, which never underflow, and the one delicate
 //! step — exponentiating to renormalize — is done through a numerically
-//! stable [`logsumexp`] that subtracts the maximum first.
+//! stable `logsumexp` that subtracts the maximum first.
 //!
 //! This file owns:
 //!
-//! * [`logsumexp`] — the stable `log(sum(exp(x_i)))` primitive.
-//! * [`log_likelihood_floored`] — `ln` of a likelihood clamped to a positive
+//! * `logsumexp` — the stable `log(sum(exp(x_i)))` primitive.
+//! * `log_likelihood_floored` — `ln` of a likelihood clamped to a positive
 //!   floor, so a single zero-likelihood observation cannot send a hypothesis
 //!   to `-inf` (a permanent, unrecoverable "impossible" state).
-//! * [`normalize_log_probs`] / [`bayes_update_log`] — the in-place log-space
+//! * `normalize_log_probs` / `bayes_update_log` — the in-place log-space
 //!   Bayesian update: add log-likelihoods, then subtract `logsumexp` so the
 //!   distribution stays a valid probability distribution.
-//! * [`log_probs_to_linear`] / [`entropy_nats`] — read-out helpers.
+//! * `log_probs_to_linear` / `entropy_nats` — read-out helpers.
 //! * [`LikelihoodRatio`] — the pairwise log-odds (log Bayes factor) form of
 //!   the update, `log(P(e | h_i) / P(e | h_j))`.
 
@@ -198,7 +198,7 @@ impl LikelihoodRatio {
     /// `P(e | h_num)` and `P(e | h_den)`.
     ///
     /// Both likelihoods are clamped to `min_likelihood` before their logs are
-    /// taken (via [`log_likelihood_floored`]), so a zero likelihood on either
+    /// taken (via `log_likelihood_floored`), so a zero likelihood on either
     /// side yields a large-but-finite `log_ratio` rather than `+/-inf`.
     #[must_use]
     pub fn from_likelihoods(

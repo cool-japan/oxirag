@@ -40,7 +40,7 @@
 //! |-----------|-----------------|
 //! | [`SpannConfig`] | Cluster count, replica count, epsilon, posting limit, nprobe, iterations, metric |
 //! | [`SpannMetric`] | Cosine (default) / L2 / Dot |
-//! | [`cluster`] (private) | Deterministic k-means, balanced-cluster splitting, boundary replication, RNG pruning |
+//! | `cluster` (private) | Deterministic k-means, balanced-cluster splitting, boundary replication, RNG pruning |
 //! | [`SpannIndex`] | Build (cluster + replicate) and search (probe + dedup + rank) |
 //! | [`Posting`] | One centroid plus its member identifiers |
 //! | [`SpannHit`] | A single ranked search result |

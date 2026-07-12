@@ -33,9 +33,11 @@ use crate::layer2_speculator::traits::prompts;
 use std::path::PathBuf;
 
 #[cfg(feature = "speculator")]
-use candle_core::{DType, Device, Tensor};
+use candle_core::{D, DType, Device, Tensor};
 #[cfg(feature = "speculator")]
 use candle_nn::VarBuilder;
+#[cfg(feature = "speculator")]
+use candle_nn::ops::log_softmax;
 #[cfg(feature = "speculator")]
 use candle_transformers::generation::LogitsProcessor;
 #[cfg(feature = "speculator")]
@@ -146,6 +148,37 @@ pub struct CandleSLM {
     config: CandleSlmConfig,
     phi_config: PhiConfig,
     slm_config: SlmConfig,
+}
+
+/// Compute the log-probability that the model's output distribution
+/// actually assigns to `token`.
+///
+/// `logits` must be the raw (unnormalized) 1-D logits tensor of shape
+/// `[vocab_size]` for a single generation step. This applies a numerically
+/// stable [`log_softmax`] over the vocabulary dimension and indexes the
+/// entry for `token`, returning `log(softmax(logits)[token])`.
+///
+/// This is deliberately NOT the maximum logit (which is not a probability
+/// at all — the softmax normalizer is never applied to it) and NOT the
+/// log-probability of the arg-max token; it is the log-probability of the
+/// specific `token` that was passed in, which callers should set to
+/// whichever token was actually sampled/observed so the returned value is
+/// a faithful per-token log-probability.
+///
+/// # Errors
+///
+/// Returns an error if the log-softmax computation, indexing into `token`,
+/// or scalar conversion fails (e.g. `token` is out of range for the
+/// vocabulary).
+#[cfg(feature = "speculator")]
+fn sampled_token_logprob(logits: &Tensor, token: u32) -> Result<f32, SpeculatorError> {
+    let log_probs = log_softmax(logits, D::Minus1)
+        .map_err(|e| SpeculatorError::Generation(format!("Log-softmax failed: {e}")))?;
+    log_probs
+        .get(token as usize)
+        .map_err(|e| SpeculatorError::Generation(format!("Get token logprob failed: {e}")))?
+        .to_scalar::<f32>()
+        .map_err(|e| SpeculatorError::Generation(format!("Scalar conversion failed: {e}")))
 }
 
 #[cfg(feature = "speculator")]
@@ -322,17 +355,6 @@ impl CandleSLM {
                 .get(seq_len - 1)
                 .map_err(|e| SpeculatorError::Generation(format!("Get last failed: {e}")))?;
 
-            // Collect log probabilities if requested
-            if collect_logprobs {
-                let logprob = last_logits
-                    .max(0)
-                    .map_err(|e| SpeculatorError::Generation(format!("Max logprob failed: {e}")))?;
-                let logprob_value = logprob.to_scalar::<f32>().map_err(|e| {
-                    SpeculatorError::Generation(format!("Scalar conversion failed: {e}"))
-                })?;
-                logprobs_vec.push(logprob_value);
-            }
-
             let next_token = logits_processor
                 .sample(&last_logits)
                 .map_err(|e| SpeculatorError::Generation(format!("Sampling failed: {e}")))?;
@@ -342,6 +364,17 @@ impl CandleSLM {
                 // Common EOS tokens for Phi models
                 finish_reason = FinishReason::Stop;
                 break;
+            }
+
+            // Collect the log-softmax probability of the token that was
+            // actually sampled (not the raw max logit, and not an
+            // arbitrary token). Pushed together with `generated_tokens`
+            // below so `logprobs_vec` stays index-aligned with the tokens
+            // that make it into the final output; tokens discarded on the
+            // EOS early-exit above never get a stray logprob pushed.
+            if collect_logprobs {
+                let logprob_value = sampled_token_logprob(&last_logits, next_token)?;
+                logprobs_vec.push(logprob_value);
             }
 
             generated_tokens.push(next_token);
@@ -422,14 +455,11 @@ impl CandleSLM {
                 .get(seq_len - 1)
                 .map_err(|e| SpeculatorError::Generation(format!("Get last failed: {e}")))?;
 
-            // Get logprob for the actual token
-            let token_logit = last_logits
-                .get(token_id as usize)
-                .map_err(|e| SpeculatorError::Generation(format!("Get token logit failed: {e}")))?
-                .to_scalar::<f32>()
-                .map_err(|e| SpeculatorError::Generation(format!("Scalar failed: {e}")))?;
+            // Get the log-softmax probability for the actual (observed)
+            // token, not the raw unnormalized logit.
+            let token_logprob = sampled_token_logprob(&last_logits, token_id)?;
 
-            logprobs.push(token_logit);
+            logprobs.push(token_logprob);
         }
 
         drop(model);
@@ -960,6 +990,56 @@ mod tests {
             assert!(candle_device.is_ok());
         }
 
+        /// This is a pure, model-free unit test of the actual logprob math
+        /// (no `HuggingFace` download, no model, no I/O): it hand-builds a
+        /// 3-way logits tensor and checks `sampled_token_logprob` against a
+        /// hand-computed `log_softmax`.
+        ///
+        /// For `logits = [1.0, 2.0, 3.0]`:
+        /// - `max = 3.0`, so `diff = [-2.0, -1.0, 0.0]`
+        /// - `sum(exp(diff)) = e^-2 + e^-1 + e^0 = 0.13533528 + 0.36787944 + 1
+        ///   = 1.50321472`
+        /// - `ln(sum) = 0.40760596`
+        /// - `log_softmax = diff - ln(sum) = [-2.40760596, -1.40760596,
+        ///   -0.40760596]`
+        ///
+        /// This also pins down the two bugs being fixed: the old code used
+        /// `.max(0)` (the raw max logit, `3.0`, not a log-probability at
+        /// all — and always positive here) and reported it regardless of
+        /// which token was actually sampled. The correct value for every
+        /// token index must be `<= 0` (a true log-probability) and must
+        /// depend on which token index is queried.
+        #[test]
+        fn test_sampled_token_logprob_matches_hand_computed_log_softmax() {
+            let logits = Tensor::new(&[1.0f32, 2.0, 3.0], &Device::Cpu)
+                .expect("test tensor creation should succeed");
+
+            let lp0 = sampled_token_logprob(&logits, 0).expect("logprob for token 0");
+            let lp1 = sampled_token_logprob(&logits, 1).expect("logprob for token 1");
+            let lp2 = sampled_token_logprob(&logits, 2).expect("logprob for token 2");
+
+            assert!((lp0 - (-2.407_606_1)).abs() < 1e-4, "lp0 = {lp0}");
+            assert!((lp1 - (-1.407_606_1)).abs() < 1e-4, "lp1 = {lp1}");
+            assert!((lp2 - (-0.407_606_1)).abs() < 1e-4, "lp2 = {lp2}");
+
+            // A valid log-probability is always <= 0 (probability <= 1) and finite.
+            for lp in [lp0, lp1, lp2] {
+                assert!(lp <= 0.0, "log-probability must be non-positive: {lp}");
+                assert!(lp.is_finite(), "log-probability must be finite: {lp}");
+            }
+
+            // exp(log_softmax) must form a valid probability distribution (sums to 1).
+            let total = lp0.exp() + lp1.exp() + lp2.exp();
+            assert!(
+                (total - 1.0).abs() < 1e-4,
+                "softmax probabilities should sum to 1: {total}"
+            );
+
+            // The highest-logit token (index 2) must have the highest logprob,
+            // confirming we're indexing the queried token, not always the max.
+            assert!(lp2 > lp1 && lp1 > lp0);
+        }
+
         #[tokio::test]
         #[ignore = "Requires model download (~2.7GB)"]
         async fn test_candle_slm_phi2_load() {
@@ -1016,6 +1096,25 @@ mod tests {
             assert!(!output.text.is_empty());
             assert!(!output.tokens.is_empty());
             assert!(output.logprobs.is_some());
+
+            // Each logprob must correspond to exactly one generated token,
+            // and every log-probability must be a valid (non-positive,
+            // finite) value -- not a raw (possibly positive) max logit.
+            let logprobs = output
+                .logprobs
+                .as_ref()
+                .expect("logprobs requested via generate()");
+            assert_eq!(logprobs.len(), output.tokens.len());
+            for logprob in logprobs {
+                assert!(
+                    *logprob <= 0.0,
+                    "log-probability must be non-positive: {logprob}"
+                );
+                assert!(
+                    logprob.is_finite(),
+                    "log-probability must be finite: {logprob}"
+                );
+            }
         }
 
         #[tokio::test]

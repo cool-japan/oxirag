@@ -21,7 +21,7 @@
 //!
 //! This decoupling is `ReWOO`'s efficiency property: a [`RewooWorker`] makes
 //! exactly one [`RewooRetriever::retrieve`] call per
-//! [`RewooAction::Search`](crate::rewoo::types::RewooAction::Search) step and
+//! [`RewooAction::Search`] step and
 //! **zero** additional planning calls, no matter how long the plan is —
 //! whereas a ReAct-style loop needs one model call per step because planning
 //! and acting alternate.
