@@ -1,6 +1,6 @@
 [package]
 name = "oxirag"
-version = "0.23.0"
+version = "0.24.0"
 edition = "2024"
 description = "A four-layer RAG engine with SMT-based logic verification and knowledge graph support"
 license = "Apache-2.0"
@@ -480,6 +480,27 @@ efficient-search         = ["filtered-vector-search", "dynamic-pruning", "index-
 probabilistic-ir         = ["language-model-retrieval", "click-model", "bandit-ranker"]
 collaborative-generation = ["replug", "mixture-of-agents", "chain-of-agents"]
 privacy-provenance       = ["kv-cache-compression", "watermarking", "knowledge-unlearning"]
+# v0.24.0 — Theme 1: Inference-Time Control
+constrained-decoding   = []
+context-aware-decoding = ["replug"]
+activation-steering    = ["hidden-states"]
+# v0.24.0 — Theme 2: Test-Time Search & Process Supervision
+process-reward-model = []
+mcts-reasoning       = []
+self-taught-reasoner = []
+# v0.24.0 — Theme 3: Serving Runtime
+continuous-batching = ["kv-cache-compression"]
+request-scheduling  = []
+chunked-prefill     = ["kv-cache-compression"]
+# v0.24.0 — Theme 4: Corpus Governance & Fairness
+corpus-curation   = ["lsh"]
+fairness-ranking  = []
+knowledge-editing = []
+# v0.24.0 theme umbrellas
+inference-time-control = ["constrained-decoding", "context-aware-decoding", "activation-steering"]
+test-time-search       = ["process-reward-model", "mcts-reasoning", "self-taught-reasoner"]
+serving-runtime        = ["continuous-batching", "request-scheduling", "chunked-prefill"]
+corpus-governance      = ["corpus-curation", "fairness-ranking", "knowledge-editing"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory"]

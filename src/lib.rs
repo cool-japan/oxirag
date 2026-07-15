@@ -719,6 +719,46 @@ pub mod watermarking;
 #[cfg(feature = "knowledge-unlearning")]
 pub mod knowledge_unlearning;
 
+// v0.24.0 — Theme 1: Inference-Time Control
+#[cfg(feature = "constrained-decoding")]
+pub mod constrained_decoding;
+
+#[cfg(feature = "context-aware-decoding")]
+pub mod context_aware_decoding;
+
+#[cfg(feature = "activation-steering")]
+pub mod activation_steering;
+
+// v0.24.0 — Theme 2: Test-Time Search & Process Supervision
+#[cfg(feature = "process-reward-model")]
+pub mod process_reward_model;
+
+#[cfg(feature = "mcts-reasoning")]
+pub mod mcts_reasoning;
+
+#[cfg(feature = "self-taught-reasoner")]
+pub mod self_taught_reasoner;
+
+// v0.24.0 — Theme 3: Serving Runtime
+#[cfg(feature = "continuous-batching")]
+pub mod continuous_batching;
+
+#[cfg(feature = "request-scheduling")]
+pub mod request_scheduling;
+
+#[cfg(feature = "chunked-prefill")]
+pub mod chunked_prefill;
+
+// v0.24.0 — Theme 4: Corpus Governance & Fairness
+#[cfg(feature = "corpus-curation")]
+pub mod corpus_curation;
+
+#[cfg(feature = "fairness-ranking")]
+pub mod fairness_ranking;
+
+#[cfg(feature = "knowledge-editing")]
+pub mod knowledge_editing;
+
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
@@ -2056,6 +2096,113 @@ pub mod prelude {
     pub use crate::watermarking::{
         WatermarkConfig, WatermarkDetection, WatermarkDetector, WatermarkError, WatermarkGenerator,
         WatermarkHasher, WatermarkMode, WatermarkResult, WatermarkTokenId,
+    };
+    // ── v0.24.0 ────────────────────────────────────────────────────────────────
+    // No aliasing needed: all 313 public names are module-prefixed and collision-free.
+    #[cfg(feature = "activation-steering")]
+    pub use crate::activation_steering::{
+        ActivationPair, ActivationSteering, CaaVector, ContrastivePair, HeadActivations, HeadIndex,
+        HeadProbeReport, Intervention, InterventionConfig, InterventionSite, LinearProbe,
+        MIN_DIRECTION_NORM, ProbeAccuracy, ProbeMethod, ResidualStream, SteerableModel,
+        SteeringConceptRule, SteeringConfig, SteeringError, SteeringFixtureModel,
+        SteeringForwardPass, SteeringGeometry, SteeringPositions, SteeringProbeResult,
+        SteeringReport, SteeringResult, SteeringRng, SteeringVector, split_pairs,
+    };
+    #[cfg(feature = "chunked-prefill")]
+    pub use crate::chunked_prefill::{
+        ChunkedPrefill, ChunkedPrefillConfig, ChunkedPrefillError, ChunkedPrefillResult,
+        PrefillChunk, PrefillChunkReport, PrefillGeometry, PrefillIteration, PrefillIterationChunk,
+        PrefillMaskGeometry, PrefillModel, PrefillOutput, PrefillPacking, PrefillPlan, PrefillRun,
+        PrefillRunStats, PrefillSchedule, PrefillScheduler, PrefillSequenceSpec,
+        PrefillSequenceTrace, PrefillStallStats, PrefillTensorModel, TokenBudget,
+        check_cache_geometry,
+    };
+    #[cfg(feature = "constrained-decoding")]
+    pub use crate::constrained_decoding::{
+        ByteAlphabet, ByteRange, CharClass, ConstrainedDecoder, ConstrainedDecoderConfig,
+        ConstrainedDecodingError, ConstrainedDecodingResult, ConstrainedGeneration,
+        ConstrainedTokenId, ConstrainedVocabulary, Constraint, Dfa, DfaState, JsonSchemaOptions,
+        Nfa, NfaState, ProductMode, PropertyOrder, RegexAst, RegexRepeat, StateId,
+        StaticVocabulary, TokenMask, VocabIndex, compile_constraint, compile_json_schema,
+        digit_class, json_string_char_ast, parse_regex, space_class, utf8_scalar_ast, word_class,
+    };
+    #[cfg(feature = "context-aware-decoding")]
+    pub use crate::context_aware_decoding::{
+        CadConfig, ContextAwareConfig, ContextAwareDecoder, ContextAwareError,
+        ContextAwareLanguageModel, ContextAwareOutput, ContextAwareResult, ContextAwareRule,
+        ContextAwareStaticLanguageModel, ContextAwareStats, ContextAwareStep, ContrastOutcome,
+        ContrastiveConfig, ContrastiveDecoder, DecodeMode, DecodingStrategy, DoLaDecoder,
+        DolaConfig, LayerSelector, LayeredLanguageModel, PrematureLayer,
+        cad_adaptive_plausibility_mask, cad_contrast_log_probs, cad_contrast_scores,
+        cad_jensen_shannon_divergence, cad_masked_contrast_log_probs,
+    };
+    #[cfg(feature = "continuous-batching")]
+    pub use crate::continuous_batching::{
+        BatchKvProducer, BatchPreemption, BatchPreemptionMode, BatchSequence, BatchSequenceId,
+        BatchSequenceState, BatchStep, ContinuousBatchConfig, ContinuousBatchEngine,
+        ContinuousBatchError, ContinuousBatchResult, ContinuousBatchStats, KvBlock,
+        KvBlockAllocator, KvBlockAllocatorStats, KvBlockAttentionOutput, KvBlockId,
+        KvBlockSwapSlab, KvBlockTable, PREFIX_HASH_SEED, fold_prefix_hash, paged_attention,
+    };
+    #[cfg(feature = "corpus-curation")]
+    pub use crate::corpus_curation::{
+        BenchmarkItem, BenchmarkVerdict, ClassifierConfig, ClassifierEvaluation, ClassifierExample,
+        ContaminationConfig, ContaminationDetector, ContaminationKind, ContaminationMatch,
+        ContaminationReport, CorpusCurator, CorpusReport, CurationConfig, CurationError,
+        CurationReport, CurationRng, DecontaminationAction, DocumentQuality, NearDupConfig,
+        NearDuplicateCluster, QualityClassifier, QualityReport, QualityRule, QualityScore,
+        QualitySignal, QualityVerdict, RejectedDocument, RejectionStage, evaluate_quality_rules,
+        find_near_duplicate_clusters, train_test_split,
+    };
+    #[cfg(feature = "fairness-ranking")]
+    pub use crate::fairness_ranking::{
+        AssignmentError, AssignmentSolution, DeltrConfig, DeltrLoss, DeltrModel, DeltrSample,
+        DisparateExposure, EquityOfAttention, ExposureMetrics, ExposureReport, ExposureTarget,
+        FairnessAudit, FairnessConfig, FairnessError, FairnessMetric, FairnessPolicy,
+        FairnessRanker, FairnessReport, FairnessResult, FairnessRng, GroupExposure, GroupId,
+        MTable, ProtectedAttribute, ProtectedGroup, adjusted_significance, audit_ranking,
+        binomial_cdf, binomial_pmf, binomial_pmf_table, binomial_quantile,
+        exact_binomial_coefficient, exposure_at_rank, failure_probability, fair_top_k,
+        fairness_dcg_at_k, fairness_ndcg_at_k, log_binomial_coefficient, log_binomial_pmf,
+        log_gamma, prefix_protected_counts, raw_table, solve_assignment, total_exposure,
+    };
+    #[cfg(feature = "knowledge-editing")]
+    pub use crate::knowledge_editing::{
+        CodebookStats, DEFAULT_COVARIANCE_RIDGE, DEFAULT_DEFERRAL_RADIUS,
+        DEFAULT_POSTCONDITION_TOLERANCE, EditBatch, EditCodebook, EditConfig, EditId, EditKey,
+        EditRead, EditRecord, EditRequest, EditResult, EditScope, EditStrategy, EditValue,
+        EditVerdict, EditableMemory, KnowledgeEditError, KnowledgeEditLinalgError, KnowledgeEditor,
+        MultiEdit, RankOneEdit,
+    };
+    #[cfg(feature = "mcts-reasoning")]
+    pub use crate::mcts_reasoning::{
+        MctsCandidate, MctsConfig, MctsEngine, MctsError, MctsHeuristicEvaluator,
+        MctsHeuristicGenerator, MctsNode, MctsOutput, MctsRng, MctsRolloutPolicy,
+        MctsSelectionPolicy, MctsStats, MctsStepGenerator, MctsTerminalEvaluator, MctsTree,
+        MctsWidening,
+    };
+    #[cfg(feature = "process-reward-model")]
+    pub use crate::process_reward_model::{
+        BestOfN, BestOfNResult, LexicalRolloutPolicy, MatchOutcomeReward, MonteCarloProcessReward,
+        OutcomeRewardModel, PrmConfig, PrmError, PrmLabelKind, PrmRng, PrmTrajectory,
+        ProcessRewardModel, RankedTrajectory, ReasoningStep, Rollout, RolloutPolicy, RolloutResult,
+        StepAggregation, StepLabel, StepScore,
+    };
+    #[cfg(feature = "request-scheduling")]
+    pub use crate::request_scheduling::{
+        AdmissionController, Backpressure, DrrSweepSnapshot, FairQueue, FlowReport, PriorityClass,
+        QueuedItem, QueuedRequest, RejectionReason, RequestDeadline, RequestId, RequestPriority,
+        RequestQueue, RequestReport, RequestScheduler, RequestSchedulingConfig, RoundProgress,
+        SchedulerError, SchedulerExecutor, SchedulerResult, SchedulerRng, SchedulingOutcome,
+        SchedulingPolicy, SchedulingReport, ServiceEvent, SloTarget, StaticSchedulerExecutor,
+        WeightedFairClock,
+    };
+    #[cfg(feature = "self-taught-reasoner")]
+    pub use crate::self_taught_reasoner::{
+        BootstrapRound, RationaleSet, RationaleSource, RationalizationStyle, ReasoningModel,
+        SelfTaughtReasoner, StarConfig, StarError, StarGeneration, StarOutcome, StarProblem,
+        StarRationale, StarRng, StaticReasoningModel, answers_equivalent, is_cheating_rationale,
+        mix_seed, normalize_answer,
     };
 }
 

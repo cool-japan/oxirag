@@ -5,6 +5,165 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-07-12
+
+Twelve cutting-edge RAG modules across four themes — Inference-Time Control, Test-Time Search & Process
+Supervision, Serving Runtime, and Corpus Governance & Fairness — all pure-Rust implementations with
+zero new dependencies. +406 tests (11,545 → 11,951), 209 module directories. Pre-validated by four
+parallel read-only recon passes that killed two candidates before any code was written (`speculative_rag`
+already exists as `speculative_drafting`; `multi_lora_serving` inherits candle or a self-referential
+oracle) and rescoped a third (`corpus_curation` composes the existing `lsh` MinHash rather than adding a
+fourth). Zero prelude aliases required.
+
+### Added
+
+- **`constrained_decoding`** (`constrained-decoding`): Decode-time constrained generation — a regex
+  dialect and a JSON-Schema compiler lowered through an AST to a Thompson NFA and then a
+  subset-construction DFA, a per-DFA-state vocabulary FSM index with co-accessibility (liveness)
+  pruning, and a byte-level logit mask that forbids any token which would leave the automaton unable to
+  complete a valid string. `ConstrainedDecoder`, `Dfa`, `Nfa`, `RegexAst`, `ConstrainedVocabulary`,
+  `compile_json_schema`, `parse_regex`. Measured: a Thompson-NFA set-simulation and the compiled DFA
+  agree on all ~1.75M strings up to length 8 over a 4-symbol alphabet (0 disagreements); `serde_json`
+  as an independent oracle caught a grammar that admitted `"-0"`. Greenfield — the crate had no regex
+  dependency and no automaton. Distinct from `watermarking`, whose `-inf` mask is a keyed hash covering
+  a fixed `gamma·|V|` fraction and constrains provenance, not syntax; and from `structured_extraction`
+  / `output_validation`, which reject an invalid string after it exists rather than making it
+  unreachable. 65 tests.
+- **`context_aware_decoding`** (`context-aware-decoding`): Decode-time distribution contrast — Context-
+  Aware Decoding (`(1+a)·logit(y|c,x) − a·logit(y|x)`), Contrastive Decoding with the adaptive
+  plausibility constraint, and DoLa with JSD-selected premature-layer contrast (the crate's only
+  Jensen-Shannon divergence). `ContextAwareDecoder`, `ContrastiveDecoder`, `DoLaDecoder`,
+  `cad_jensen_shannon_divergence`, `LayeredLanguageModel`. Measured: the CAD adjustment is bit-for-bit
+  equal to `replug::math::log_linear_pool_log_probs(&[1+a, −a], ..)` where no truncation fires, then on
+  a crafted input the unconstrained kernel amplifies a 4e−6 token to p=0.99998 while the constrained
+  decoder correctly masks it. Distinct from `replug`, which interpolates distributions with non-negative
+  weights (a convex mixture that never subtracts one); this module extrapolates with a negative
+  coefficient and therefore needs the plausibility constraint a mixture never does. 38 tests.
+- **`activation_steering`** (`activation-steering`): Inference-Time Intervention and Contrastive
+  Activation Addition — per-head linear probes (logistic regression by gradient descent with a derived
+  safe step size, plus the closed-form mass-mean direction), top-K head selection by validation
+  accuracy, and an `alpha·sigma` residual-stream shift applied through a real mid-forward hook.
+  `ActivationSteering`, `LinearProbe`, `SteeringVector`, `SteerableModel`, `Intervention`. Measured:
+  the mass-mean probe recovers a planted unit direction at cosine 0.9994, top-K selects exactly the 3
+  of 8 signal heads, and the steering shift matches the predicted `alpha·sigma` to four digits. States
+  two honest limits and proves them by test: the crate's captured `ModelHiddenStates` has no
+  mid-forward hook, and per-head activations are not stored (`attention_weights` holds probabilities,
+  not head outputs). Distinct from `hidden_states`, which captures activations but never modifies them,
+  and `eigenscore`, which reads response embeddings, not internal activations. 24 tests.
+- **`process_reward_model`** (`process-reward-model`): Step-level (process) reward — Math-Shepherd
+  Monte-Carlo rollout auto-labelling (a step's soft label is the fraction of continuations that reach
+  the correct answer), min/product/last step-score aggregation, and best-of-N reranking against an
+  outcome-only baseline. `ProcessRewardModel`, `OutcomeRewardModel`, `BestOfN`, `StepAggregation`,
+  `MonteCarloProcessReward`. Measured: the estimated soft label recovers a known true p=0.70 to 0.696
+  at R=500 (inside the Hoeffding bound); on two trajectories that reach the same answer, the PRM's
+  min-aggregation localizes a flaw to exactly step 1 (score 0.106) where the outcome model ties both at
+  1.0. Distinct from `llm_judge`, `trust_score`, and `chainpoll`, which score a finished answer as one
+  unit. 11 tests.
+- **`mcts_reasoning`** (`mcts-reasoning`): Monte-Carlo Tree Search over reasoning steps — UCT and
+  AlphaZero-PUCT selection, rollout simulation, value backpropagation, and progressive widening, with
+  max-visit final selection and a deterministic tie-break. `MctsEngine`, `MctsNode`,
+  `MctsSelectionPolicy`, `MctsStepGenerator`, `MctsTerminalEvaluator`. Measured: exact UCT scores
+  asserted bit-for-bit on a 3-child/6-visit fixture; the regret ratio regret(2000)/regret(500) = 1.22
+  (≈log growth) versus >3.5 for random descent; and `N(s)=1+ΣN(child)`, `Q=W/N` hold exactly on every
+  internal node. Distinct from `tree_of_thought`, whose BFS/beam and DFS write each node's value once at
+  expansion and never revise it; nothing else in the crate does rollout or value backpropagation.
+  46 tests.
+- **`self_taught_reasoner`** (`self-taught-reasoner`): STaR bootstrapping — keep rationales whose answer
+  is correct, rationalize backwards from the gold answer for those that fail, accumulate a bootstrapped
+  set, and iterate to a fixed point, with a structural task-agnostic cheat-rationale detector.
+  `SelfTaughtReasoner`, `ReasoningModel`, `RationaleSet`, `is_cheating_rationale`, `RationalizationStyle`.
+  Measured: on a learnable modular-arithmetic task, forward accuracy climbs `[1/13, 5/13, 9/13, 1.0,
+  1.0]` to a converged ceiling; the rationalization ablation lifts coverage from 0.5 to 1.0 with the gap
+  set equal to exactly the 13 problems the forward pass cannot solve. Distinct from `self_consistency`,
+  which samples K rationales and marginalizes them away rather than keeping the ones that worked.
+  30 tests.
+- **`continuous_batching`** (`continuous-batching`): PagedAttention-style KV block management — a
+  fixed-size block allocator with copy-on-write sharing, growing per-sequence block tables, preemption
+  by recompute or swap, and iteration-level (per-decode-step) scheduling, built as a block-structured
+  view over the existing contiguous KV tensor. `KvBlockAllocator`, `KvBlockTable`,
+  `ContinuousBatchEngine`, `BatchSequence`, `BatchPreemptionMode`. Measured: attention gathered through
+  a fragmented, non-monotone block table equals `kv_cache_compression::scaled_dot_product_attention`
+  over the equivalent contiguous tensor bit-for-bit; N sequences sharing a P-token prefix occupy
+  `blocks(P) + N·blocks(suffix)` blocks (sharing factor 2.4, exact); allocator conservation holds after
+  6,000 seeded churn operations. Distinct from `prefix_cache::paging`, which allocates fresh immutable
+  pages per fingerprint and never shares a page, and from `memory_paging`, which pages conversational
+  text. 25 tests.
+- **`request_scheduling`** (`request-scheduling`): The SLO-aware policy layer above a serving backend —
+  TTFT/TPOT admission control, priority classes, Deficit-Round-Robin and Weighted-Fair-Queueing fair
+  scheduling, Earliest-Deadline-First ordering, and starvation bounds over logical ticks, behind its own
+  `SchedulerExecutor` trait. `RequestScheduler`, `SchedulingPolicy`, `SchedulerExecutor`, `SloTarget`,
+  `AdmissionController`. Measured: EDF's maximum lateness equals the brute-force optimum over all n!
+  permutations (Jackson's rule) across 48 seeded instances; DRR service is exactly `m·Q − deficit` with
+  deficits bounded by the max packet; the starvation ablation shows a naive priority victim's wait grows
+  51→91 under load while DRR's stays flood-independent at 19. Distinct from `connection_pool`, an unfair
+  semaphore over idle connections that knows nothing of priority, deadline, or remaining work. 15 tests.
+- **`chunked_prefill`** (`chunked-prefill`): Sarathi-Serve stall-free batching — a long prompt's prefill
+  split into token-budgeted chunks packed one-per-iteration with as many decodes as fit, with piecewise
+  causal masking and absolute-position bookkeeping across chunk boundaries. `ChunkedPrefill`,
+  `PrefillScheduler`, `PrefillChunk`, `TokenBudget`, `PrefillModel`. Measured: for every one of the 512
+  compositions of a 10-token prompt, the chunked KV tensor and every attention output are bit-for-bit
+  identical to a one-shot prefill computed from the existing attention kernel (a deliberately injected
+  boundary off-by-one is proven to break the invariant); the stall-free bound `max-gap ≤ B` is tight.
+  Distinct from `continuous_batching` (where the bytes live) and `request_scheduling` (across-request
+  ordering); this module owns within-request work splitting. 23 tests.
+- **`corpus_curation`** (`corpus-curation`, depends on `lsh`): Ingest-time corpus quality — Gopher/C4
+  heuristic quality signals, a trained binary logistic quality classifier over hashed text features, and
+  eval-set contamination detection (verbatim and n-gram-overlap against a held-out benchmark, with a
+  corpus-level contamination rate and a decontamination action). `CorpusCurator`, `QualityClassifier`,
+  `ContaminationDetector`, `QualityRule`, `find_near_duplicate_clusters`. Measured: the classifier
+  reaches 0.9056 held-out accuracy versus a 0.5167 majority baseline; contamination detection finds 6/6
+  planted items with 0 false positives at a rate of exactly 0.3; end-to-end curation lifts precision@10
+  from 0.70 to 1.00. Composes the existing `lsh_index::MinHashIndex` for near-duplicate clustering
+  rather than adding a fourth MinHash. Distinct from `semantic_dedup` and `lsh_index`, which filter a
+  retrieved result set or serve k-NN queries; this filters the corpus at ingest. 39 tests.
+- **`fairness_ranking`** (`fairness-ranking`): Group-exposure fairness in ranked lists — FA*IR ranked
+  group fairness on an exact binomial CDF (hand-rolled Lanczos log-gamma and u128 coefficients) with a
+  recursive multiple-test correction, DELTR disparate-exposure regularization, and Biega amortized
+  equity-of-attention via a from-scratch Hungarian assignment solver. `FairnessRanker`, `binomial_cdf`,
+  `solve_assignment`, `DeltrModel`, `ExposureMetrics`. Measured: the exact binomial CDF matches rational
+  arithmetic to <1e-12 and is asserted to diverge from the normal approximation (Bin(5,0.1): exact
+  0.59049 vs normal 0.5), proving it did not silently substitute the crate's `normal_cdf`; the
+  assignment solver matches brute force over all n! permutations; FA*IR cuts exposure disparity 0.0999→
+  0.0282 at an nDCG cost of 0.004. Distinct from `diversity_rank` and `retrieval_diversity`, which
+  maximize content dissimilarity or subtopic coverage and have no notion of a protected group. 49 tests.
+- **`knowledge_editing`** (`knowledge-editing`): Locate-then-edit plus deferral memory — a ROME closed-
+  form rank-1 update to a linear memory matrix with exact post-conditions (`W'k*=v*`; `W'kᵢ≈Wkᵢ` for
+  preserved keys), a MEMIT-style multi-edit path with measured drift, and a persistent non-evicting
+  GRACE/SERAC deferral codebook consulted within a radius at inference. `KnowledgeEditor`, `RankOneEdit`,
+  `EditCodebook`, `EditableMemory`, `MultiEdit`. Measured: `W'k*=v*` to <1e-9; the closed form agrees
+  with an independent projected-gradient solve to <1e-6; the codebook serves 50/50 edits under pressure
+  where an LRU drops to 8/50; overdetermined (E>d) edits are honestly rejected with rollback rather than
+  silently regularized. Uses its own hand-rolled `linalg` (with `KnowledgeEditLinalgError`, not the
+  preluded `LinalgError`) to keep the feature independent. Distinct from `knowledge_unlearning`, which
+  deletes documents, and `belief_revision`, which updates a posterior over a fixed hypothesis set.
+  28 tests.
+
+### Changed
+
+- **`speculative_drafting`**: closed two deviations from Wang et al. 2024, both additive (defaults
+  preserve existing behavior bit-for-bit; all 66 prior tests unchanged and passing). Added an opt-in
+  `DraftSubsetStrategy::OneRepresentativePerCluster` that samples one document from each cluster per
+  subset (the paper's scheme) alongside the existing per-cluster default, and an optional draft
+  `rationale` with a self-reflection term so the verifier score becomes `ρ_SC × ρ_SR` when a rationale
+  is present. +13 tests (66 → 79).
+
+### Theme umbrellas
+
+- `inference-time-control` = `constrained-decoding` + `context-aware-decoding` + `activation-steering`
+- `test-time-search` = `process-reward-model` + `mcts-reasoning` + `self-taught-reasoner`
+- `serving-runtime` = `continuous-batching` + `request-scheduling` + `chunked-prefill`
+- `corpus-governance` = `corpus-curation` + `fairness-ranking` + `knowledge-editing`
+
+### Verification
+
+`cargo fmt --all --check`, `cargo clippy --all-features --all-targets -- -D warnings` (0 warnings),
+`cargo nextest run --workspace --all-features` (11,951 passed, 8 network-guarded skips), and
+`RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps` all green. Every new module carries a
+measurement-based headline test that falsifies against independent ground truth (brute-force optima,
+the existing attention kernel, exact rational arithmetic, known generating processes, or naive-baseline
+ablations); each caught a real bug during development. Zero prelude aliases; the toolchain (rustc
+1.97.0) matched the previous release, so no drift-cleanup pass was needed.
+
 ## [0.23.0] - 2026-07-11
 
 Twelve cutting-edge RAG modules across four themes — Constrained & Mutable Search, Probabilistic IR &

@@ -4,15 +4,44 @@ use thiserror::Error;
 
 use crate::types::Document;
 
+// ── DraftSubsetStrategy ──────────────────────────────────────────────────────────
+
+/// Strategy for forming the document subsets that each draft is generated from.
+///
+/// # Modes
+///
+/// - [`DraftSubsetStrategy::PerCluster`] drafts one answer per *whole cluster*
+///   (a subset is every document in that cluster). This is the strategy
+///   [`SpeculativeDrafter`](crate::speculative_drafting::SpeculativeDrafter)
+///   has always used, and remains the default so existing callers see no
+///   behavior change.
+/// - [`DraftSubsetStrategy::OneRepresentativePerCluster`] is the sampling
+///   scheme described in *Speculative RAG* (Wang et al., 2024): form `M`
+///   subsets, each containing exactly **one representative document sampled
+///   from every cluster**, so every subset spans all topics instead of being
+///   confined to one. `M` is [`SpecDraftConfig::num_subsets`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DraftSubsetStrategy {
+    /// Draft one answer per whole cluster (today's default behavior).
+    #[default]
+    PerCluster,
+    /// Paper-faithful sampling: draft one answer per subset, where each of
+    /// the `M` subsets holds one representative document from every cluster.
+    OneRepresentativePerCluster,
+}
+
 // ── SpecDraftConfig ──────────────────────────────────────────────────────────────
 
 /// Configuration for [`SpeculativeDrafter`](crate::speculative_drafting::SpeculativeDrafter).
 ///
 /// The retrieved corpus is partitioned into at most `num_clusters` diverse
-/// subsets; one draft answer is generated per non-empty cluster. Each draft is
-/// then scored by blending a verifier *support* score (weight
-/// [`Self::verify_weight`]) with a *self-consistency* agreement score (weight
-/// [`Self::consistency_weight`]).
+/// subsets; one draft answer is generated per non-empty cluster (or, under
+/// [`DraftSubsetStrategy::OneRepresentativePerCluster`], per sampled subset —
+/// see [`Self::subset_strategy`]). Each draft is then scored by blending a
+/// verifier *support* score (weight [`Self::verify_weight`]) with a
+/// *self-consistency* agreement score (weight [`Self::consistency_weight`]),
+/// optionally multiplied by a self-reflection term when the draft carries a
+/// rationale (see [`DraftCandidate::rationale`]).
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpecDraftConfig {
     /// Maximum number of document clusters (and hence drafts). Defaults to `3`.
@@ -27,6 +56,14 @@ pub struct SpecDraftConfig {
     ///
     /// Defaults to `0.4`.
     pub consistency_weight: f32,
+    /// Strategy for forming draft subsets.
+    ///
+    /// Defaults to [`DraftSubsetStrategy::PerCluster`] (today's behavior).
+    pub subset_strategy: DraftSubsetStrategy,
+    /// Number of subsets `M` to draft under
+    /// [`DraftSubsetStrategy::OneRepresentativePerCluster`]. Ignored under
+    /// [`DraftSubsetStrategy::PerCluster`]. Defaults to `3`.
+    pub num_subsets: usize,
 }
 
 impl Default for SpecDraftConfig {
@@ -36,6 +73,8 @@ impl Default for SpecDraftConfig {
             dim: 128,
             verify_weight: 0.6,
             consistency_weight: 0.4,
+            subset_strategy: DraftSubsetStrategy::PerCluster,
+            num_subsets: 3,
         }
     }
 }
@@ -74,26 +113,72 @@ impl SpecDraftConfig {
         self.consistency_weight = consistency_weight;
         self
     }
+
+    /// Set the draft subset-formation strategy.
+    #[must_use]
+    pub fn with_subset_strategy(mut self, subset_strategy: DraftSubsetStrategy) -> Self {
+        self.subset_strategy = subset_strategy;
+        self
+    }
+
+    /// Set the number of subsets `M` used by
+    /// [`DraftSubsetStrategy::OneRepresentativePerCluster`].
+    #[must_use]
+    pub fn with_num_subsets(mut self, num_subsets: usize) -> Self {
+        self.num_subsets = num_subsets;
+        self
+    }
 }
 
 // ── Drafter ──────────────────────────────────────────────────────────────────────
 
 /// A generator that drafts an answer from one *subset* of retrieved documents.
 ///
-/// In Speculative RAG (Wang et al., 2024) each draft sees only the documents of
-/// a single cluster, so distinct clusters yield distinct perspectives. The
-/// trait is [`Sync`] so drafts can be produced in parallel across clusters.
+/// In *Speculative RAG* (Wang et al., 2024) each draft sees only the documents
+/// of a single cluster (or, under
+/// [`DraftSubsetStrategy::OneRepresentativePerCluster`], a single sampled
+/// subset), so distinct groups yield distinct perspectives. The trait is
+/// [`Sync`] so drafts can be produced in parallel across groups.
 pub trait Drafter: Sync {
     /// Draft an answer from a document subset.
     fn draft(&self, query: &str, docs: &[&Document]) -> String;
+
+    /// Draft an answer together with a supporting **rationale**, enabling the
+    /// self-reflection term `ρ_SR` (Wang et al., 2024).
+    ///
+    /// The default implementation calls [`Drafter::draft`] and returns no
+    /// rationale (`None`), so `total_score` in
+    /// [`SpeculativeDrafter::run`](crate::speculative_drafting::SpeculativeDrafter::run)
+    /// is computed exactly as before for every existing implementor. Override
+    /// this method to opt into rationale-conditioned scoring; see
+    /// [`DraftCandidate::rationale`] and [`DraftVerifier::reflect`].
+    fn draft_with_rationale(&self, query: &str, docs: &[&Document]) -> (String, Option<String>) {
+        (self.draft(query, docs), None)
+    }
 }
 
 /// A verifier that scores how well a draft is grounded in its supporting docs.
 ///
-/// The trait is [`Sync`] so drafts can be verified in parallel across clusters.
+/// The trait is [`Sync`] so drafts can be verified in parallel across groups.
 pub trait DraftVerifier: Sync {
     /// Score how well a draft is supported by its docs, in `[0, 1]`.
     fn verify(&self, query: &str, draft: &str, docs: &[&Document]) -> f32;
+
+    /// Self-reflection confidence `ρ_SR`: a rationale-conditioned confidence
+    /// score in `[0, 1]` (Wang et al., 2024), combined multiplicatively with
+    /// the support/consistency blend as `ρ_SC * ρ_SR` when a draft carries a
+    /// rationale.
+    ///
+    /// The default implementation is the token-Jaccard overlap between
+    /// `rationale` and `draft` (does the stated reasoning actually overlap
+    /// with the produced answer?). This method is only invoked by
+    /// [`SpeculativeDrafter::run`](crate::speculative_drafting::SpeculativeDrafter::run)
+    /// when a draft's rationale is `Some`, so a candidate with no rationale
+    /// never calls it — overriding it cannot change behavior for callers who
+    /// do not opt into rationales.
+    fn reflect(&self, _query: &str, draft: &str, rationale: &str, _docs: &[&Document]) -> f32 {
+        self_reflection_score(rationale, draft)
+    }
 }
 
 // ── MockDrafter ──────────────────────────────────────────────────────────────────
@@ -198,13 +283,32 @@ impl DraftVerifier for MockDraftVerifier {
 pub struct DraftCandidate {
     /// The drafted answer text.
     pub content: String,
-    /// Index of the cluster (into the cluster list) this draft was generated from.
+    /// Index of the cluster (under [`DraftSubsetStrategy::PerCluster`]) or
+    /// subset (under [`DraftSubsetStrategy::OneRepresentativePerCluster`])
+    /// this draft was generated from.
     pub cluster_id: usize,
     /// Verifier support score for this draft, in `[0, 1]`.
     pub support_score: f32,
     /// Mean token-Jaccard agreement with the *other* drafts, in `[0, 1]`.
     pub self_consistency: f32,
-    /// Weighted blend of support and self-consistency, in `[0, 1]`.
+    /// The rationale that justified this draft, when the [`Drafter`] opted
+    /// into [`Drafter::draft_with_rationale`].
+    ///
+    /// `None` for any drafter that only implements [`Drafter::draft`] — which
+    /// is every drafter that existed before this field was added, so
+    /// `rationale` defaults to `None` and leaves their scoring untouched.
+    pub rationale: Option<String>,
+    /// Self-reflection confidence `ρ_SR` (Wang et al., 2024), computed only
+    /// when [`Self::rationale`] is `Some`.
+    ///
+    /// `None` when there is no rationale, in which case [`Self::total_score`]
+    /// is the support/consistency blend alone — today's formula, bit-for-bit
+    /// unchanged.
+    pub self_reflection: Option<f32>,
+    /// Weighted blend of support and self-consistency (playing the role of
+    /// `ρ_SC` in the paper), multiplied by [`Self::self_reflection`] (`ρ_SR`)
+    /// when a rationale is present; otherwise equal to the blend alone. In
+    /// `[0, 1]`.
     pub total_score: f32,
 }
 
@@ -260,4 +364,20 @@ pub(crate) fn token_jaccard(a: &str, b: &str) -> f32 {
     }
     let intersection = set_a.intersection(&set_b).count();
     intersection as f32 / union as f32
+}
+
+// ── Self-reflection scoring ──────────────────────────────────────────────────────
+
+/// Default self-reflection confidence `ρ_SR` (Wang et al., 2024): the
+/// token-Jaccard overlap between a draft's `rationale` and its `draft` answer,
+/// in `[0, 1]`.
+///
+/// A rationale that shares little vocabulary with the answer it is meant to
+/// justify is weak evidence the answer follows from the reasoning; full
+/// overlap is the strongest lexical signal this deterministic proxy can give.
+/// This is the default body of [`DraftVerifier::reflect`], exposed
+/// separately so it can be measured directly in tests.
+#[must_use]
+pub(crate) fn self_reflection_score(rationale: &str, draft: &str) -> f32 {
+    token_jaccard(rationale, draft)
 }

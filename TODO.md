@@ -1,5 +1,101 @@
 # OxiRAG TODO
 
+## v0.24.0 — Inference-Time Control, Test-Time Search, Serving Runtime & Corpus Governance ✅
+
+**Released**: 2026-07-12 | **Tests**: 11,951 (+406) | **Warnings**: 0 | **Module dirs**: 209 | **New deps**: 0
+
+Twelve modules, four themes, zero new dependencies. Pre-validated by 4 parallel recon passes over the
+existing 197 modules. Zero prelude aliases (proactive prefixing + collision-sweep). rustc 1.97.0 (no
+toolchain drift since v0.23.0, so no cleanup pass).
+
+Recon **killed 2 candidates before any code was written**:
+- `speculative_rag` — **already exists**. `speculative_drafting` *is* Wang et al. 2024 "Speculative RAG".
+  Replaced by `self_taught_reasoner` (STaR) — `rationale`/`rationaliz` had zero hits crate-wide.
+- `multi_lora_serving` — the only adapter-forward code is candle-gated (5 heavy deps) or self-referential
+  if hand-rolled; its hard part (adapter paging) collides with `continuous_batching`'s allocator.
+  Replaced by `chunked_prefill` (Sarathi-Serve), whose oracle is code it did not write.
+
+Recon also **rescoped `corpus_curation`**: near-dup already exists 3× (`lsh_index::MinHashIndex`,
+`semantic_dedup`, `knowledge_unlearning::dedup`). It composes `corpus-curation = ["lsh"]` not a fourth.
+
+**Theme 1 — Inference-Time Control** (`inference-time-control`)
+- [x] **Constrained Decoding** (`constrained-decoding`): regex/JSON-Schema → Thompson NFA → subset-DFA;
+  vocabulary FSM index with co-accessibility pruning; decode-time logit mask. NFA-vs-DFA agree on all
+  ~1.75M strings ≤ len 8 (0 disagreements); `serde_json` oracle caught a grammar admitting `"-0"`.
+  `ConstrainedDecoder`, `Dfa`, `Nfa`, `RegexAst`. 65 tests.
+- [x] **Context-Aware Decoding** (`context-aware-decoding`): CAD + DoLa (JSD premature layer) + Contrastive
+  Decoding w/ adaptive plausibility. Bit-equal to `replug` log-linear pool where no truncation fires;
+  crafted input shows the unconstrained kernel amplifies a 4e-6 token to p=0.99998. `ContextAwareDecoder`,
+  `DoLaDecoder`, `cad_jensen_shannon_divergence`. 38 tests.
+- [x] **Activation Steering** (`activation-steering`): ITI + CAA; mass-mean probe recovers planted
+  direction at cosine 0.9994; top-K selects exactly 3/8 signal heads; `alpha*sigma` shift matches to 4
+  digits. States+proves two honest limits (no mid-forward hook; per-head activations not stored).
+  `ActivationSteering`, `LinearProbe`, `SteerableModel`. 24 tests.
+
+**Theme 2 — Test-Time Search & Process Supervision** (`test-time-search`)
+- [x] **Process Reward Model** (`process-reward-model`): Math-Shepherd MC-rollout labels recover true
+  p=0.70→0.696 (Hoeffding); min-agg localizes a flaw to step 1 (0.106) where the outcome model ties at
+  1.0. Mutation-tested its own invariants. `ProcessRewardModel`, `OutcomeRewardModel`, `BestOfN`. 11 tests.
+- [x] **MCTS Reasoning** (`mcts-reasoning`): UCT/PUCT + rollout + value backprop + progressive widening;
+  exact UCT scores bit-for-bit; regret(2000)/regret(500)=1.22 vs >3.5 random; `N=1+ΣN(child)`, `Q=W/N`
+  exact. `MctsEngine`, `MctsNode`, `MctsSelectionPolicy`. 46 tests.
+- [x] **Self-Taught Reasoner** (`self-taught-reasoner`): STaR; forward accuracy climbs [1/13→1.0] to a
+  converged ceiling; rationalization ablation 0.5→1.0 coverage (gap = exactly the 13 hard problems);
+  structural cheat detector. `SelfTaughtReasoner`, `RationaleSet`, `is_cheating_rationale`. 30 tests.
+
+**Theme 3 — Serving Runtime** (`serving-runtime`)
+- [x] **Continuous Batching** (`continuous-batching`): PagedAttention KV blocks + COW + preemption +
+  iteration-level scheduling. Block-table attention == contiguous `scaled_dot_product_attention`
+  bit-for-bit; conservation holds over 6,000 seeded ops; prefix sharing factor 2.4 exact.
+  `KvBlockAllocator`, `ContinuousBatchEngine`. 25 tests.
+- [x] **Request Scheduling** (`request-scheduling`): SLO admission + priority + DRR/WFQ + EDF + starvation
+  bounds. EDF max-lateness == brute-force optimum over n! (Jackson's rule, 48 instances); DRR victim wait
+  flood-independent at 19 vs naive 51→91. `RequestScheduler`, `SchedulerExecutor`. 15 tests.
+- [x] **Chunked Prefill** (`chunked-prefill`): Sarathi-Serve stall-free batching. For **all 512**
+  compositions of a 10-token prompt, KV + attention == one-shot prefill bit-for-bit (injected off-by-one
+  proven to break it); stall bound tight. `ChunkedPrefill`, `PrefillScheduler`. 23 tests.
+
+**Theme 4 — Corpus Governance & Fairness** (`corpus-governance`)
+- [x] **Corpus Curation** (`corpus-curation` → `lsh`): Gopher/C4 heuristics + logistic quality classifier
+  (0.9056 held-out vs 0.5167 baseline) + contamination detection (6/6, rate 0.3 exact); precision@10
+  0.70→1.00. Composes `lsh_index::MinHashIndex`, not a 4th MinHash. `CorpusCurator`, `ContaminationDetector`.
+  39 tests.
+- [x] **Fairness Ranking** (`fairness-ranking`): FA*IR on an **exact** binomial CDF (asserted divergent
+  from the normal approx: Bin(5,0.1) exact 0.59049 vs 0.5) + DELTR + Biega equity via a from-scratch
+  Hungarian solver (== brute force over n!). Disparity 0.0999→0.0282 at nDCG cost 0.004. `FairnessRanker`,
+  `binomial_cdf`, `solve_assignment`. 49 tests.
+- [x] **Knowledge Editing** (`knowledge-editing`): ROME rank-1 edit `W'k*=v*` to <1e-9 (== independent
+  PGD solve to <1e-6); non-evicting codebook serves 50/50 under pressure vs LRU 8/50; overdetermined
+  (E>d) edits honestly rejected with rollback. `KnowledgeEditor`, `RankOneEdit`, `EditCodebook`. 28 tests.
+
+**Correctness item (found by recon)**
+- [x] **`speculative_drafting` paper fidelity** — closed both deviations *additively* (all 66 prior tests
+  unchanged, no-rationale path bit-for-bit identical): opt-in `OneRepresentativePerCluster` subset
+  sampling (the paper's scheme) + optional `rationale` with a `ρ_SC × ρ_SR` self-reflection term. +13 tests.
+
+**Process notes (what worked / to repeat)**
+- **Orchestrator ran on Opus 4.8** (Rule 0 satisfied — second consecutive non-Sonnet cycle).
+- **Recon-first paid off a 4th cycle running**: killed 2 duplicates + rescoped 1 before any code. The
+  serving-theme boundary was drawn crisply enough (`continuous_batching`=bytes, `request_scheduling`=order,
+  `chunked_prefill`=within-request splitting) that 3 parallel agents never collided.
+- **Zero prelude aliases** (matches v0.21.0/v0.23.0 best case): Phase-0 pre-wiring + one-dir-per-agent +
+  a pre-flight sibling-collision assignment (`ContinuousBatchConfig`/`RequestSchedulingConfig` both wanted
+  `SchedulerConfig`; `KnowledgeEditLinalgError` not the preluded `LinalgError`; `SteeringProbeResult` not
+  `ProbeResult`). Recon swept 100+ names; the wiring agent's grep found no residual clash.
+- **Measurement-based tests earned their keep again**: every module's headline test falsified against
+  independent ground truth. First bug caught in *shipped implementation logic* (not just a test premise):
+  `constrained_decoding`'s JSON integer grammar admitted `"-0"`, which `serde_json` reads back as a float.
+  `process_reward_model` and `request_scheduling` proactively mutation-tested their own suites when
+  headline tests passed first try. `fairness_ranking` and `knowledge_editing` degraded honestly rather
+  than faking (ProportionalExposure documented as a heuristic; E>d edits rejected with rollback).
+- **The CAD near-duplicate became a regression test**: recon found `replug::log_linear_pool` already
+  computes CAD's formula (it accepts negative weights); handing that to the implementer up front turned a
+  would-be duplicate into the module's strongest cross-module bit-equality assertion.
+- **Integration agent hit a mid-run API session limit** after writing the prelude + a green build;
+  orchestrator verified all 5 gates itself rather than resuming, and finished the release.
+- **No git-reset / self-delegation / cross-file-collision hazards recurred** (the no-mutating-git,
+  do-it-yourself, one-directory-per-agent briefs held for all 14 subagents).
+
 ## v0.23.0 — Constrained & Mutable Search, Probabilistic IR, Collaborative Generation & Privacy-Provenance ✅
 
 **Released**: 2026-07-11 | **Tests**: 11,545 | **Warnings**: 0

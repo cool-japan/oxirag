@@ -9,18 +9,40 @@
 //! combines it with **self-consistency** (agreement across the drafts). The
 //! highest-scoring draft is returned.
 //!
+//! Two paper-faithful capabilities are available **opt-in**, each defaulting
+//! to today's behavior so existing callers see no change:
+//!
+//! - **Paper subset sampling.** [`DraftSubsetStrategy::OneRepresentativePerCluster`]
+//!   forms `M` subsets, each holding one representative document sampled from
+//!   *every* cluster — rather than one draft per whole cluster — matching the
+//!   paper's own sampling scheme. Select it with
+//!   [`SpecDraftConfig::with_subset_strategy`]; the default remains
+//!   [`DraftSubsetStrategy::PerCluster`].
+//! - **Self-reflection.** A [`Drafter`] that overrides
+//!   [`Drafter::draft_with_rationale`] attaches a rationale to its draft; the
+//!   verifier's [`DraftVerifier::reflect`] then scores a rationale-conditioned
+//!   confidence `ρ_SR`, and the total score becomes `ρ_SC * ρ_SR` — the
+//!   paper's verifier score — instead of the plain support/consistency blend
+//!   `ρ_SC` alone. A drafter that never supplies a rationale (the default)
+//!   leaves the score exactly as it was.
+//!
 //! This module is **distinct** from `self_consistency`: that module samples
 //! diverse *reasoning paths* from a single query and marginalizes over them,
 //! whereas here the diversity comes from *disjoint document clusters* — each
-//! draft is grounded in a different slice of the evidence.
+//! draft is grounded in a different slice of the evidence. It is also
+//! **distinct** from [`layer2_speculator`](crate::layer2_speculator), which
+//! performs *token-level* draft-and-verify speculative decoding (a small
+//! model proposes tokens, a large model verifies them); this module performs
+//! *document-level* draft-and-verify retrieval-augmented generation.
 //!
 //! # Pipeline
 //!
 //! | Stage | Responsibility |
 //! |-------|----------------|
 //! | [`SpeculativeDrafter::cluster_docs`] | Partition the corpus into `<= num_clusters` diverse groups |
-//! | [`Drafter`] | Draft one answer per cluster (run in parallel) |
-//! | [`DraftVerifier`] | Score how well each draft is supported by its docs |
+//! | [`SpeculativeDrafter::draft_groups`] | One group per cluster, or `M` cross-cluster representative subsets (see [`DraftSubsetStrategy`]) |
+//! | [`Drafter`] | Draft one answer per group, optionally with a rationale (run in parallel) |
+//! | [`DraftVerifier`] | Score how well each draft is supported by its docs, and — given a rationale — self-reflection confidence |
 //! | self-consistency | Mean token-Jaccard agreement across drafts |
 //! | [`SpeculativeDrafter::run`] | Blend the scores and pick the best draft |
 //!
@@ -54,6 +76,6 @@ mod tests;
 
 pub use drafter::SpeculativeDrafter;
 pub use types::{
-    DraftCandidate, DraftVerifier, Drafter, MockDraftVerifier, MockDrafter, SpecDraftConfig,
-    SpecDraftError, SpeculativeOutput,
+    DraftCandidate, DraftSubsetStrategy, DraftVerifier, Drafter, MockDraftVerifier, MockDrafter,
+    SpecDraftConfig, SpecDraftError, SpeculativeOutput,
 };

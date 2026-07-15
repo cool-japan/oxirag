@@ -16,8 +16,8 @@
 use super::cluster::{embed, kmeans_lite};
 use super::drafter::SpeculativeDrafter;
 use super::types::{
-    DraftVerifier, Drafter, MockDraftVerifier, MockDrafter, SpecDraftConfig, SpecDraftError,
-    token_jaccard,
+    DraftSubsetStrategy, DraftVerifier, Drafter, MockDraftVerifier, MockDrafter, SpecDraftConfig,
+    SpecDraftError, token_jaccard,
 };
 use crate::types::Document;
 
@@ -889,4 +889,394 @@ fn run_output_best_non_empty() {
         )
         .unwrap();
     assert!(!out.best.is_empty());
+}
+
+// ── DraftSubsetStrategy: paper subset sampling (Deviation 1) ────────────────────
+
+#[test]
+fn subset_strategy_default_is_per_cluster() {
+    assert_eq!(
+        SpecDraftConfig::default().subset_strategy,
+        DraftSubsetStrategy::PerCluster
+    );
+    assert_eq!(
+        DraftSubsetStrategy::default(),
+        DraftSubsetStrategy::PerCluster
+    );
+}
+
+#[test]
+fn config_default_num_subsets_is_three() {
+    assert_eq!(SpecDraftConfig::default().num_subsets, 3);
+}
+
+#[test]
+fn config_builder_subset_strategy() {
+    let cfg = SpecDraftConfig::new()
+        .with_subset_strategy(DraftSubsetStrategy::OneRepresentativePerCluster);
+    assert_eq!(
+        cfg.subset_strategy,
+        DraftSubsetStrategy::OneRepresentativePerCluster
+    );
+    // Other fields untouched.
+    assert_eq!(cfg.num_clusters, 3);
+}
+
+#[test]
+fn config_builder_num_subsets() {
+    let cfg = SpecDraftConfig::new().with_num_subsets(9);
+    assert_eq!(cfg.num_subsets, 9);
+}
+
+#[test]
+fn subset_strategy_per_cluster_draft_groups_is_identity() {
+    // Additivity: under the default strategy, `draft_groups` returns its
+    // input unchanged -- literally the same partition `cluster_docs`
+    // produced, exactly what `run` has always drafted from.
+    let corpus = two_topic_corpus();
+    let drafter = SpeculativeDrafter::new(SpecDraftConfig::new().with_num_clusters(3));
+    let clusters = drafter.cluster_docs(&corpus);
+    let groups = drafter.draft_groups(clusters.clone());
+    assert_eq!(groups, clusters);
+}
+
+/// MEASUREMENT (a): the paper subset strategy produces subsets with exactly
+/// one representative per cluster, `M` of them, deterministically.
+#[test]
+fn subset_strategy_one_representative_per_cluster_composition() {
+    let corpus = two_topic_corpus();
+    let drafter = SpeculativeDrafter::new(
+        SpecDraftConfig::new()
+            .with_num_clusters(2)
+            .with_subset_strategy(DraftSubsetStrategy::OneRepresentativePerCluster)
+            .with_num_subsets(4),
+    );
+    let clusters = drafter.cluster_docs(&corpus);
+    assert!(
+        clusters.len() >= 2,
+        "fixture expected to yield at least 2 clusters, got {}",
+        clusters.len()
+    );
+
+    let subsets = drafter.draft_groups(clusters.clone());
+
+    // Exactly M = 4 subsets.
+    assert_eq!(subsets.len(), 4);
+
+    // Each subset has exactly one representative per cluster (composition
+    // explicit: same length as the cluster list), and every representative
+    // genuinely belongs to the cluster it stands in for.
+    for subset in &subsets {
+        assert_eq!(subset.len(), clusters.len());
+        for (cluster, &rep) in clusters.iter().zip(subset.iter()) {
+            assert!(
+                cluster.contains(&rep),
+                "representative {rep} must belong to its cluster {cluster:?}"
+            );
+        }
+    }
+
+    // Explicit composition, hand-derived straight from the definition:
+    // subset `m` must equal `clusters[c][m % clusters[c].len()]` for every
+    // cluster `c`.
+    let expected: Vec<Vec<usize>> = (0..4)
+        .map(|m| clusters.iter().map(|c| c[m % c.len()]).collect())
+        .collect();
+    assert_eq!(subsets, expected);
+
+    // Deterministic: same clusters + same M ⇒ identical subsets, repeatably
+    // (same seed/order ⇒ identical output).
+    let subsets_again = drafter.draft_groups(clusters.clone());
+    assert_eq!(subsets, subsets_again);
+    let subsets_third = drafter.draft_groups(clusters);
+    assert_eq!(subsets, subsets_third);
+}
+
+#[test]
+fn subset_strategy_one_representative_num_subsets_zero_floors_to_one() {
+    let corpus = two_topic_corpus();
+    let drafter = SpeculativeDrafter::new(
+        SpecDraftConfig::new()
+            .with_num_clusters(2)
+            .with_subset_strategy(DraftSubsetStrategy::OneRepresentativePerCluster)
+            .with_num_subsets(0),
+    );
+    let clusters = drafter.cluster_docs(&corpus);
+    let subsets = drafter.draft_groups(clusters);
+    assert_eq!(subsets.len(), 1);
+}
+
+#[test]
+fn subset_strategy_one_representative_empty_clusters_is_empty() {
+    let drafter = SpeculativeDrafter::new(
+        SpecDraftConfig::new()
+            .with_subset_strategy(DraftSubsetStrategy::OneRepresentativePerCluster)
+            .with_num_subsets(3),
+    );
+    assert!(drafter.draft_groups(Vec::new()).is_empty());
+}
+
+#[test]
+fn subset_strategy_one_representative_cycles_within_larger_cluster() {
+    // A single cluster of 3 members, sampled into 5 subsets: representative
+    // selection must cycle deterministically (m % 3), not panic or stall.
+    let corpus = vec![doc("alpha one"), doc("beta two"), doc("gamma three")];
+    let drafter = SpeculativeDrafter::new(
+        SpecDraftConfig::new()
+            .with_num_clusters(1)
+            .with_subset_strategy(DraftSubsetStrategy::OneRepresentativePerCluster)
+            .with_num_subsets(5),
+    );
+    let clusters = drafter.cluster_docs(&corpus);
+    assert_eq!(clusters.len(), 1);
+    let subsets = drafter.draft_groups(clusters.clone());
+    assert_eq!(subsets.len(), 5);
+    let expected: Vec<Vec<usize>> = (0..5)
+        .map(|m| clusters.iter().map(|c| c[m % c.len()]).collect())
+        .collect();
+    assert_eq!(subsets, expected);
+    // With only 3 distinct members, subset 0 and subset 3 must repeat
+    // (3 % 3 == 0), exercising the wraparound explicitly.
+    assert_eq!(subsets[0], subsets[3]);
+}
+
+// ── Self-reflection: rationale-conditioned scoring (Deviation 2) ────────────────
+
+#[test]
+fn draft_with_rationale_default_has_no_rationale() {
+    // Additivity: a `Drafter` that only implements `draft` -- every drafter
+    // that existed before this feature -- gets `None` back from the default
+    // `draft_with_rationale`, with content identical to calling `draft`
+    // directly.
+    let d = MockDrafter::new();
+    let docs = vec![doc("photosynthesis needs sunlight.")];
+    let refs: Vec<&Document> = docs.iter().collect();
+    let (content, rationale) = d.draft_with_rationale("query", &refs);
+    assert_eq!(content, d.draft("query", &refs));
+    assert_eq!(rationale, None);
+}
+
+#[test]
+fn reflect_default_is_token_jaccard_of_rationale_and_draft() {
+    let v = MockDraftVerifier::new();
+    let docs = two_topic_corpus();
+    let refs: Vec<&Document> = docs.iter().collect();
+    let score = v.reflect(
+        "q",
+        "sunlight energy plants",
+        "sunlight energy comes from stars",
+        &refs,
+    );
+    let expected = token_jaccard("sunlight energy comes from stars", "sunlight energy plants");
+    assert_eq!(score, expected);
+    assert!(expected > 0.0 && expected < 1.0);
+}
+
+/// MEASUREMENT (b): with a rationale present, `total_score` is exactly
+/// `ρ_SC * ρ_SR` (hand-computed). With no rationale, `total_score` equals
+/// today's `ρ_SC`-only formula bit-for-bit -- the additivity guarantee.
+#[test]
+fn rationale_total_is_exact_product_and_additive_without_it() {
+    // A drafter that always emits the same content and a fixed rationale
+    // that partially overlaps it, so rho_sr = token_jaccard(rationale,
+    // content) is neither 0 nor 1 -- a genuine measurement, not a
+    // degenerate corner.
+    struct RationaleDrafter;
+    impl Drafter for RationaleDrafter {
+        fn draft(&self, _query: &str, _docs: &[&Document]) -> String {
+            "sunlight energy plants grow".to_string()
+        }
+        fn draft_with_rationale(
+            &self,
+            query: &str,
+            docs: &[&Document],
+        ) -> (String, Option<String>) {
+            let content = self.draft(query, docs);
+            let rationale = "sunlight energy comes from the sun and warms plants".to_string();
+            (content, Some(rationale))
+        }
+    }
+
+    let corpus = two_topic_corpus();
+    let cfg = SpecDraftConfig::new()
+        .with_num_clusters(3)
+        .with_verify_weight(0.6)
+        .with_consistency_weight(0.4);
+    let drafter = SpeculativeDrafter::new(cfg.clone());
+
+    // -- With a rationale: total == rho_sc * rho_sr, exactly (epsilon for
+    // float round-trip only). --
+    let out = drafter
+        .run(
+            "describe",
+            &corpus,
+            &RationaleDrafter,
+            &MockDraftVerifier::new(),
+        )
+        .unwrap();
+    assert!(!out.drafts.is_empty());
+    for d in &out.drafts {
+        let rationale = d
+            .rationale
+            .as_deref()
+            .expect("RationaleDrafter always supplies a rationale");
+        assert_eq!(
+            rationale,
+            "sunlight energy comes from the sun and warms plants"
+        );
+
+        // Hand-compute rho_sc from the independently-validated
+        // support_score/self_consistency fields, and rho_sr via the public
+        // token_jaccard helper -- the same definition
+        // `DraftVerifier::reflect`'s default uses.
+        let rho_sc =
+            cfg.verify_weight * d.support_score + cfg.consistency_weight * d.self_consistency;
+        let rho_sr = token_jaccard(rationale, &d.content);
+        assert!(
+            rho_sr > 0.0 && rho_sr < 1.0,
+            "fixture must give a genuine partial overlap, got {rho_sr}"
+        );
+        assert_eq!(d.self_reflection, Some(rho_sr));
+        assert!((d.total_score - rho_sc * rho_sr).abs() < 1e-5);
+    }
+
+    // -- With no rationale: total is today's formula, bit-for-bit. --
+    // `MockDrafter` never overrides `draft_with_rationale`, so it always
+    // returns `None` via the trait's default implementation.
+    let out_plain = drafter
+        .run(
+            "describe",
+            &corpus,
+            &MockDrafter::new(),
+            &MockDraftVerifier::new(),
+        )
+        .unwrap();
+    assert!(!out_plain.drafts.is_empty());
+    for d in &out_plain.drafts {
+        assert_eq!(d.rationale, None);
+        assert_eq!(d.self_reflection, None);
+        let rho_sc =
+            cfg.verify_weight * d.support_score + cfg.consistency_weight * d.self_consistency;
+        assert_eq!(d.total_score, rho_sc);
+    }
+}
+
+// ── Ablation: paper subset strategy is real, not cosmetic (Deviation 1) ─────────
+
+/// MEASUREMENT (c): an ablation on a fixture where `PerCluster` and
+/// `OneRepresentativePerCluster` genuinely diverge -- the paper mode changes
+/// which draft wins, proving it is a real behavioral change, not cosmetic.
+#[test]
+fn subset_strategy_changes_selection_on_diverging_fixture() {
+    // A `Drafter` that reports which topic(s) its subset spans, derived from
+    // each doc's leading numeric index (0-2 = topic A, 3-5 = topic B).
+    // `PerCluster` subsets are topic-pure (a whole cluster); paper subsets
+    // mix one representative from *each* topic -- a composition `PerCluster`
+    // can never produce. This lets the two strategies be told apart by the
+    // content they draft.
+    struct CompositionDrafter;
+    impl Drafter for CompositionDrafter {
+        fn draft(&self, _query: &str, docs: &[&Document]) -> String {
+            let indices: Vec<usize> = docs
+                .iter()
+                .filter_map(|d| d.content.split_whitespace().next())
+                .filter_map(|w| w.parse::<usize>().ok())
+                .collect();
+            let has_a = indices.iter().any(|&i| i < 3);
+            let has_b = indices.iter().any(|&i| i >= 3);
+            match (has_a, has_b) {
+                (true, true) => "gamma crosslink sunlight respiration".to_string(),
+                (true, false) => "alpha photosynthesis sunlight chlorophyll".to_string(),
+                (false, true) => "beta respiration mitochondria glucose".to_string(),
+                (false, false) => "empty subset".to_string(),
+            }
+        }
+    }
+
+    let corpus = vec![
+        doc("0 photosynthesis sunlight chlorophyll plants energy"),
+        doc("1 photosynthesis sunlight chlorophyll plants sugar"),
+        doc("2 photosynthesis sunlight leaves plants green"),
+        doc("3 respiration mitochondria atp glucose cells"),
+        doc("4 respiration mitochondria atp glucose animal"),
+        doc("5 respiration mitochondria atp cellular breakdown"),
+    ];
+
+    let base_cfg = SpecDraftConfig::new()
+        .with_num_clusters(2)
+        .with_verify_weight(0.6)
+        .with_consistency_weight(0.4);
+    let drafter_per_cluster = SpeculativeDrafter::new(base_cfg.clone());
+    let drafter_one_rep = SpeculativeDrafter::new(
+        base_cfg
+            .with_subset_strategy(DraftSubsetStrategy::OneRepresentativePerCluster)
+            .with_num_subsets(3),
+    );
+
+    // Sanity: the fixture must actually split into two topic-pure clusters,
+    // or this ablation would not be measuring what it claims to (both
+    // drafters share the same num_clusters/dim, so cluster_docs agrees).
+    let base_clusters = drafter_per_cluster.cluster_docs(&corpus);
+    assert_eq!(base_clusters.len(), 2, "fixture must yield two clusters");
+    for cluster in &base_clusters {
+        let has_a = cluster.iter().any(|&i| i < 3);
+        let has_b = cluster.iter().any(|&i| i >= 3);
+        assert!(
+            has_a ^ has_b,
+            "cluster {cluster:?} must be topic-pure for this ablation to be meaningful"
+        );
+    }
+
+    let out_per_cluster = drafter_per_cluster
+        .run(
+            "describe",
+            &corpus,
+            &CompositionDrafter,
+            &MockDraftVerifier::new(),
+        )
+        .unwrap();
+    let out_one_rep = drafter_one_rep
+        .run(
+            "describe",
+            &corpus,
+            &CompositionDrafter,
+            &MockDraftVerifier::new(),
+        )
+        .unwrap();
+
+    // The two strategies must select genuinely different winning content --
+    // proof the paper sampling mode is real, not cosmetic.
+    assert_ne!(
+        out_per_cluster.best, out_one_rep.best,
+        "paper subset strategy must change the winning draft on a fixture \
+         where per-cluster and per-representative subsets genuinely diverge"
+    );
+
+    // Report the selected draft in each mode, hand-derived:
+    //   PerCluster: two topic-pure drafts with disjoint tokens
+    //     (self_consistency = 0.0 each); support = 3/4 each (their own
+    //     topic's three words ground, "alpha"/"beta" do not) -- an exact
+    //     tie broken to the lower cluster id (topic A).
+    //     total = 0.6 * 0.75 + 0.4 * 0.0 = 0.45.
+    //   OneRepresentativePerCluster: every subset mixes one doc from each
+    //     topic, so every draft is the identical "mixed" string
+    //     (self_consistency = 1.0); support = 2/4 (only "sunlight" and
+    //     "respiration" ground, each present in every doc of its topic).
+    //     total = 0.6 * 0.5 + 0.4 * 1.0 = 0.7.
+    assert_eq!(
+        out_per_cluster.best,
+        "alpha photosynthesis sunlight chlorophyll"
+    );
+    assert_eq!(out_one_rep.best, "gamma crosslink sunlight respiration");
+    assert!((out_per_cluster.confidence - 0.45).abs() < 1e-4);
+    assert!((out_one_rep.confidence - 0.7).abs() < 1e-4);
+
+    assert_eq!(out_per_cluster.drafts.len(), 2);
+    assert_eq!(out_one_rep.drafts.len(), 3);
+    assert!(
+        out_one_rep
+            .drafts
+            .iter()
+            .all(|d| d.content == out_one_rep.best)
+    );
 }
