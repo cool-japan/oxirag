@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use crate::error::GraphError;
 use crate::layer4_graph::traits::RelationshipExtractor;
 use crate::layer4_graph::types::{GraphEntity, GraphRelationship, RelationshipType};
+use crate::text;
 
 /// A mock relationship extractor that returns predefined relationships for testing.
 #[derive(Debug, Default)]
@@ -85,6 +86,11 @@ impl PatternRelationshipExtractor {
     #[must_use]
     pub fn new() -> Self {
         Self {
+            // Both punctuation families in one list. The matcher looks for a pattern in the text
+            // BETWEEN two entity mentions, and in Japanese that span is the particles and verb —
+            // `東京 は 日本の首都 です` puts `は` between `東京` and `日本`, and the copula after.
+            // Neither is a word in the English sense, which is why none of the English patterns
+            // could ever fire on Japanese and why a Japanese corpus produced zero relationships.
             is_a_patterns: vec![
                 "is a".to_string(),
                 "is an".to_string(),
@@ -94,6 +100,8 @@ impl PatternRelationshipExtractor {
                 "type of".to_string(),
                 "kind of".to_string(),
                 "instance of".to_string(),
+                "とは".to_string(),
+                "という".to_string(),
             ],
             part_of_patterns: vec![
                 "part of".to_string(),
@@ -102,6 +110,9 @@ impl PatternRelationshipExtractor {
                 "component of".to_string(),
                 "member of".to_string(),
                 "within".to_string(),
+                "の一部".to_string(),
+                "に含まれ".to_string(),
+                "に属す".to_string(),
             ],
             uses_patterns: vec![
                 "uses".to_string(),
@@ -112,6 +123,10 @@ impl PatternRelationshipExtractor {
                 "built with".to_string(),
                 "implemented with".to_string(),
                 "written in".to_string(),
+                "を使".to_string(),
+                "を利用".to_string(),
+                "で作".to_string(),
+                "を用い".to_string(),
             ],
             created_by_patterns: vec![
                 "created by".to_string(),
@@ -121,6 +136,10 @@ impl PatternRelationshipExtractor {
                 "authored by".to_string(),
                 "designed by".to_string(),
                 "invented by".to_string(),
+                "が作".to_string(),
+                "が開発".to_string(),
+                "によって作".to_string(),
+                "が生み出".to_string(),
             ],
             located_in_patterns: vec![
                 "located in".to_string(),
@@ -129,6 +148,10 @@ impl PatternRelationshipExtractor {
                 "at".to_string(),
                 "from".to_string(),
                 "headquartered in".to_string(),
+                "にあ".to_string(),
+                "に位置".to_string(),
+                "で生まれ".to_string(),
+                "にまたが".to_string(),
             ],
             works_for_patterns: vec![
                 "works for".to_string(),
@@ -163,18 +186,51 @@ impl PatternRelationshipExtractor {
     }
 
     /// Find the relationship type and direction between two entities based on text patterns.
+    /// True when another entity's name sits between the two given positions in `sentence`.
+    ///
+    /// Used to require ADJACENCY on Japanese. `カレーはインドで生まれた料理です` mentions three
+    /// entities, and the span between `カレー` and `料理` contains `で生まれ`, so a pattern search
+    /// over that span reports `カレー LOCATED_IN 料理` — a relationship the sentence does not state.
+    /// The verb belongs to the entity actually next to it. English does not need this: its patterns
+    /// are words that sit directly between the pair, so an intervening entity does not smuggle one
+    /// in, and requiring adjacency there would drop relationships that are really stated.
+    fn has_entity_between(
+        sentence_lower: &str,
+        start: usize,
+        end: usize,
+        entities: &[GraphEntity],
+        source: &GraphEntity,
+        target: &GraphEntity,
+    ) -> bool {
+        if start >= end {
+            return false;
+        }
+        let span = &sentence_lower[start..end];
+        entities.iter().any(|other| {
+            other.id != source.id
+                && other.id != target.id
+                && span.contains(&other.name.to_lowercase())
+        })
+    }
+
+    #[allow(clippy::too_many_lines)]
     fn find_relationship_pattern(
         &self,
         text: &str,
         source: &GraphEntity,
         target: &GraphEntity,
+        entities: &[GraphEntity],
     ) -> Option<(RelationshipType, bool)> {
         let lower_text = text.to_lowercase();
         let source_lower = source.name.to_lowercase();
         let target_lower = target.name.to_lowercase();
 
-        // Try to find a sentence or clause containing both entities
-        let sentences: Vec<&str> = text.split(['.', '!', '?', ';', ',']).collect();
+        // Try to find a sentence or clause containing both entities. Clause separators are added
+        // to the sentence enders, in both punctuation families — `、` is the Japanese comma.
+        let sentences: Vec<&str> = text::split_sentences(text)
+            .into_iter()
+            .flat_map(|sentence| sentence.split([';', ',', '；', '、']))
+            .collect();
 
         for sentence in sentences {
             let sentence_lower = sentence.to_lowercase();
@@ -192,7 +248,39 @@ impl PatternRelationshipExtractor {
                 };
 
                 if start < end {
-                    let between = &sentence_lower[start..end];
+                    if text::has_cjk(sentence)
+                        && Self::has_entity_between(
+                            &sentence_lower,
+                            start,
+                            end,
+                            entities,
+                            source,
+                            target,
+                        )
+                    {
+                        continue;
+                    }
+                    // Japanese is verb-final: `OxiRAG は OxiZ を使います` puts the verb that names
+                    // the relationship AFTER both entities, where a between-the-entities search
+                    // cannot see it. English puts it in the middle (`OxiRAG uses OxiZ`), which is
+                    // the only case the original span covers. So for text with CJK in it, search
+                    // the span between the entities AND the tail after the second one.
+                    let tail_start = end
+                        + if forward {
+                            target_lower.len()
+                        } else {
+                            source_lower.len()
+                        };
+                    let span = if text::has_cjk(sentence) && tail_start <= sentence_lower.len() {
+                        format!(
+                            "{}{}",
+                            &sentence_lower[start..end],
+                            &sentence_lower[tail_start..]
+                        )
+                    } else {
+                        sentence_lower[start..end].to_string()
+                    };
+                    let between = span.as_str();
 
                     // Check each pattern type
                     for pattern in &self.is_a_patterns {
@@ -282,7 +370,7 @@ impl RelationshipExtractor for PatternRelationshipExtractor {
 
                 // Try to find a relationship pattern
                 if let Some((rel_type, forward)) =
-                    self.find_relationship_pattern(text, source, target)
+                    self.find_relationship_pattern(text, source, target, entities)
                 {
                     let (src_id, tgt_id) = if forward {
                         (source.id.clone(), target.id.clone())

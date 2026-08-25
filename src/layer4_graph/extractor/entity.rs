@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use crate::error::GraphError;
 use crate::layer4_graph::traits::EntityExtractor;
 use crate::layer4_graph::types::{EntityType, GraphEntity};
+use crate::text;
 
 /// A mock entity extractor that returns predefined entities for testing.
 #[derive(Debug, Default)]
@@ -278,12 +279,70 @@ impl PatternEntityExtractor {
         None
     }
 
+    /// Japanese noun-phrase suffixes that name what kind of thing the phrase is.
+    ///
+    /// Japanese has no capitalisation, so `is_capitalized_word` — the whole basis of the English
+    /// path — finds nothing. What it does have is a productive suffix system: `静岡県` is a
+    /// prefecture the way `Shizuoka Prefecture` is, except that the suffix is part of the word.
+    /// Reading the last character is therefore the closest available equivalent of reading a
+    /// capital letter.
+    const JAPANESE_TYPE_SUFFIXES: [(&'static str, EntityType); 17] = [
+        ("県", EntityType::Location),
+        ("都", EntityType::Location),
+        ("府", EntityType::Location),
+        ("市", EntityType::Location),
+        ("区", EntityType::Location),
+        ("町", EntityType::Location),
+        ("村", EntityType::Location),
+        ("島", EntityType::Location),
+        ("山", EntityType::Location),
+        ("川", EntityType::Location),
+        ("湖", EntityType::Location),
+        ("駅", EntityType::Location),
+        ("会社", EntityType::Organization),
+        ("大学", EntityType::Organization),
+        ("学校", EntityType::Organization),
+        ("研究所", EntityType::Organization),
+        ("協会", EntityType::Organization),
+    ];
+
+    /// Classify a Japanese noun phrase by its suffix, defaulting to a concept.
+    ///
+    /// Longest suffix first: `大学` must not be read as the location suffix `学`… which is not in
+    /// the list, but the ordering is what keeps that class of mistake from appearing when it grows.
+    fn classify_japanese(name: &str) -> EntityType {
+        let mut best: Option<(usize, EntityType)> = None;
+        for (suffix, entity_type) in Self::JAPANESE_TYPE_SUFFIXES {
+            if name.ends_with(suffix)
+                && name.len() > suffix.len()
+                && best
+                    .as_ref()
+                    .is_none_or(|(best_len, _)| suffix.len() > *best_len)
+            {
+                best = Some((suffix.len(), entity_type));
+            }
+        }
+        best.map_or(EntityType::Concept, |(_, entity_type)| entity_type)
+    }
+
     /// Extract potential entity names from text.
-    fn extract_candidate_names(&self, text: &str) -> Vec<(String, String)> {
+    ///
+    /// Two paths, chosen per sentence by script. The Japanese one takes maximal Han and Katakana
+    /// runs (see [`crate::text::japanese_noun_candidates`]); before it existed this function
+    /// returned an empty vector for any Japanese input, and a Japanese corpus produced a knowledge
+    /// graph with zero nodes in it.
+    fn extract_candidate_names(&self, input: &str) -> Vec<(String, String)> {
         let mut candidates = Vec::new();
-        let sentences: Vec<&str> = text.split(['.', '!', '?']).collect();
+        let sentences: Vec<&str> = text::split_sentences(input);
 
         for sentence in sentences {
+            if text::has_cjk(sentence) {
+                for name in text::japanese_noun_candidates(sentence) {
+                    candidates.push((name, sentence.to_string()));
+                }
+                // A sentence can still hold Latin-script names (`OxiZ は…`), so fall through
+                // rather than continuing: both passes run over it.
+            }
             let words: Vec<&str> = sentence.split_whitespace().collect();
             let mut i = 0;
 
@@ -345,7 +404,13 @@ impl EntityExtractor for PatternEntityExtractor {
                 continue;
             }
 
-            if let Some(entity_type) = self.classify_entity(&name, &context) {
+            let classified = if text::has_cjk(&name) {
+                Some(Self::classify_japanese(&name))
+            } else {
+                self.classify_entity(&name, &context)
+            };
+
+            if let Some(entity_type) = classified {
                 seen_names.insert(lower_name);
                 entities.push(
                     GraphEntity::new(&name, entity_type).with_confidence(0.7), // Pattern-based extraction has moderate confidence

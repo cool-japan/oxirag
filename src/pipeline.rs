@@ -2,6 +2,7 @@
 
 use crate::time::Instant;
 use async_trait::async_trait;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -262,20 +263,79 @@ where
         &mut self.config
     }
 
+    /// How many retrieved documents contribute sentences to a draft.
+    const DRAFT_SOURCE_LIMIT: usize = 3;
+
+    /// How many sentences an extractive draft may contain.
+    const DRAFT_SENTENCE_LIMIT: usize = 5;
+
     /// Generate a draft answer from search results.
+    ///
+    /// The draft is EXTRACTIVE — no model writes it — so the only question is which of the
+    /// retrieved text belongs in it. This used to concatenate the top three documents whole, which
+    /// meant a query about penguins produced an answer that also explained bicycles, because the
+    /// bicycle document happened to rank third. Every downstream layer then graded and verified
+    /// that padding: Layer 2 marked the draft as needing revision, and Layer 3 spent solver calls
+    /// on claims the query never asked about.
+    ///
+    /// So: score each SENTENCE of the top [`Self::DRAFT_SOURCE_LIMIT`] documents against the query,
+    /// keep the ones that actually share terms with it, and assemble those in retrieval order. A
+    /// sentence that shares nothing with the query is not an answer to it. If no sentence clears
+    /// the bar the top document's opening sentences are used, so a draft is never empty — the
+    /// engine says something and lets Layer 2 mark it as weak, rather than silently returning
+    /// nothing.
     #[allow(clippy::unused_self, clippy::cast_precision_loss)]
     fn generate_draft(&self, query: &Query, context: &[crate::types::SearchResult]) -> Draft {
         if context.is_empty() {
             return Draft::new("No relevant information found.", &query.text).with_confidence(0.0);
         }
 
-        // Simple draft generation: combine top results
-        let combined: String = context
-            .iter()
-            .take(3)
-            .map(|r| r.document.content.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let query_tokens = crate::text::query_tokens(&query.text);
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut selected: Vec<(usize, f32, String)> = Vec::new();
+
+        for (rank, result) in context.iter().take(Self::DRAFT_SOURCE_LIMIT).enumerate() {
+            for sentence in crate::text::split_sentences(&result.document.content) {
+                let score = crate::text::overlap_score(&query_tokens, sentence);
+                if score <= 0.0 {
+                    continue;
+                }
+                if !seen.insert(crate::text::normalize_for_compare(sentence)) {
+                    continue;
+                }
+                selected.push((rank, score, sentence.to_string()));
+            }
+        }
+
+        // Best-matching sentences first, ties broken by how well their document ranked, then
+        // truncated. Sorting by score rather than by position is what puts the sentence that
+        // answers the question at the top of the answer.
+        selected.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(core::cmp::Ordering::Equal)
+                .then(a.0.cmp(&b.0))
+        });
+        selected.truncate(Self::DRAFT_SENTENCE_LIMIT);
+
+        // Joined with `crate::text::join_sentences`, not `join(" ")`: splitting drops the
+        // terminator, and a draft that cannot be split back into sentences reaches Layer 3 as ONE
+        // claim holding the whole answer, and the revision step's "already present?" check as one
+        // opaque string. Both were visible on the page.
+        let combined = if selected.is_empty() {
+            crate::text::join_sentences(
+                &crate::text::split_sentences(&context[0].document.content)
+                    .into_iter()
+                    .take(2)
+                    .collect::<Vec<_>>(),
+            )
+        } else {
+            crate::text::join_sentences(
+                &selected
+                    .iter()
+                    .map(|(_, _, sentence)| sentence.as_str())
+                    .collect::<Vec<_>>(),
+            )
+        };
 
         let avg_score: f32 = context.iter().map(|r| r.score).sum::<f32>() / context.len() as f32;
 

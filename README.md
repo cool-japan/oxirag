@@ -329,6 +329,20 @@ reads config from the invocation directory upwards, never from a dependency:
 rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
 ```
 
+### Japanese
+
+Layers 2, 3 and 4 handle Japanese as of the current `Unreleased` entry. They did not before, and
+the failure was silent rather than loud: a Japanese corpus indexed and retrieved correctly (Layer 1
+works on character bigrams) and then produced `claims: 0`, `entities: 0`, `relationships: 0`,
+because every heuristic above Layer 1 assumed sentences end in `.` and words are separated by
+spaces.
+
+`crate::text` now carries the script-aware primitives — sentence splitting for both punctuation
+families, particle-boundary segmentation, topic/copula/negation handling, Han and Katakana noun
+candidates — and the extractors use them. What this is NOT is morphological analysis: there is no
+dictionary here, and `A は B です` is recognised by its particles, not parsed. For real
+segmentation, use [MeCrab](https://github.com/cool-japan/mecrab).
+
 **`MockEmbeddingProvider` does not retrieve, and `WasmRagEngine` is built on it.** It hashes the
 *whole text* into one `u64`, so cosine similarity between any two distinct strings is noise —
 measured at 384 dimensions, a near-duplicate pair scores 0.0284 while an unrelated pair scores

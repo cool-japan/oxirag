@@ -1,10 +1,11 @@
 //! Advanced claim extraction from text.
 
 use async_trait::async_trait;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::error::JudgeError;
 use crate::layer3_judge::traits::ClaimExtractor;
+use crate::text;
 use crate::types::{
     CausalStrength, ClaimStructure, ComparisonOp, LogicalClaim, Modality, TimeRelation,
 };
@@ -128,27 +129,25 @@ impl AdvancedClaimExtractor {
     }
 
     /// Split text into sentences.
+    ///
+    /// Delegates to [`crate::text::split_sentences`], which knows `。！？` as well as `.!?` and
+    /// treats a newline as a boundary. Splitting on the ASCII three alone meant a Japanese
+    /// paragraph arrived here as one sentence and left as no claims at all.
     #[allow(clippy::unused_self)]
-    fn split_sentences(&self, text: &str) -> Vec<String> {
-        text.split(['.', '!', '?'])
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
+    fn split_sentences(&self, input: &str) -> Vec<String> {
+        text::split_sentences(input)
+            .into_iter()
+            .map(str::to_string)
             .collect()
     }
 
     /// Tokenize a sentence into words.
+    ///
+    /// Delegates to [`crate::text::tokenize`], which keeps the historical whitespace path for text
+    /// with no CJK in it and segments on script and particle boundaries for text that has some.
     #[allow(clippy::unused_self)]
     fn tokenize(&self, sentence: &str) -> Vec<String> {
-        sentence
-            .split_whitespace()
-            .map(|w| {
-                w.chars()
-                    .filter(|c| c.is_alphanumeric())
-                    .collect::<String>()
-                    .to_lowercase()
-            })
-            .filter(|w| !w.is_empty())
-            .collect()
+        text::tokenize(sentence)
     }
 
     /// Check if a sentence contains negation.
@@ -324,8 +323,72 @@ impl AdvancedClaimExtractor {
         None
     }
 
+    /// Try to extract a predicate claim from a Japanese sentence.
+    ///
+    /// Japanese marks its topic with a particle rather than with word order, so the English path —
+    /// "find a copula verb in the token list, everything left of it is the subject" — has nothing
+    /// to find: there is no `is`, and before [`crate::text`] there was no token list either.
+    ///
+    /// The shape recognised here is the one everyday statements are written in:
+    ///
+    /// ```text
+    /// 東京 は 日本の首都 です。      → Predicate { 東京, です, 日本の首都 }
+    /// ペンギン は 空 を 飛びません。 → Not(Predicate { ペンギン, 飛びません, 空 })
+    /// ```
+    ///
+    /// Subject is what precedes the first `は`/`が`. If an object particle `を` follows, the object
+    /// is what precedes it and the predicate is the verb phrase after it; otherwise the sentence is
+    /// predicate-nominal and the copula is the predicate. Negation is a suffix on the predicate,
+    /// not a separate word, so it is detected on the phrase — see [`crate::text::is_negated`].
+    #[allow(clippy::cast_precision_loss)]
+    fn try_extract_predicate_ja(sentence: &str) -> Option<(ClaimStructure, f32)> {
+        let (subject, rest) = text::split_topic(sentence)?;
+        if subject.chars().count() < 2 {
+            return None;
+        }
+
+        let (structure, base_confidence) = if let Some(object_end) = rest.find('を') {
+            let object = rest[..object_end].trim();
+            let predicate = rest[object_end + 'を'.len_utf8()..].trim();
+            if object.is_empty() || predicate.is_empty() {
+                return None;
+            }
+            (
+                ClaimStructure::Predicate {
+                    subject: subject.to_string(),
+                    predicate: predicate.to_string(),
+                    object: Some(object.to_string()),
+                },
+                0.7_f32,
+            )
+        } else {
+            let (complement, had_copula) = text::strip_copula(rest);
+            if complement.is_empty() {
+                return None;
+            }
+            // A sentence with no copula and no object particle is a bare comment (`東京は寒い`);
+            // still a claim, but a less certain reading of one.
+            let predicate = if had_copula { "です" } else { "は" };
+            (
+                ClaimStructure::Predicate {
+                    subject: subject.to_string(),
+                    predicate: predicate.to_string(),
+                    object: Some(complement.to_string()),
+                },
+                if had_copula { 0.75 } else { 0.6 },
+            )
+        };
+
+        // Same shape as the English path: a longer sentence says more, up to a ceiling.
+        let confidence = (base_confidence + (sentence.chars().count() as f32 / 200.0)).min(0.9);
+        Some((structure, confidence))
+    }
+
     /// Extract a claim from a sentence.
     fn extract_claim_from_sentence(&self, sentence: &str) -> Option<LogicalClaim> {
+        if text::has_cjk(sentence) {
+            return Self::extract_claim_from_japanese_sentence(sentence);
+        }
         let tokens = self.tokenize(sentence);
 
         if tokens.len() < 2 {
@@ -353,6 +416,23 @@ impl AdvancedClaimExtractor {
             LogicalClaim::new(sentence, structure).with_confidence(confidence)
         })
     }
+
+    /// The Japanese counterpart of [`Self::extract_claim_from_sentence`].
+    ///
+    /// Kept separate rather than folded into the strategy chain because every strategy in that
+    /// chain keys off an English keyword list (`if`, `because`, `might`), and running them over
+    /// Japanese tokens produces confident nonsense rather than nothing. When Japanese equivalents
+    /// of those lists exist they belong here, in order of specificity, the same way.
+    fn extract_claim_from_japanese_sentence(sentence: &str) -> Option<LogicalClaim> {
+        let (mut structure, mut confidence) = Self::try_extract_predicate_ja(sentence)?;
+
+        if text::is_negated(sentence) {
+            structure = ClaimStructure::Not(Box::new(structure));
+            confidence *= 0.9;
+        }
+
+        Some(LogicalClaim::new(sentence, structure).with_confidence(confidence))
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -360,16 +440,28 @@ impl AdvancedClaimExtractor {
 impl ClaimExtractor for AdvancedClaimExtractor {
     async fn extract_claims(
         &self,
-        text: &str,
+        input: &str,
         max_claims: usize,
     ) -> Result<Vec<LogicalClaim>, JudgeError> {
-        let sentences = self.split_sentences(text);
+        let sentences = self.split_sentences(input);
 
-        let claims: Vec<LogicalClaim> = sentences
-            .into_iter()
-            .filter_map(|s| self.extract_claim_from_sentence(&s))
-            .take(max_claims)
-            .collect();
+        // De-duplicate by normalised sentence. A draft is assembled from retrieved passages, and
+        // the same passage can reach it twice — once as the draft body and once as a context
+        // summary. Verifying it twice does not make it truer; it just prints the same row twice on
+        // whatever renders the verdict table.
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut claims: Vec<LogicalClaim> = Vec::new();
+        for sentence in sentences {
+            if claims.len() >= max_claims {
+                break;
+            }
+            if !seen.insert(text::normalize_for_compare(&sentence)) {
+                continue;
+            }
+            if let Some(claim) = self.extract_claim_from_sentence(&sentence) {
+                claims.push(claim);
+            }
+        }
 
         Ok(claims)
     }

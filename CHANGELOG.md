@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Japanese, and answers made only of evidence
+
+Two separate defects, found by running the four layers on a Japanese corpus and reading what came
+out rather than reading the code.
+
+### Fixed
+
+- **Layers 3 and 4 returned nothing at all on Japanese.** Measured on a seven-document Japanese
+  corpus: `entities: 0`, `relationships: 0`, `claims: 0`, `summary: "No verifiable claims found"`.
+  Layer 1 ranked correctly throughout — it works on character bigrams and never needed words. The
+  cause was two assumptions baked into every heuristic in Layers 2–4: that sentences end in `.`,
+  `!` or `?`, and that words are separated by whitespace. Japanese does neither, so a paragraph
+  arrived at the claim extractor as one "sentence" holding one 40-character "word", and the
+  extractor bailed at its two-token minimum. The entity extractor, meanwhile, looked for capital
+  letters in a script that has no case.
+
+  New `crate::text` carries the script-aware primitives: sentence splitting that knows `。！？` and
+  treats a newline as a boundary, particle- and script-boundary segmentation, topic/copula/negation
+  handling, and Han/Katakana noun-phrase candidates. `AdvancedClaimExtractor` gained a Japanese
+  predicate path (`A は B です` → `Predicate`, `A は B を C ません` → `Not(Predicate)`);
+  `PatternEntityExtractor` gained Japanese noun candidates and suffix classification (`県`/`市`/`山`
+  → `Location`, `大学`/`会社` → `Organization`); `PatternRelationshipExtractor` gained Japanese
+  patterns and, because Japanese is verb-final, now also searches the span AFTER the second entity —
+  `OxiRAG は OxiZ を使います` puts the verb where a between-the-entities search cannot see it.
+  English extraction is unchanged: `crate::text::tokenize` keeps the historical whitespace path for
+  text with no CJK in it. Covered by `tests/japanese_pipeline.rs`.
+
+- **`RuleBasedSpeculator::revise_draft` put commentary and mid-word fragments into the answer.** It
+  built `"Based on the available information: " + the first 100 CHARACTERS of each of three
+  documents + the draft + "[Revision notes: …]"`. Layer 3 verifies the revised draft and prints one
+  row per claim, so every piece of that was visible to a reader as a verdict:
+  `MeCrab uses the IPADIC dicti OxiZ is a Pure Rust SMT solver` was one row — two unrelated halves
+  of two documents, cut mid-word by a character count, marked `Verified`. The context is where the
+  draft came from, so re-prepending it also duplicated every sentence: the same claim appeared two
+  and three times. Revision now adds whole retrieved SENTENCES that cover query terms the draft is
+  missing, de-duplicated, and adds nothing else. The issues are still reported on
+  `SpeculationResult::issues`, which is where a caller reads them; they no longer travel inside the
+  answer.
+
+### Changed
+
+- **`RagPipeline::generate_draft` is sentence-level.** It concatenated the top three documents
+  whole, so a question about penguins produced an answer that also explained bicycles, because the
+  bicycle document ranked third — and every downstream layer then graded and verified that padding.
+  It now scores each sentence of the top three documents against the query and keeps the ones that
+  share terms with it, best first, capped at five. A draft is still never empty: with nothing above
+  the bar, the top document's opening sentences are used and Layer 2 is left to mark the answer as
+  weak.
+- `AdvancedClaimExtractor::extract_claims` de-duplicates by normalised sentence.
+
 ## [Unreleased] — `wasm32-unknown-unknown`
 
 OxiRAG advertised WASM support it did not have. `categories` listed `"wasm"`, the crate shipped

@@ -136,6 +136,7 @@ pub mod semantic_cache;
 pub mod simd_similarity;
 pub mod streaming;
 pub mod sync;
+pub mod text;
 pub mod time;
 pub mod types;
 
