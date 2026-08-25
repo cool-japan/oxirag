@@ -221,7 +221,8 @@ impl Default for InMemoryDistillationTracker {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl DistillationTracker for InMemoryDistillationTracker {
     async fn track_query(
         &mut self,
@@ -274,7 +275,7 @@ impl DistillationTracker for InMemoryDistillationTracker {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

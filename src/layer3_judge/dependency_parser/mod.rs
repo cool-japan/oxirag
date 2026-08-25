@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use crate::error::JudgeError;
 use crate::types::{ClaimStructure, LogicalClaim};
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 /// Common dependency relations in natural language.

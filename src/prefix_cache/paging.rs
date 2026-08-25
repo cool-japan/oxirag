@@ -4,9 +4,9 @@
 //! efficient memory utilization by dividing cache entries into fixed-size
 //! pages that can be allocated and deallocated independently.
 
+use crate::time::Instant;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::time::Instant;
 
 use super::types::ContextFingerprint;
 
@@ -643,7 +643,7 @@ impl Clone for PagedCache {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

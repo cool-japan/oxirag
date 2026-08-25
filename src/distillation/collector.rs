@@ -291,7 +291,7 @@ pub struct CollectorStatistics {
     pub average_pairs_per_pattern: f32,
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

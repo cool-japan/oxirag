@@ -11,7 +11,8 @@ use super::types::{
 };
 
 /// Extracts entities from text.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait EntityExtractor: Send + Sync {
     /// Extract entities from the given text.
     async fn extract_entities(&self, text: &str) -> Result<Vec<GraphEntity>, GraphError>;
@@ -21,7 +22,8 @@ pub trait EntityExtractor: Send + Sync {
 }
 
 /// Extracts relationships between entities from text.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait RelationshipExtractor: Send + Sync {
     /// Extract relationships between the given entities from text.
     async fn extract_relationships(
@@ -35,7 +37,8 @@ pub trait RelationshipExtractor: Send + Sync {
 }
 
 /// Storage for knowledge graph data with traversal capabilities.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait GraphStore: Send + Sync {
     /// Add an entity to the graph.
     async fn add_entity(&mut self, entity: GraphEntity) -> Result<EntityId, GraphError>;
@@ -91,7 +94,8 @@ pub trait GraphStore: Send + Sync {
 }
 
 /// The Graph layer: combines entity extraction, relationship extraction, and graph storage.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Graph: Send + Sync {
     /// Index a document by extracting entities and relationships.
     async fn index_document(&mut self, document: &Document) -> Result<(), GraphError>;
@@ -119,7 +123,7 @@ pub trait Graph: Send + Sync {
     async fn clear(&mut self) -> Result<(), GraphError>;
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

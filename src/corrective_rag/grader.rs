@@ -34,7 +34,8 @@ fn tokenize_for_grading(text: &str) -> HashSet<String> {
 ///
 /// Implementations must be `Send + Sync` to work safely in the multi-threaded
 /// CRAG engine.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait RetrievalGrader: Send + Sync {
     /// Grade a single `result` against the `query`.
     ///
@@ -141,7 +142,8 @@ impl Default for HeuristicRetrievalGrader {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl RetrievalGrader for HeuristicRetrievalGrader {
     async fn grade(&self, query: &str, result: &SearchResult) -> Result<f32, CorrectiveRagError> {
         let score = Self::jaccard(query, &result.document.content);
@@ -186,7 +188,8 @@ impl MockRetrievalGrader {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl RetrievalGrader for MockRetrievalGrader {
     async fn grade(&self, _query: &str, result: &SearchResult) -> Result<f32, CorrectiveRagError> {
         let s = self

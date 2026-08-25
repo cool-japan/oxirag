@@ -137,7 +137,7 @@ pub use types::{
     ModelHiddenStates, ModelKVCache, TensorShape,
 };
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::cast_precision_loss, clippy::no_effect_underscore_binding)]
 mod tests {
     use super::*;

@@ -6,7 +6,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use super::types::{CacheIndex, IndexEntry, PersistedEntry};
 use crate::error::OxiRagError;
@@ -161,7 +161,7 @@ pub fn rewrite_data_file(
         }
 
         new_index.last_compaction = Some(
-            SystemTime::now()
+            crate::time::system_now()
                 .duration_since(UNIX_EPOCH)
                 .map_or(0, |d| d.as_secs()),
         );

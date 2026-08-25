@@ -447,7 +447,7 @@ pub struct RegistryStatistics {
     pub avg_accuracy: f32,
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::cast_precision_loss)]
 mod tests {
     use super::*;

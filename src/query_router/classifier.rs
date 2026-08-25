@@ -150,7 +150,8 @@ const UNKNOWN_FLOOR: f32 = 0.05;
 ///
 /// Implementors analyse a raw query string and return a scored
 /// [`IntentScores`] distribution over all [`QueryIntent`] variants.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait IntentClassifier: Send + Sync {
     /// Classifies `query` and returns a scored distribution.
     async fn classify(&self, query: &str) -> Result<IntentScores, QueryRouterError>;
@@ -264,7 +265,8 @@ impl Default for HeuristicIntentClassifier {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl IntentClassifier for HeuristicIntentClassifier {
     /// Classifies the query using keyword/pattern heuristics.
     ///
@@ -415,7 +417,8 @@ impl MockIntentClassifier {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl IntentClassifier for MockIntentClassifier {
     /// Returns the scripted [`IntentScores`] without inspecting `query`.
     async fn classify(&self, _query: &str) -> Result<IntentScores, QueryRouterError> {

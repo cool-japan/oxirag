@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use crate::sync::RwLock;
 use async_trait::async_trait;
-use tokio::sync::RwLock;
 use tracing::{debug, instrument, warn};
 
 use super::buffer::HistoryBuffer;
@@ -27,7 +27,8 @@ use super::types::{ConversationError, ConversationId, Session, SessionConfig, Tu
 ///
 /// Implementors are required to be `Send + Sync` so they can be shared
 /// across threads in a Tokio multi-threaded runtime.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait SessionManager: Send + Sync {
     /// Create a new session with the given configuration and return its ID.
     async fn create_session(
@@ -128,7 +129,8 @@ impl InMemorySessionManager {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl SessionManager for InMemorySessionManager {
     #[instrument(skip(self, config), fields(max_sessions = self.max_sessions))]
     async fn create_session(

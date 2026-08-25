@@ -96,7 +96,8 @@ impl PseudoRelevanceFeedback {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl QueryExpander for PseudoRelevanceFeedback {
     async fn expand(&self, query: &Query) -> Vec<Query> {
         // Without results, we can't do PRF expansion

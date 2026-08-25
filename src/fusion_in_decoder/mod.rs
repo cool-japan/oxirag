@@ -30,7 +30,7 @@
 pub mod fusion;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use fusion::FusionInDecoder;

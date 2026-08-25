@@ -62,7 +62,7 @@ pub mod reformulator;
 pub mod session;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 // ── Convenience re-exports ────────────────────────────────────────────────────

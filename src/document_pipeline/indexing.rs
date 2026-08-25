@@ -10,7 +10,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use tokio::sync::{Mutex, RwLock};
+use crate::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 use crate::chunking::{Chunk, ChunkConfig, DocumentChunker};
@@ -250,10 +250,7 @@ impl IndexingPipeline {
     /// lock is contended or no provenance was recorded for the ID.
     #[must_use]
     pub fn get_provenance(&self, chunk_id: &Uuid) -> Option<ChunkProvenance> {
-        self.provenance_map
-            .try_read()
-            .ok()
-            .and_then(|guard| guard.get(chunk_id).cloned())
+        crate::sync::try_read(&self.provenance_map).and_then(|guard| guard.get(chunk_id).cloned())
     }
 
     /// Return a snapshot of the current pipeline statistics.

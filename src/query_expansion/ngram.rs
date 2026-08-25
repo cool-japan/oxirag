@@ -54,7 +54,8 @@ impl NGramExpander {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl QueryExpander for NGramExpander {
     async fn expand(&self, query: &Query) -> Vec<Query> {
         let (min_n, max_n) = self.config.ngram_range;

@@ -1,7 +1,7 @@
 //! Types and serialisable structs for the redb prefix-cache backend.
 
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
 
@@ -56,11 +56,11 @@ impl PersistedKVEntry {
     /// Convert a live [`KVCacheEntry`] to a persistable form.
     ///
     /// `created_at` and `last_accessed` `Instant` values are approximated by
-    /// `SystemTime::now()` because `Instant` has no stable relationship to
+    /// `crate::time::system_now()` because `Instant` has no stable relationship to
     /// wall-clock time that can survive a process restart.
     #[must_use]
     pub fn from_kv_entry(entry: &KVCacheEntry) -> Self {
-        let now_secs = SystemTime::now()
+        let now_secs = crate::time::system_now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
@@ -82,7 +82,7 @@ impl PersistedKVEntry {
     /// Reconstruct a [`KVCacheEntry`] from this persisted form.
     ///
     /// Because [`std::time::Instant`] cannot be recovered from a Unix timestamp,
-    /// `created_at` and `last_accessed` are set to [`std::time::Instant::now()`],
+    /// `created_at` and `last_accessed` are set to [`crate::time::Instant::now()`],
     /// which means `age()` and `time_since_access()` reflect time-since-load
     /// rather than true historical age.  TTL expiry is enforced separately via
     /// wall-clock timestamps stored in this struct.
@@ -118,7 +118,7 @@ impl PersistedKVEntry {
         let Some(ttl) = self.ttl_secs else {
             return false;
         };
-        let now = SystemTime::now()
+        let now = crate::time::system_now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();

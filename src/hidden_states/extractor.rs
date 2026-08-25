@@ -95,7 +95,8 @@ impl MockHiddenStateProvider {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HiddenStateProvider for MockHiddenStateProvider {
     async fn extract_hidden_states(
         &self,
@@ -552,7 +553,7 @@ impl StatePooling {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

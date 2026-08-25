@@ -349,7 +349,8 @@ impl TrainingJob {
 ///
 /// Implementations of this trait handle the actual training process,
 /// whether local or remote.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait LoraTrainer: Send + Sync {
     /// Create a new training job.
     ///
@@ -473,7 +474,8 @@ impl MockLoraTrainer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl LoraTrainer for MockLoraTrainer {
     async fn create_job(
         &mut self,
@@ -530,7 +532,7 @@ impl LoraTrainer for MockLoraTrainer {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

@@ -177,7 +177,7 @@ pub fn worker_init(dimension: usize) {
 #[wasm_bindgen]
 pub async fn worker_handle_message(msg: JsValue) -> JsValue {
     // Deserialise the request — accept both JS objects and JSON strings.
-    let request: WorkerRequest = match deserialise_request(msg) {
+    let request: WorkerRequest = match deserialise_request(&msg) {
         Ok(r) => r,
         Err(e) => {
             return json_response_value(&WorkerResponse::err("unknown", e));
@@ -197,7 +197,7 @@ pub async fn worker_handle_message(msg: JsValue) -> JsValue {
 
 /// Attempt to deserialise a [`WorkerRequest`] from either a JS object or a
 /// JSON string `JsValue`.
-fn deserialise_request(val: JsValue) -> Result<WorkerRequest, String> {
+fn deserialise_request(val: &JsValue) -> Result<WorkerRequest, String> {
     // Try direct object deserialisation first.
     if let Ok(req) = serde_wasm_bindgen::from_value::<WorkerRequest>(val.clone()) {
         return Ok(req);
@@ -264,7 +264,9 @@ async fn handle_index(req: WorkerRequest) -> Result<WorkerResponse, String> {
     let mut engine = engine_taken
         .ok_or_else(|| "worker not initialised — call worker_init() first".to_string())?;
 
-    let indexed_id = Echo::index(&mut engine, doc)
+    let indexed_id = doc.id.clone();
+
+    Echo::index(engine.echo_mut(), doc)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -293,8 +295,8 @@ async fn handle_query(req: WorkerRequest) -> Result<WorkerResponse, String> {
     let top_k = req
         .payload
         .get("top_k")
-        .and_then(|v| v.as_u64())
-        .map_or(5, |n| n as usize);
+        .and_then(serde_json::Value::as_u64)
+        .map_or(5, |n| usize::try_from(n).unwrap_or(usize::MAX));
 
     let query = Query::new(query_text).with_top_k(top_k);
 
@@ -356,7 +358,7 @@ async fn handle_clear(req: WorkerRequest) -> Result<WorkerResponse, String> {
 // Tests
 // ────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use wasm_bindgen_test::*;

@@ -75,7 +75,8 @@ impl Default for SpeculatorConfig {
 }
 
 /// The Speculator trait for draft verification.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Speculator: Send + Sync {
     /// Verify a draft answer against the query and context.
     ///
@@ -223,7 +224,8 @@ impl Default for RuleBasedSpeculator {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Speculator for RuleBasedSpeculator {
     async fn verify_draft(
         &self,
@@ -299,7 +301,7 @@ impl Speculator for RuleBasedSpeculator {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

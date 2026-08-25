@@ -33,7 +33,8 @@ use crate::error::HiddenStateError;
 ///     println!("Extracted {} layers", states.layers.len());
 /// }
 /// ```
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait HiddenStateProvider: Send + Sync {
     /// Extract hidden states from input text.
     ///
@@ -125,7 +126,8 @@ pub trait StateReuseStrategy: Send + Sync {
 pub type BoxedStateReuseStrategy = Box<dyn StateReuseStrategy>;
 
 /// Extension trait for hidden state providers with additional utilities.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait HiddenStateProviderExt: HiddenStateProvider {
     /// Extract hidden states and automatically cache them.
     async fn extract_and_cache(
@@ -178,7 +180,7 @@ pub trait HiddenStateProviderExt: HiddenStateProvider {
 // Blanket implementation for all HiddenStateProvider
 impl<T: HiddenStateProvider> HiddenStateProviderExt for T {}
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::hidden_states::extractor::MockHiddenStateProvider;

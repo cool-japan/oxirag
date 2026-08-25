@@ -140,7 +140,8 @@ impl RedbPrefixCache {
 // PrefixCacheStore impl
 // ---------------------------------------------------------------------------
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg(feature = "prefix-cache-redb")]
 impl PrefixCacheStore for RedbPrefixCache {
     /// Retrieve a cache entry by its fingerprint.

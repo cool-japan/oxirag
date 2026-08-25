@@ -9,11 +9,11 @@
 //! - Cross-collection search with Reciprocal Rank Fusion (RRF).
 //! - `search_all` that spans every registered collection.
 
+use crate::time::Instant;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Instant;
 
-use tokio::sync::{Mutex, RwLock};
+use crate::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 use crate::layer1_echo::{InMemoryVectorStore, IndexedDocument, VectorStore};

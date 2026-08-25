@@ -7,6 +7,8 @@
 //! - Whitespace-only input builds a query without panicking
 //! - Unicode non-control characters are handled without panics
 
+#![cfg(not(target_arch = "wasm32"))]
+
 use oxirag::query_builder::QueryBuilder;
 use proptest::prelude::*;
 

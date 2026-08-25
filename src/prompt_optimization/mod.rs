@@ -1,7 +1,7 @@
 //! Prompt optimization — few-shot demo selection and prompt variant scoring.
 pub mod optimizer;
 pub mod selector;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use optimizer::PromptOptimizer;

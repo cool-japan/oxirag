@@ -138,7 +138,7 @@ impl PersistentPrefixCache {
     /// Panics if the internal lock is poisoned.
     #[allow(clippy::cast_possible_truncation)]
     pub fn compact(&mut self) -> Result<CompactionStats, OxiRagError> {
-        let start = std::time::Instant::now();
+        let start = crate::time::Instant::now();
 
         let mut stats = CompactionStats::default();
         let mut index = self.index.write().expect("lock poisoned");
@@ -231,7 +231,8 @@ impl Clone for PersistentPrefixCache {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PrefixCacheStore for PersistentPrefixCache {
     async fn get(&self, fingerprint: &ContextFingerprint) -> Option<KVCacheEntry> {
         let index = self.index.read().expect("lock poisoned");
@@ -566,7 +567,8 @@ impl Clone for HybridPersistentCache {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PrefixCacheStore for HybridPersistentCache {
     async fn get(&self, fingerprint: &ContextFingerprint) -> Option<KVCacheEntry> {
         // Try memory cache first

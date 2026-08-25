@@ -97,10 +97,15 @@ pub mod advanced_retrieval;
 pub mod chunking;
 pub mod circuit_breaker;
 pub mod config;
+#[cfg(feature = "native")]
 pub mod connection_pool;
 #[cfg(feature = "distillation")]
 pub mod distillation;
 pub mod error;
+// Browser globals, from a `Window` or a `WorkerGlobalScope` alike. A RAG
+// pipeline belongs in a worker, where `web_sys::window()` is `None`.
+#[cfg(target_arch = "wasm32")]
+pub mod global_scope;
 #[cfg(feature = "hidden-states")]
 pub mod hidden_states;
 pub mod hybrid_search;
@@ -130,6 +135,8 @@ pub mod retry;
 pub mod semantic_cache;
 pub mod simd_similarity;
 pub mod streaming;
+pub mod sync;
+pub mod time;
 pub mod types;
 
 #[cfg(feature = "rag-eval")]
@@ -762,7 +769,10 @@ pub mod knowledge_editing;
 #[cfg(feature = "rest-server")]
 pub mod rest_server;
 
-#[cfg(feature = "wasm")]
+// The `#[wasm_bindgen]` surface only exists on the target it binds to. Off
+// wasm32 the macro has no crate behind it — `wasm-bindgen` is a wasm32 target
+// dependency now — and there is nothing for it to bind to either.
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 pub mod wasm;
 
 #[cfg(all(target_arch = "wasm32", feature = "wasm"))]
@@ -788,6 +798,7 @@ pub mod prelude {
         EchoConfig, JudgeConfig as JudgeCfg, OxiRagConfig, PipelineConfig as PipelineCfg,
         RetryConfig, SimilarityMetricConfig, SpeculatorConfig as SpeculatorCfg,
     };
+    #[cfg(feature = "native")]
     pub use crate::connection_pool::{
         Connection, ConnectionError, ConnectionPool, MockConnection, PoolConfig, PoolError,
         PoolStats, PooledConnection,
@@ -2217,7 +2228,7 @@ pub use crate::nodejs::{
     NapiDocument, NapiPipeline, NapiPipelineBuilder, NapiQuery, NapiSearchResult,
 };
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::prelude::*;
 

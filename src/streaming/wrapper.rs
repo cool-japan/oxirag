@@ -1,12 +1,14 @@
 //! `StreamingPipeline` trait, `StreamingPipelineWrapper`, and `StreamingPipelineResult`.
 
+#[cfg(feature = "native")]
+use crate::time::Instant;
 use async_trait::async_trait;
-use std::time::Instant;
 
 use crate::error::OxiRagError;
 use crate::pipeline::RagPipeline;
 use crate::types::{PipelineOutput, Query};
 
+#[cfg(feature = "native")]
 use super::types::{ChunkType, PipelineChunk, truncate_content};
 
 #[cfg(feature = "native")]
@@ -157,6 +159,16 @@ impl StreamingPipelineResult {
     }
 
     /// Collect the result (immediately available in WASM).
+    ///
+    /// # Errors
+    ///
+    /// The error the pipeline produced, or [`PipelineError::ExecutionError`] if
+    /// this result carries neither an output nor an error.
+    ///
+    /// `async` with nothing to await is deliberate: this is the `wasm32` half of
+    /// an API whose native half genuinely awaits a channel, and callers are
+    /// written once against both.
+    #[allow(clippy::unused_async)]
     pub async fn collect(self) -> Result<PipelineOutput, OxiRagError> {
         match (self.output, self.error) {
             (Some(output), _) => Ok(output),
@@ -169,7 +181,8 @@ impl StreamingPipelineResult {
 }
 
 /// Trait extension for streaming pipeline execution.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait StreamingPipeline: RagPipeline + Send + Sync {
     /// Process a query with streaming output.
     ///
@@ -237,7 +250,8 @@ impl<P: RagPipeline> StreamingPipelineWrapper<P> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<P: RagPipeline + Send + Sync> RagPipeline for StreamingPipelineWrapper<P> {
     async fn process(&self, query: Query) -> Result<PipelineOutput, OxiRagError> {
         self.inner.process(query).await
@@ -423,7 +437,8 @@ async fn emit_verification_chunks(
 }
 
 #[cfg(feature = "native")]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<P: RagPipeline + Send + Sync> StreamingPipeline for StreamingPipelineWrapper<P> {
     async fn process_streaming(
         &self,
@@ -528,7 +543,8 @@ impl<P: RagPipeline + Send + Sync> StreamingPipeline for StreamingPipelineWrappe
 }
 
 #[cfg(not(feature = "native"))]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<P: RagPipeline + Send + Sync> StreamingPipeline for StreamingPipelineWrapper<P> {
     async fn process_streaming(
         &self,

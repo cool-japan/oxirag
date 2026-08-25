@@ -31,7 +31,7 @@
 pub mod deduplicator;
 pub mod minhash;
 pub mod simhash;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

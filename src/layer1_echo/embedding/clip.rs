@@ -444,7 +444,8 @@ impl CandleClipProvider {
 // Trait implementation
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl MultiModalEmbeddingProvider for CandleClipProvider {
     async fn embed_multi(&self, input: EmbeddingInput<'_>) -> Result<Vec<f32>, EmbeddingError> {
         match input {
@@ -483,7 +484,7 @@ impl MultiModalEmbeddingProvider for CandleClipProvider {
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

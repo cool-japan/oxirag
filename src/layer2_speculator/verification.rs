@@ -700,7 +700,7 @@ impl Default for PipelineBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp, clippy::unnecessary_to_owned)]
 mod tests {
     use super::*;

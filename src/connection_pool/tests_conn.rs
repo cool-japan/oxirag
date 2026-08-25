@@ -1,6 +1,6 @@
 //! Connection/config/error tests for connection pool (`deref_mut`, take, mock, config, errors, debug, stats).
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::items_after_statements)]
 pub(super) mod conn_tests {
     use std::sync::Arc;

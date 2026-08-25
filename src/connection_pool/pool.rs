@@ -1,12 +1,13 @@
 //! `ConnectionPool<C>` core implementation.
 
+use crate::time::Instant;
 use std::collections::VecDeque;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use tokio::sync::{Mutex, Notify, Semaphore};
 use tokio::time::timeout;

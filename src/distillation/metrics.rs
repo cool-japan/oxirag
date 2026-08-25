@@ -17,5 +17,5 @@ pub use plot::{ExtraEpochMetrics, PlotData, TrainingEpochMetrics};
 pub use tracker::{MetricsTracker, TrackerSummary};
 pub use transfer::{KnowledgeTransferMetrics, LayerSimilarity};
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

@@ -259,7 +259,8 @@ impl CandleEmbeddingProvider {
 }
 
 #[cfg(feature = "speculator")]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EmbeddingProvider for CandleEmbeddingProvider {
     async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError> {
         let results = self.embed_batch(&[text]).await?;
@@ -435,7 +436,8 @@ impl MockEmbeddingProvider {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EmbeddingProvider for MockEmbeddingProvider {
     async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError> {
         if text.is_empty() {
@@ -464,7 +466,7 @@ impl EmbeddingProvider for MockEmbeddingProvider {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

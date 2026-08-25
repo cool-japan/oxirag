@@ -163,7 +163,7 @@ pub(crate) fn fnv1a(bytes: &[u8]) -> u64 {
     hash
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod unit_tests {
     use super::*;
 

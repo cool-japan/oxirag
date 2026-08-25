@@ -189,7 +189,7 @@ pub mod engine;
 pub mod table;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use allocator::{KvBlockAllocator, KvBlockAllocatorStats, PREFIX_HASH_SEED, fold_prefix_hash};

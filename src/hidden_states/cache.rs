@@ -5,9 +5,9 @@
 
 #![allow(clippy::collapsible_if)]
 
+use crate::time::Instant;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use std::time::Instant;
 
 use super::types::{ModelHiddenStates, ModelKVCache};
 
@@ -435,7 +435,7 @@ impl HiddenStateCacheStats {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::hidden_states::types::{

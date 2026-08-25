@@ -11,7 +11,7 @@
 pub mod traversal;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use traversal::{MultiHopRetriever, detect_entity_mentions, expand_hop};

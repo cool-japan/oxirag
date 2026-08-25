@@ -291,7 +291,7 @@ impl DiskAnnIndex {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 impl DiskAnnIndex {
     /// Test-only constructor for a vector-less index.
     ///

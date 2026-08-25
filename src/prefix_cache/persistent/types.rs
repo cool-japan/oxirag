@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
 
@@ -109,7 +109,7 @@ impl PersistedEntry {
     /// Create a new persisted entry from a KV cache entry.
     #[must_use]
     pub fn from_kv_entry(entry: &KVCacheEntry) -> Self {
-        let created_at_unix = SystemTime::now()
+        let created_at_unix = crate::time::system_now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
 
@@ -153,7 +153,7 @@ impl PersistedEntry {
     #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(ttl_secs) = self.ttl_secs {
-            let now = SystemTime::now()
+            let now = crate::time::system_now()
                 .duration_since(UNIX_EPOCH)
                 .map_or(0, |d| d.as_secs());
             now.saturating_sub(self.created_at_unix) >= ttl_secs
@@ -197,7 +197,7 @@ impl IndexEntry {
     #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(ttl_secs) = self.ttl_secs {
-            let now = SystemTime::now()
+            let now = crate::time::system_now()
                 .duration_since(UNIX_EPOCH)
                 .map_or(0, |d| d.as_secs());
             now.saturating_sub(self.created_at_unix) >= ttl_secs

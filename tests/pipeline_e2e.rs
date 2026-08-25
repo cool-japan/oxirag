@@ -1,6 +1,8 @@
 //! End-to-end pipeline integration tests using all in-memory backends.
 //! These tests exercise the full pipeline rather than individual layers.
 
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::sync::Arc;
 
 use oxirag::layer1_echo::{EchoLayer, InMemoryVectorStore, MockEmbeddingProvider};

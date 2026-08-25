@@ -6,6 +6,8 @@
 //! - SMT-LIB output from extracted claims contains no null bytes
 //! - Extracting from the same input twice yields the same count
 
+#![cfg(not(target_arch = "wasm32"))]
+
 use oxirag::layer3_judge::normalizer::ClaimNormalizer;
 use oxirag::layer3_judge::{AdvancedClaimExtractor, ClaimExtractor, DefaultClaimNormalizer};
 use proptest::prelude::*;

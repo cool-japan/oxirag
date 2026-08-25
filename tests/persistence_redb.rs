@@ -3,6 +3,8 @@
 //! These tests write data, drop the DB, reopen it, and assert recovery.
 //! Uses tempfile::TempDir for automatic cleanup.
 
+#![cfg(not(target_arch = "wasm32"))]
+
 #[cfg(feature = "full")]
 mod persistence_tests {
     use tempfile::TempDir;

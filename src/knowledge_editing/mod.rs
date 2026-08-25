@@ -107,7 +107,7 @@ pub mod editor;
 pub mod linalg;
 pub mod memory;
 pub mod rank_one;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

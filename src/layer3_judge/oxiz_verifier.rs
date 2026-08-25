@@ -1,7 +1,7 @@
 //! `OxiZ` SMT solver integration for claim verification.
 
+use crate::time::Instant;
 use async_trait::async_trait;
-use std::time::Instant;
 
 use crate::error::JudgeError;
 use crate::layer3_judge::traits::{ClaimExtractor, Judge, JudgeConfig, SmtVerifier};
@@ -266,7 +266,8 @@ impl OxizVerifier {
 }
 
 #[cfg(feature = "judge")]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl SmtVerifier for OxizVerifier {
     async fn verify_claim(
         &self,
@@ -353,7 +354,8 @@ impl Default for MockSmtVerifier {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl SmtVerifier for MockSmtVerifier {
     async fn verify_claim(
         &self,
@@ -413,7 +415,8 @@ impl<E: ClaimExtractor, V: SmtVerifier> JudgeImpl<E, V> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<E: ClaimExtractor, V: SmtVerifier> Judge for JudgeImpl<E, V> {
     async fn judge(
         &self,
@@ -548,7 +551,7 @@ impl<E: ClaimExtractor, V: SmtVerifier> Judge for JudgeImpl<E, V> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::layer3_judge::claim_extractor::AdvancedClaimExtractor;

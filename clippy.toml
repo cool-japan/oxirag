@@ -1,0 +1,30 @@
+# Methods that compile for `wasm32-unknown-unknown` and then trap at runtime.
+#
+# `Instant::now()` and `SystemTime::now()` have no clock behind them on that
+# target and panic; under a `panic = "abort"` release profile — which is what
+# browser consumers build with — that is an uncatchable trap that poisons the
+# whole instance. `tests/wasm_clock.rs` demonstrates it. `crate::time` wraps
+# both.
+#
+# `web_sys::window()` returns `None` inside a Web Worker, which is where a RAG
+# pipeline belongs. `crate::global_scope::GlobalScope` resolves either global.
+#
+# The compiler cannot find these for us — they build fine and fail in the
+# browser — so the lint is the gate. This exists because ADR-0005's `?Send`
+# decision was applied to six traits and then not applied to the 122 written
+# after it; a rule nobody can forget is worth more than a rule nobody remembers.
+disallowed-methods = [
+  { path = "std::time::Instant::now", reason = "traps on wasm32 — use crate::time::Instant" },
+  { path = "std::time::SystemTime::now", reason = "traps on wasm32 — use crate::time::system_now()" },
+  { path = "web_sys::window", reason = "None in a Web Worker — use crate::global_scope::GlobalScope::current()" },
+]
+
+# Proper nouns this codebase uses in prose. `clippy::doc_markdown` reads them as
+# CamelCase identifiers that lost their backticks; they are product and API
+# names, and rendering them as code spans would be wrong typography rather than
+# a fix. `".."` keeps clippy's own default list in addition to these.
+doc-valid-idents = [
+  "..",
+  "OxiRAG", "OxiZ", "OxiFFT", "GraphRAG", "IndexedDB", "MiniLM", "RAGAS",
+  "RAPTOR", "SMT-LIB2", "OpenAI", "JavaScript", "WebAssembly",
+]

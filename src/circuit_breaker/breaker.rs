@@ -1,11 +1,12 @@
 //! `CircuitBreaker` and `CircuitPermit` RAII guard.
 
+use crate::time::Instant;
 use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use tokio::sync::RwLock;
+use crate::sync::RwLock;
 
 use super::types::{CircuitBreakerConfig, CircuitBreakerError, CircuitBreakerStats, CircuitState};
 

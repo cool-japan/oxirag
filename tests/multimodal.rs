@@ -2,6 +2,8 @@
 //!
 //! These tests do not download any models. They simply verify that
 //! the type system wires up correctly.
+#![cfg(not(target_arch = "wasm32"))]
+
 #[cfg(feature = "multimodal")]
 mod tests {
     use oxirag::layer1_echo::EmbeddingInput;

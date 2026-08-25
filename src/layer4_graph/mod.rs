@@ -75,7 +75,8 @@ impl<E: EntityExtractor, R: RelationshipExtractor, S: GraphStore> GraphLayer<E, 
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<E: EntityExtractor, R: RelationshipExtractor, S: GraphStore> Graph for GraphLayer<E, R, S> {
     async fn index_document(&mut self, document: &Document) -> Result<(), GraphError> {
         // Extract entities from document content
@@ -223,7 +224,7 @@ impl<E: EntityExtractor, R: RelationshipExtractor, S: GraphStore> GraphLayerBuil
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

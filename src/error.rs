@@ -356,7 +356,7 @@ pub enum HiddenStateError {
 /// A type alias for Results with [`OxiRagError`].
 pub type Result<T> = std::result::Result<T, OxiRagError>;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

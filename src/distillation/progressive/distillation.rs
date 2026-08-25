@@ -175,10 +175,10 @@ impl ProgressiveDistillation {
 
         let mut training_history = Vec::new();
         let mut current_loss = 1.0_f32;
-        let start_time = std::time::Instant::now();
+        let start_time = crate::time::Instant::now();
 
         for epoch in 1..=stage_config.num_epochs {
-            let epoch_start = std::time::Instant::now();
+            let epoch_start = crate::time::Instant::now();
             current_loss *= 0.9;
 
             let epoch_metrics = EpochMetrics::new(epoch, current_loss, stage_config.learning_rate)

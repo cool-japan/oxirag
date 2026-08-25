@@ -1,7 +1,7 @@
 //! LLM-as-judge evaluation — pointwise, pairwise, and reference-based scoring.
 pub mod judge;
 pub mod rubric;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use judge::LlmJudge;

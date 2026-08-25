@@ -469,7 +469,8 @@ impl CandleSLM {
 }
 
 #[cfg(feature = "speculator")]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl SmallLanguageModel for CandleSLM {
     async fn generate(
         &self,
@@ -798,7 +799,8 @@ impl CandleSlmSpeculator {
 }
 
 #[cfg(feature = "speculator")]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Speculator for CandleSlmSpeculator {
     async fn verify_draft(
         &self,
@@ -853,7 +855,8 @@ impl Default for MockSlmSpeculator {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Speculator for MockSlmSpeculator {
     async fn verify_draft(
         &self,
@@ -914,7 +917,7 @@ impl Speculator for MockSlmSpeculator {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

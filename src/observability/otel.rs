@@ -253,7 +253,7 @@ impl SpanObserver for OtelSpanObserver {
 // Tests
 // ────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use std::collections::HashMap;
 

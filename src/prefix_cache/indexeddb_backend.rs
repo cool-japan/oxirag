@@ -23,7 +23,6 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
@@ -101,6 +100,11 @@ impl PersistedKVEntry {
             return false;
         };
         let age_ms = js_sys::Date::now() - self.created_at_ms;
+        if !age_ms.is_finite() || age_ms <= 0.0 {
+            // A clock that moved backwards is not evidence of expiry.
+            return false;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let age_secs = (age_ms / 1000.0) as u64;
         age_secs >= ttl_secs
     }
@@ -110,6 +114,9 @@ impl PersistedKVEntry {
 // IDB helpers
 // ────────────────────────────────────────────────────────────────────────────
 
+/// By value rather than by reference so it can be named directly in
+/// `.map_err(js_err_to_oxirag)`, which is every one of its call sites.
+#[allow(clippy::needless_pass_by_value)]
 fn js_err_to_oxirag(js: JsValue) -> OxiRagError {
     let msg = js.as_string().unwrap_or_else(|| format!("{js:?}"));
     OxiRagError::Config(format!("IndexedDB error: {msg}"))
@@ -117,9 +124,13 @@ fn js_err_to_oxirag(js: JsValue) -> OxiRagError {
 
 /// Open (or upgrade) the prefix cache database.
 async fn open_db(db_name: &str) -> Result<web_sys::IdbDatabase, OxiRagError> {
-    let window = web_sys::window().ok_or_else(|| OxiRagError::Config("no Window object".into()))?;
+    // See `layer1_echo::storage::indexeddb::open_db` — a worker has no `window`
+    // but does have IndexedDB.
+    let scope = crate::global_scope::GlobalScope::current().ok_or_else(|| {
+        OxiRagError::Config("no Window or WorkerGlobalScope (not a browser context)".into())
+    })?;
 
-    let idb_factory = window
+    let idb_factory = scope
         .indexed_db()
         .map_err(js_err_to_oxirag)?
         .ok_or_else(|| OxiRagError::Config("IndexedDB not available".into()))?;
@@ -133,7 +144,12 @@ async fn open_db(db_name: &str) -> Result<web_sys::IdbDatabase, OxiRagError> {
         Closure::once(|event: web_sys::IdbVersionChangeEvent| {
             if let Some(target) = event.target() {
                 let req: web_sys::IdbOpenDbRequest = target.unchecked_into();
-                if let Ok(Some(result)) = req.result() {
+                // web-sys 0.3.104 returns the raw `JsValue`; a request that has
+                // not settled yields `undefined` rather than `None`.
+                if let Ok(result) = req.result()
+                    && !result.is_undefined()
+                    && !result.is_null()
+                {
                     let db: web_sys::IdbDatabase = result.unchecked_into();
                     if !db.object_store_names().contains(STORE_NAME) {
                         let _ = db.create_object_store(STORE_NAME);
@@ -172,11 +188,13 @@ async fn open_db(db_name: &str) -> Result<web_sys::IdbDatabase, OxiRagError> {
 
     JsFuture::from(promise).await.map_err(js_err_to_oxirag)?;
 
-    let db: web_sys::IdbDatabase = open_request
-        .result()
-        .map_err(js_err_to_oxirag)?
-        .ok_or_else(|| OxiRagError::Config("IDB open succeeded but result is null".into()))?
-        .unchecked_into();
+    let result = open_request.result().map_err(js_err_to_oxirag)?;
+    if result.is_undefined() || result.is_null() {
+        return Err(OxiRagError::Config(
+            "IDB open succeeded but result is null".into(),
+        ));
+    }
+    let db: web_sys::IdbDatabase = result.unchecked_into();
 
     Ok(db)
 }
@@ -347,11 +365,11 @@ impl PrefixCacheStore for IndexedDbPrefixCache {
         // Respect capacity limit — evict oldest entry if at max.
         if self.max_capacity > 0 && self.entry_count >= self.max_capacity {
             // Remove the first record we can find.
-            if let Ok(all) = self.load_all().await {
-                if let Some(oldest) = all.into_iter().next() {
-                    self.remove_by_key_raw(&oldest.key).await?;
-                    self.entry_count = self.entry_count.saturating_sub(1);
-                }
+            if let Ok(all) = self.load_all().await
+                && let Some(oldest) = all.into_iter().next()
+            {
+                self.remove_by_key_raw(&oldest.key).await?;
+                self.entry_count = self.entry_count.saturating_sub(1);
             }
         }
 
@@ -437,10 +455,8 @@ impl PrefixCacheStore for IndexedDbPrefixCache {
 
         let mut removed = 0;
         for entry in all {
-            if entry.is_expired_wall() {
-                if self.remove_by_key_raw(&entry.key).await.is_ok() {
-                    removed += 1;
-                }
+            if entry.is_expired_wall() && self.remove_by_key_raw(&entry.key).await.is_ok() {
+                removed += 1;
             }
         }
 

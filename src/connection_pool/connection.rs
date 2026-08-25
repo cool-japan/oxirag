@@ -1,8 +1,8 @@
 //! `Connection` trait and `PooledConnection` RAII guard.
 
+use crate::time::Instant;
 use std::fmt;
 use std::sync::atomic::Ordering;
-use std::time::Instant;
 
 use super::pool::ConnectionPool;
 use super::types::ConnectionError;

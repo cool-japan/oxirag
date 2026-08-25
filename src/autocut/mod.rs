@@ -6,7 +6,7 @@
 //! [`AutoCutStrategy`]; the keep count is always clamped into a configurable
 //! `[min_keep, max_keep]` window.
 pub mod cutter;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use cutter::AutoCutter;

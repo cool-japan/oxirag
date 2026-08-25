@@ -54,7 +54,7 @@ impl Turn {
         Self {
             role,
             text: text.into(),
-            timestamp: SystemTime::now(),
+            timestamp: crate::time::system_now(),
             metadata: HashMap::new(),
         }
     }
@@ -288,7 +288,7 @@ impl Session {
         Self {
             id: ConversationId::new(),
             history: ConversationHistory::new(),
-            created_at: SystemTime::now(),
+            created_at: crate::time::system_now(),
             config,
         }
     }
@@ -299,7 +299,7 @@ impl Session {
         Self {
             id,
             history: ConversationHistory::new(),
-            created_at: SystemTime::now(),
+            created_at: crate::time::system_now(),
             config,
         }
     }

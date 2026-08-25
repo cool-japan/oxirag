@@ -26,10 +26,11 @@
 //! }
 //! ```
 
+use crate::time::Instant;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -280,7 +281,8 @@ impl RequestResult {
 }
 
 /// Trait for generating queries during load testing.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait QueryGenerator: Send + Sync {
     /// Generate a random query for testing.
     fn generate(&self) -> Query;
@@ -339,7 +341,8 @@ impl QueryGenerator for MockQueryGenerator {
 }
 
 /// Trait for executing queries (to be implemented by pipeline wrappers).
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait QueryExecutor: Send + Sync {
     /// Execute a query and return the result.
     async fn execute(&self, query: Query) -> RequestResult;
@@ -393,7 +396,8 @@ impl MockQueryExecutor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl QueryExecutor for MockQueryExecutor {
     async fn execute(&self, _query: Query) -> RequestResult {
         let count = self.request_count.fetch_add(1, Ordering::Relaxed);
@@ -741,7 +745,7 @@ impl<G: QueryGenerator, E: QueryExecutor> LoadTestBuilder<G, E> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

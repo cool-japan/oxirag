@@ -28,7 +28,7 @@ pub mod cache;
 pub mod config;
 pub mod entry;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use cache::{CacheStats, InMemorySemanticCache, SemanticCache};

@@ -3,8 +3,9 @@
 //! This module provides various invalidation policies and dependency tracking
 //! for cache entries, enabling sophisticated cache management strategies.
 
+use crate::time::Instant;
 use std::collections::{HashMap, HashSet};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use super::types::{CacheKey, ContextFingerprint, KVCacheEntry};
 
@@ -690,7 +691,7 @@ impl Default for FingerprintInvalidationContext {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::cast_sign_loss)]
 mod tests {
     use super::*;

@@ -6,7 +6,7 @@
 #![allow(clippy::cast_precision_loss)]
 
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use crate::error::HiddenStateError;
 
@@ -446,7 +446,7 @@ impl ModelHiddenStates {
     /// Create a new empty model hidden states container.
     #[must_use]
     pub fn new(model_id: impl Into<String>, num_layers: usize, hidden_dim: usize) -> Self {
-        let timestamp = SystemTime::now()
+        let timestamp = crate::time::system_now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
         Self {
@@ -851,7 +851,7 @@ impl HiddenStateConfig {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

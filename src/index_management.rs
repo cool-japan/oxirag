@@ -13,12 +13,12 @@
 //! - Index merging for combining multiple indices
 //! - Snapshot creation and restoration
 
+use crate::sync::RwLock;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use tokio::sync::RwLock;
 
 use crate::error::{OxiRagError, VectorStoreError};
 use crate::layer1_echo::traits::{IndexedDocument, SimilarityMetric, VectorStore};
@@ -231,7 +231,8 @@ pub struct MergeResult {
 }
 
 /// Trait for index management operations.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait IndexManagement: Send + Sync {
     /// Rebuild the index from scratch using existing data.
     async fn rebuild_index(&mut self) -> Result<IndexStats, OxiRagError>;
@@ -284,8 +285,10 @@ struct IndexManagerStats {
     /// Total operations count.
     total_operations: u64,
     /// Total bytes written.
+    #[cfg_attr(not(feature = "native"), allow(dead_code))]
     total_bytes_written: u64,
     /// Total bytes read.
+    #[cfg_attr(not(feature = "native"), allow(dead_code))]
     total_bytes_read: u64,
 }
 
@@ -301,12 +304,12 @@ impl<V: VectorStore> IndexManager<V> {
     }
 
     /// Get a reference to the underlying store for read operations.
-    pub async fn store(&self) -> tokio::sync::RwLockReadGuard<'_, V> {
+    pub async fn store(&self) -> crate::sync::RwLockReadGuard<'_, V> {
         self.store.read().await
     }
 
     /// Get a mutable reference to the underlying store.
-    pub async fn store_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, V> {
+    pub async fn store_mut(&self) -> crate::sync::RwLockWriteGuard<'_, V> {
         self.store.write().await
     }
 
@@ -354,7 +357,7 @@ impl<V: VectorStore> IndexManager<V> {
         _other: &V2,
         _skip_duplicates: bool,
     ) -> Result<MergeResult, OxiRagError> {
-        let start = std::time::Instant::now();
+        let start = crate::time::Instant::now();
         let duplicates_skipped = 0;
         let documents_added = 0;
         let _ = documents_added;
@@ -398,7 +401,7 @@ impl<V: VectorStore> IndexManager<V> {
         indices: Vec<SerializedIndex>,
         skip_duplicates: bool,
     ) -> Result<MergeResult, OxiRagError> {
-        let start = std::time::Instant::now();
+        let start = crate::time::Instant::now();
         let mut duplicates_skipped = 0;
 
         let mut store = self.store.write().await;
@@ -525,7 +528,8 @@ impl<V: VectorStore> IndexManager<V> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V> {
     async fn rebuild_index(&mut self) -> Result<IndexStats, OxiRagError> {
         let store = self.store.write().await;
@@ -547,7 +551,7 @@ impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V>
     }
 
     async fn optimize(&mut self, config: &OptimizeConfig) -> Result<OptimizeResult, OxiRagError> {
-        let start = std::time::Instant::now();
+        let start = crate::time::Instant::now();
 
         let store = self.store.read().await;
         let count = store.count().await;
@@ -591,7 +595,7 @@ impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V>
     }
 
     async fn vacuum(&mut self) -> Result<VacuumResult, OxiRagError> {
-        let start = std::time::Instant::now();
+        let start = crate::time::Instant::now();
 
         // Get pending deletions
         let deleted_ids: Vec<DocumentId> = {
@@ -657,23 +661,13 @@ impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V>
             ))
     }
 
+    #[cfg(feature = "native")]
     async fn export_to_file(&self, path: &Path) -> Result<(), OxiRagError> {
         let serialized = self.serialize_index().await?;
         let json = serde_json::to_string_pretty(&serialized)?;
         let json_len = json.len();
 
-        #[cfg(feature = "native")]
-        {
-            tokio::fs::write(path, json).await?;
-        }
-
-        #[cfg(not(feature = "native"))]
-        {
-            let _ = json; // Suppress unused warning
-            return Err(OxiRagError::Config(
-                "File I/O not supported in WASM".to_string(),
-            ));
-        }
+        tokio::fs::write(path, json).await?;
 
         let mut stats_guard = self.stats.write().await;
         stats_guard.total_operations += 1;
@@ -682,26 +676,36 @@ impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V>
         Ok(())
     }
 
+    /// There is no filesystem in the browser, and no `tokio::fs` outside the
+    /// `native` feature. Callers get a typed error rather than a stub that
+    /// silently drops the index: persistence on `wasm32` is IndexedDB's job
+    /// (`wasm-indexeddb`), not this method's.
+    #[cfg(not(feature = "native"))]
+    async fn export_to_file(&self, _path: &Path) -> Result<(), OxiRagError> {
+        Err(OxiRagError::Config(
+            "File I/O not supported in WASM".to_string(),
+        ))
+    }
+
+    #[cfg(feature = "native")]
     async fn import_from_file(&mut self, path: &Path) -> Result<IndexStats, OxiRagError> {
-        #[cfg(feature = "native")]
-        {
-            let json = tokio::fs::read_to_string(path).await?;
-            let serialized: SerializedIndex = serde_json::from_str(&json)?;
+        let json = tokio::fs::read_to_string(path).await?;
+        let serialized: SerializedIndex = serde_json::from_str(&json)?;
 
-            let mut stats_guard = self.stats.write().await;
-            stats_guard.total_operations += 1;
-            stats_guard.total_bytes_read += json.len() as u64;
-            drop(stats_guard);
+        let mut stats_guard = self.stats.write().await;
+        stats_guard.total_operations += 1;
+        stats_guard.total_bytes_read += json.len() as u64;
+        drop(stats_guard);
 
-            self.deserialize_index(&serialized).await
-        }
+        self.deserialize_index(&serialized).await
+    }
 
-        #[cfg(not(feature = "native"))]
-        {
-            Err(OxiRagError::Config(
-                "File I/O not supported in WASM".to_string(),
-            ))
-        }
+    /// See [`Self::export_to_file`] — the `wasm32` half, for the same reason.
+    #[cfg(not(feature = "native"))]
+    async fn import_from_file(&mut self, _path: &Path) -> Result<IndexStats, OxiRagError> {
+        Err(OxiRagError::Config(
+            "File I/O not supported in WASM".to_string(),
+        ))
     }
 
     async fn create_snapshot(
@@ -745,7 +749,7 @@ impl<V: VectorStore + Send + Sync + 'static> IndexManagement for IndexManager<V>
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

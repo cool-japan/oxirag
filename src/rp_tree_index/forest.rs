@@ -156,7 +156,7 @@ impl RpTreeForest {
     }
 
     /// Borrow the trees (crate-internal; used for structural assertions).
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn trees(&self) -> &[RpTree] {
         &self.trees
     }

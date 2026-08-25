@@ -16,11 +16,9 @@ use crate::types::{Document, Query};
 /// Initialize logging for WASM.
 #[wasm_bindgen(start)]
 pub fn init() {
-    #[cfg(feature = "wasm")]
-    {
-        // Set up console logging for tracing
-        console_error_panic_hook::set_once();
-    }
+    // Human-readable panic messages in the browser console. `panic = "abort"`
+    // makes a panic an uncatchable trap, so the message is all a caller gets.
+    console_error_panic_hook::set_once();
 }
 
 /// A WASM-compatible RAG engine.
@@ -222,7 +220,7 @@ pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use wasm_bindgen_test::*;

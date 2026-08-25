@@ -72,7 +72,8 @@ impl RerankerConfig {
 }
 
 /// Trait for reranking search results.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Reranker: Send + Sync {
     /// Rerank a list of search results based on the query.
     ///
@@ -107,7 +108,8 @@ pub trait Reranker: Send + Sync {
 }
 
 /// Trait for cross-encoder based rerankers (interface for future ML-based implementations).
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait CrossEncoderReranker: Send + Sync {
     /// Encode a query-document pair and return a relevance score.
     ///
@@ -169,7 +171,8 @@ impl Default for MockReranker {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Reranker for MockReranker {
     async fn rerank(
         &self,
@@ -233,7 +236,8 @@ impl Default for MockCrossEncoderReranker {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl CrossEncoderReranker for MockCrossEncoderReranker {
     async fn encode_pair(&self, query: &str, document: &str) -> Result<f32, OxiRagError> {
         // Simple mock: score based on word overlap
@@ -338,7 +342,8 @@ impl Default for KeywordReranker {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Reranker for KeywordReranker {
     async fn rerank(
         &self,
@@ -419,7 +424,8 @@ impl<E: EmbeddingProvider> SemanticReranker<E> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<E: EmbeddingProvider + Send + Sync> Reranker for SemanticReranker<E> {
     async fn rerank(
         &self,
@@ -545,7 +551,8 @@ impl<E: EmbeddingProvider> HybridReranker<E> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<E: EmbeddingProvider + Send + Sync> Reranker for HybridReranker<E> {
     async fn rerank(
         &self,
@@ -811,7 +818,8 @@ impl RerankerPipeline {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Reranker for RerankerPipeline {
     async fn rerank(
         &self,
@@ -908,7 +916,7 @@ impl Default for RerankerPipelineBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::similar_names)]
 mod tests {
     use super::*;

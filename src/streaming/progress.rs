@@ -1,7 +1,7 @@
 //! `ProgressReporter` for pipeline stages (native/tokio only).
 
 #[cfg(feature = "native")]
-use std::time::Instant;
+use crate::time::Instant;
 
 #[cfg(feature = "native")]
 use tokio::sync::mpsc;

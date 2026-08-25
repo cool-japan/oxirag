@@ -420,7 +420,8 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     if denom > 1e-9 { dot / denom } else { 0.0 }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<P: HiddenStateProvider + Send + Sync> Speculator for HiddenStateSpeculator<P> {
     async fn verify_draft(
         &self,
@@ -521,7 +522,8 @@ impl Default for MockHiddenStateSpeculator {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Speculator for MockHiddenStateSpeculator {
     async fn verify_draft(
         &self,
@@ -566,7 +568,7 @@ impl Speculator for MockHiddenStateSpeculator {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

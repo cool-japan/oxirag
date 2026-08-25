@@ -543,7 +543,10 @@ impl CandleLoraTrainer {
     }
 
     /// Fallback training implementation when speculator feature is disabled.
-    #[allow(dead_code)]
+    ///
+    /// `async` with nothing to await keeps the signature identical to the
+    /// `speculator` implementation this stands in for.
+    #[allow(dead_code, clippy::unused_async)]
     #[cfg(not(feature = "speculator"))]
     async fn train_impl(&self, job: &mut TrainingJob) -> Result<Vec<TrainingMetrics>, OxiRagError> {
         job.fail("Training requires 'speculator' feature to be enabled");
@@ -608,7 +611,8 @@ impl CandleLoraTrainer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl LoraTrainer for CandleLoraTrainer {
     async fn create_job(
         &mut self,
@@ -668,7 +672,7 @@ impl LoraTrainer for CandleLoraTrainer {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

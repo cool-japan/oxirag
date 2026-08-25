@@ -1,6 +1,6 @@
 //! Chain-of-Verification (`CoVe`) — verify draft answers with targeted re-retrieval.
 pub mod engine;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub mod verifier;

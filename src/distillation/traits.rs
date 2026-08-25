@@ -14,7 +14,8 @@ use async_trait::async_trait;
 /// - Collecting Q&A pairs for training data
 /// - Identifying candidates ready for distillation
 /// - Managing statistics and cleanup
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait DistillationTracker: Send + Sync {
     /// Track a query and optionally collect a Q&A pair.
     ///
@@ -64,7 +65,7 @@ pub trait DistillationTracker: Send + Sync {
     async fn clear(&mut self);
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::sync::Arc;
@@ -77,7 +78,8 @@ mod tests {
         stats: DistillationStats,
     }
 
-    #[async_trait]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
     impl DistillationTracker for MockTracker {
         async fn track_query(
             &mut self,

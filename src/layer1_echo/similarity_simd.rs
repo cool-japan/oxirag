@@ -461,7 +461,7 @@ unsafe fn horizontal_sum_sse(v: __m128) -> f32 {
     _mm_cvtss_f32(result)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

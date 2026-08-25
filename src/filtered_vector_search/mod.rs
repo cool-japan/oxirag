@@ -245,7 +245,7 @@ pub mod predicate;
 pub mod selectivity;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use index::{FilteredVectorIndex, FilteredVectorRecord};

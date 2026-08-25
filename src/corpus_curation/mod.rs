@@ -73,7 +73,7 @@ pub mod engine;
 pub mod heuristics;
 pub mod near_dup;
 pub mod rng;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

@@ -19,7 +19,7 @@
 pub mod extractor;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use extractor::{COMMON_VERBS, detect_verb, extract_from_sentence, split_sentences};

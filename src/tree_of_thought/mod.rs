@@ -1,6 +1,6 @@
 //! Tree-of-Thoughts reasoning — branching search over thought trees.
 pub mod search;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use search::TreeOfThoughtEngine;

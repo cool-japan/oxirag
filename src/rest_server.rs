@@ -551,7 +551,7 @@ pub async fn build_and_serve(config: ServerConfig) -> Result<(), Box<dyn std::er
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use axum::body::Body;

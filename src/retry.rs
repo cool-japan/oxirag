@@ -286,7 +286,7 @@ fn simple_random() -> f64 {
 
     thread_local! {
         static SEED: Cell<u64> = Cell::new(
-            SystemTime::now()
+            crate::time::system_now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .map_or(12345, |d| d.as_nanos() as u64)
         );
@@ -309,31 +309,35 @@ async fn sleep(duration: Duration) {
 }
 
 /// Platform-agnostic sleep function for WASM.
-#[cfg(all(feature = "wasm", not(feature = "native")))]
+#[cfg(all(target_arch = "wasm32", not(feature = "native")))]
 async fn sleep(duration: Duration) {
-    use wasm_bindgen::prelude::*;
     use wasm_bindgen_futures::JsFuture;
 
+    // Neither `expect` here is survivable: under `panic = "abort"` a missing
+    // global or a refused `setTimeout` would abort the instance from inside a
+    // retry. A sleep that cannot be scheduled resolves immediately instead —
+    // the caller retries sooner than it asked to, which is a degraded backoff
+    // rather than a dead page.
+    let Some(scope) = crate::global_scope::GlobalScope::current() else {
+        return;
+    };
+    let millis = i32::try_from(duration.as_millis()).unwrap_or(i32::MAX);
     let promise = js_sys::Promise::new(&mut |resolve, _| {
-        let window = web_sys::window().expect("no window");
-        window
-            .set_timeout_with_callback_and_timeout_and_arguments_0(
-                &resolve,
-                duration.as_millis() as i32,
-            )
-            .expect("setTimeout failed");
+        if scope.set_timeout(&resolve, millis).is_err() {
+            let _ = resolve.call0(&wasm_bindgen::JsValue::UNDEFINED);
+        }
     });
     let _ = JsFuture::from(promise).await;
 }
 
 /// Fallback sleep for when neither native nor wasm features are enabled.
-#[cfg(all(not(feature = "native"), not(feature = "wasm")))]
+#[cfg(all(not(feature = "native"), not(target_arch = "wasm32")))]
 async fn sleep(_duration: Duration) {
     // No-op in non-async context - this should not happen in practice
     std::hint::spin_loop();
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::sync::Arc;

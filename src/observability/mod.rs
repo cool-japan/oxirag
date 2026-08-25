@@ -39,9 +39,10 @@ pub mod otel;
 #[cfg(feature = "otel")]
 pub use otel::OtelSpanObserver;
 
+use crate::time::Instant;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
@@ -737,7 +738,7 @@ pub fn record_pipeline_event<S: std::hash::BuildHasher>(
 // Tests
 // ────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::thread;

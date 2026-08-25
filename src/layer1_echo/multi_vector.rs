@@ -234,7 +234,8 @@ impl MaxSimScore {
 }
 
 /// Provider for generating token-level embeddings from text.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait TokenEmbeddingProvider: Send + Sync {
     /// Generate token-level embeddings for a text.
     ///
@@ -261,7 +262,8 @@ pub trait TokenEmbeddingProvider: Send + Sync {
 }
 
 /// Storage for multi-vector documents with `MaxSim` search.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait MultiVectorStore: Send + Sync {
     /// Insert a multi-vector document.
     ///
@@ -378,7 +380,8 @@ impl MockTokenEmbeddingProvider {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl TokenEmbeddingProvider for MockTokenEmbeddingProvider {
     async fn embed_tokens(&self, text: &str) -> Result<Vec<TokenEmbedding>, EmbeddingError> {
         if text.is_empty() {
@@ -455,7 +458,8 @@ impl InMemoryMultiVectorStore {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl MultiVectorStore for InMemoryMultiVectorStore {
     async fn insert(&mut self, doc: MultiVectorDocument) -> Result<(), VectorStoreError> {
         // Validate dimension
@@ -549,7 +553,7 @@ impl MultiVectorStore for InMemoryMultiVectorStore {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

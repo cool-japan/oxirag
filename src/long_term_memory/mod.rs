@@ -1,7 +1,7 @@
 //! Long-term memory stream — generative-agents-style importance + recency + relevance retrieval.
 pub mod retrieval;
 pub mod store;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use retrieval::MemoryRetriever;

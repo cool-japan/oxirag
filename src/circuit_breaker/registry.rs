@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::RwLock;
+use crate::sync::RwLock;
 
 use super::breaker::CircuitBreaker;
 use super::types::{CircuitBreakerConfig, CircuitBreakerStats};

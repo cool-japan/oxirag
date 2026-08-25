@@ -32,7 +32,8 @@ impl MockEntityExtractor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EntityExtractor for MockEntityExtractor {
     async fn extract_entities(&self, _text: &str) -> Result<Vec<GraphEntity>, GraphError> {
         Ok(self.entities.clone())
@@ -330,7 +331,8 @@ impl PatternEntityExtractor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EntityExtractor for PatternEntityExtractor {
     async fn extract_entities(&self, text: &str) -> Result<Vec<GraphEntity>, GraphError> {
         let candidates = self.extract_candidate_names(text);
@@ -365,7 +367,7 @@ impl EntityExtractor for PatternEntityExtractor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

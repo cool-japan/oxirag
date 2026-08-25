@@ -14,7 +14,7 @@
 
 pub mod ops;
 pub mod store;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

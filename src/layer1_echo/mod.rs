@@ -30,6 +30,8 @@ pub use similarity::{
     euclidean_to_similarity, normalize, top_k_similar,
 };
 pub use storage::InMemoryVectorStore;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-indexeddb"))]
+pub use storage::IndexedDbVectorStore;
 pub use traits::{
     Echo, EmbeddingInput, EmbeddingProvider, IndexedDocument, MultiModalEmbeddingProvider,
     SimilarityMetric, VectorStore,
@@ -255,7 +257,7 @@ impl<E: EmbeddingProvider + Send + Sync, V: VectorStore + Send + Sync> Echo for 
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

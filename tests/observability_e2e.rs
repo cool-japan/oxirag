@@ -1,5 +1,7 @@
 //! Integration tests verifying that SpanObserver fires during pipeline execution.
 
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::sync::Arc;
 
 use oxirag::layer1_echo::{EchoLayer, InMemoryVectorStore, MockEmbeddingProvider};

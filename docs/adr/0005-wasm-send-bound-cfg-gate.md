@@ -106,3 +106,29 @@ Keep the existing `Send`-only `VectorStore` trait and ship WASM with only the
 for browser-based RAG applications. Without it, reloading the browser tab
 destroys the entire vector index, making the WASM target unsuitable for any
 non-trivial deployment.
+
+## Addendum (2026-08-25) — the decision was correct and was not kept
+
+This ADR named six traits. By OxiRAG 0.24.0 the crate carried **122 further**
+`#[async_trait]` sites written after it, none of which had received the
+`cfg_attr` pair — which is most of why `wasm32-unknown-unknown` had stopped
+compiling entirely (39 errors). The `?Send` relaxation is viral: an implementation
+missing the pair does not fail locally, it fails at every caller that awaits it,
+which is why the symptom presented as "future is not `Send`" in `reranker.rs` and
+`pipeline.rs` rather than at the impls actually at fault.
+
+All 122 have been brought in line, and the pair is now applied uniformly rather
+than selectively: on `wasm32` the `?Send` variant is chosen for every
+`#[async_trait]` in the crate, and off it nothing changes.
+
+The lesson is recorded in [ADR-0006](0006-wasm-portability-substrate.md), which
+adds a `clippy.toml` gate for its own decisions rather than relying on the next
+author having read this file. A convention that only holds while everyone
+remembers it decays at the rate the codebase grows.
+
+One consequence discovered while repairing this: `Speculator` could not be
+implemented on `wasm32` at all, because `HiddenStateCache` used
+`Arc<RefCell<…>>` under `cfg(not(feature = "native"))` while `Speculator`
+requires `Send + Sync`. The fix was not to relax the supertrait but to delete the
+`RefCell` fork — `std::sync::RwLock` works on `wasm32` and the fork bought
+nothing. `Speculator: Send + Sync` is unchanged.

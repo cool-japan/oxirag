@@ -86,7 +86,7 @@ mod ngram;
 mod nli_lite;
 mod qa_lite;
 pub mod scorer;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

@@ -8,7 +8,8 @@ use crate::types::{
 };
 
 /// Trait for extracting logical claims from text.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ClaimExtractor: Send + Sync {
     /// Extract logical claims from text.
     ///
@@ -33,7 +34,8 @@ pub trait ClaimExtractor: Send + Sync {
 }
 
 /// Trait for SMT-based verification.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait SmtVerifier: Send + Sync {
     /// Verify a single claim.
     async fn verify_claim(
@@ -79,7 +81,8 @@ impl Default for JudgeConfig {
 }
 
 /// The Judge trait for logic verification.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Judge: Send + Sync {
     /// Fully verify a draft against the context.
     ///
@@ -203,7 +206,8 @@ impl PatternClaimExtractor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl ClaimExtractor for PatternClaimExtractor {
     async fn extract_claims(
         &self,
@@ -325,7 +329,7 @@ impl ClaimExtractor for PatternClaimExtractor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::single_char_pattern)]
 mod tests {
     use super::*;

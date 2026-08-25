@@ -12,6 +12,8 @@
 //! Note: requires the `prefix-cache` feature to be enabled, e.g.
 //! `cargo nextest run --features prefix-cache --test fuzz_fingerprint`
 
+#![cfg(not(target_arch = "wasm32"))]
+
 use proptest::prelude::*;
 
 #[cfg(feature = "prefix-cache")]

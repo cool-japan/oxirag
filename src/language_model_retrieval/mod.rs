@@ -146,7 +146,7 @@ pub mod rm3;
 pub mod smoothing;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use dfr::{dph_term_score, pl2_term_score};

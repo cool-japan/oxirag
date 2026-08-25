@@ -376,7 +376,7 @@ async fn test_redb_memory_usage() {
 // Property-based tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,

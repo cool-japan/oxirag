@@ -116,7 +116,8 @@ pub trait PrefixCacheExt: PrefixCacheStore {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<T: PrefixCacheStore + Send> PrefixCacheExt for T {
     async fn get_or_compute<F>(
         &mut self,
@@ -157,7 +158,7 @@ impl<T: PrefixCacheStore> PrefixCacheExt for T {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::prefix_cache::InMemoryPrefixCache;

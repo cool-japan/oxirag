@@ -16,5 +16,5 @@ pub use stem::StemExpander;
 pub use synonym::SynonymExpander;
 pub use types::{ExpandedQuery, ExpansionConfig, ExpansionMethod, QueryExpander};
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

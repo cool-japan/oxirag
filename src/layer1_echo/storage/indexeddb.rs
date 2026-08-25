@@ -84,6 +84,10 @@ impl IndexedDbEntry {
 // ────────────────────────────────────────────────────────────────────────────
 
 /// Convert a [`JsValue`] error into [`VectorStoreError::StorageError`].
+///
+/// By value rather than by reference so it can be named directly in
+/// `.map_err(js_err)`, which is every one of its ~20 call sites.
+#[allow(clippy::needless_pass_by_value)]
 fn js_err(js: JsValue) -> VectorStoreError {
     VectorStoreError::StorageError(js.as_string().unwrap_or_else(|| format!("{js:?}")))
 }
@@ -93,11 +97,16 @@ fn js_err(js: JsValue) -> VectorStoreError {
 /// If the database does not exist yet the `onupgradeneeded` callback creates the
 /// `"documents"` object store with `keyPath = "id"`.
 async fn open_db() -> Result<web_sys::IdbDatabase, VectorStoreError> {
-    let window = web_sys::window().ok_or_else(|| {
-        VectorStoreError::StorageError("no Window object (not in browser context)".into())
+    // A `Window` OR a `WorkerGlobalScope`: IndexedDB is available to workers,
+    // and a RAG pipeline belongs in one. Reaching only for `window()` reported
+    // "not available in this browser" on the host where this engine should run.
+    let scope = crate::global_scope::GlobalScope::current().ok_or_else(|| {
+        VectorStoreError::StorageError(
+            "no Window or WorkerGlobalScope (not a browser context)".into(),
+        )
     })?;
 
-    let idb_factory = window.indexed_db().map_err(js_err)?.ok_or_else(|| {
+    let idb_factory = scope.indexed_db().map_err(js_err)?.ok_or_else(|| {
         VectorStoreError::StorageError("IndexedDB not available in this browser".into())
     })?;
 
@@ -113,7 +122,12 @@ async fn open_db() -> Result<web_sys::IdbDatabase, VectorStoreError> {
         Closure::once(|event: web_sys::IdbVersionChangeEvent| {
             if let Some(target) = event.target() {
                 let req: web_sys::IdbOpenDbRequest = target.unchecked_into();
-                if let Ok(Some(result)) = req.result() {
+                // web-sys 0.3.104 returns the raw `JsValue`; a request that has
+                // not settled yields `undefined` rather than `None`.
+                if let Ok(result) = req.result()
+                    && !result.is_undefined()
+                    && !result.is_null()
+                {
                     let db: web_sys::IdbDatabase = result.unchecked_into();
                     if !db.object_store_names().contains(STORE_NAME) {
                         // Plain createObjectStore — out-of-line key, no autoIncrement.
@@ -157,13 +171,13 @@ async fn open_db() -> Result<web_sys::IdbDatabase, VectorStoreError> {
     JsFuture::from(promise).await.map_err(js_err)?;
 
     // Retrieve the IdbDatabase from the original request handle.
-    let db: web_sys::IdbDatabase = open_request
-        .result()
-        .map_err(js_err)?
-        .ok_or_else(|| {
-            VectorStoreError::StorageError("IDB open succeeded but result is null".into())
-        })?
-        .unchecked_into();
+    let result = open_request.result().map_err(js_err)?;
+    if result.is_undefined() || result.is_null() {
+        return Err(VectorStoreError::StorageError(
+            "IDB open succeeded but result is null".into(),
+        ));
+    }
+    let db: web_sys::IdbDatabase = result.unchecked_into();
 
     Ok(db)
 }
@@ -436,10 +450,10 @@ impl VectorStore for IndexedDbVectorStore {
                     return None;
                 }
                 let score = compute_similarity(query_embedding, &e.embedding, metric);
-                if let Some(min) = min_score {
-                    if score < min {
-                        return None;
-                    }
+                if let Some(min) = min_score
+                    && score < min
+                {
+                    return None;
                 }
                 Some((score, e))
             })
@@ -482,16 +496,16 @@ impl VectorStore for IndexedDbVectorStore {
                     return None;
                 }
                 // Apply metadata filter if provided.
-                if let Some(f) = filter {
-                    if !f.matches(&e.metadata) {
-                        return None;
-                    }
+                if let Some(f) = filter
+                    && !f.matches(&e.metadata)
+                {
+                    return None;
                 }
                 let score = compute_similarity(query_embedding, &e.embedding, metric);
-                if let Some(min) = min_score {
-                    if score < min {
-                        return None;
-                    }
+                if let Some(min) = min_score
+                    && score < min
+                {
+                    return None;
                 }
                 Some((score, e))
             })
@@ -515,7 +529,19 @@ impl VectorStore for IndexedDbVectorStore {
         let result = with_ro_store(|store| store.count().map_err(js_err)).await;
 
         match result {
-            Ok(v) => v.as_f64().map_or(0, |n| n as usize),
+            // `IDBObjectStore.count()` returns a non-negative integer well inside
+            // `usize` on wasm32; a browser reporting anything else counts as zero
+            // rather than as a wrapped-around number.
+            Ok(v) => v.as_f64().map_or(0, |n| {
+                if n.is_finite() && n >= 0.0 {
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    {
+                        n as usize
+                    }
+                } else {
+                    0
+                }
+            }),
             Err(_) => 0,
         }
     }
@@ -538,7 +564,7 @@ impl VectorStore for IndexedDbVectorStore {
 // WASM-bindgen tests
 // ────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use wasm_bindgen_test::*;

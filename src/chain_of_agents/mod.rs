@@ -87,7 +87,7 @@ pub mod types;
 pub mod unit;
 pub mod worker;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use engine::CoaEngine;

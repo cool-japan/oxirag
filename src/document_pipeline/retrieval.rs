@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::{Mutex, RwLock};
+use crate::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 use crate::advanced_retrieval::{MmrConfig, MmrReranker};

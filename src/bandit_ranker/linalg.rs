@@ -600,7 +600,7 @@ fn check_vector(vector: &[f64], dim: usize) -> Result<(), LinalgError> {
 ///
 /// [`LinalgError::NotPositiveDefinite`] is reused to report a singular matrix
 /// (an all-but-zero pivot column), plus the usual dimension/finiteness errors.
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 pub fn gauss_jordan_inverse(matrix: &[f64], dim: usize) -> Result<Vec<f64>, LinalgError> {
     if dim == 0 {
         return Err(LinalgError::ZeroDimension);

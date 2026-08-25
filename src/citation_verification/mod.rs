@@ -43,7 +43,7 @@
 //! assert!(!result.matched_spans.is_empty());
 //! ```
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub mod verifier;

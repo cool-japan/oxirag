@@ -17,6 +17,13 @@ crate-type = ["cdylib", "rlib"]
 # Core
 thiserror = "2.0"
 async-trait = "0.1"
+# Runtime-agnostic async `RwLock`/`Mutex`. `src/sync.rs` takes its primitives from
+# here whenever `tokio` is not in the build — which is every `wasm32` build (no
+# runtime, no threads) and every `--no-default-features` build on any target.
+# Unconditional rather than optional so that "OxiRAG without tokio" is a
+# configuration that compiles everywhere rather than one that compiles on wasm32
+# and nowhere else. Pure Rust, three small crates. See ADR-0006.
+async-lock = "3.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tracing = "0.1"
@@ -28,26 +35,21 @@ tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "sync", "ti
 tokio-stream = { version = "0.1", optional = true }
 futures = { version = "0.3", optional = true }
 
-# WASM support
-wasm-bindgen = { version = "0.2", optional = true }
-wasm-bindgen-futures = { version = "0.4", optional = true }
-js-sys = { version = "0.3", optional = true }
-web-sys = { version = "0.3", optional = true, features = [
-    "console",
-    # IndexedDB
-    "IdbFactory", "IdbDatabase", "IdbObjectStore", "IdbTransaction",
-    "IdbRequest", "IdbOpenDbRequest", "IdbKeyRange",
-    "IdbCursor", "IdbCursorWithValue", "IdbVersionChangeEvent", "DomStringList",
-    "Window", "WorkerGlobalScope",
-    # Web Worker
-    "Worker", "WorkerOptions", "DedicatedWorkerGlobalScope",
-    "MessageEvent", "MessagePort",
-    # Streaming
-    "ReadableStream", "ReadableStreamDefaultController",
-] }
-getrandom = { version = "0.4", features = ["wasm_js"], optional = true }
-console_error_panic_hook = { version = "0.1", optional = true }
-serde-wasm-bindgen = { version = "0.6", optional = true }
+# WASM support.
+#
+# These are declared under `[target.'cfg(target_arch = "wasm32")'.dependencies]`
+# rather than here, and they are NOT optional there. The distinction matters:
+#
+#   * building OxiRAG *for* wasm32 needs them unconditionally — `src/sync.rs`
+#     has no `tokio::sync` to fall back on and `src/retry.rs` has no timer, so a
+#     wasm32 build without them is not a smaller build, it is a broken one;
+#   * the `wasm` FEATURE means something narrower: expose `src/wasm.rs` and
+#     `src/wasm_worker.rs`, the `#[wasm_bindgen]` surface JavaScript calls.
+#
+# A downstream shim that writes its own `#[wasm_bindgen]` boundary (the
+# COOLJAPAN Playground `/rag` demo does) therefore takes OxiRAG *without* the
+# `wasm` feature and still compiles for wasm32 — and does not inherit a second
+# `#[wasm_bindgen(start)]` or an export surface it does not use.
 
 # Layer 1: Echo (currently using pure Rust for similarity)
 # numrs2 = { version = "0.1", optional = true }
@@ -90,6 +92,41 @@ tower = { version = "0.5", optional = true }
 tower-http = { version = "0.7", optional = true, features = ["cors", "trace"] }
 tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter"] }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "console",
+    # IndexedDB
+    "IdbFactory", "IdbDatabase", "IdbObjectStore", "IdbTransaction",
+    "IdbRequest", "IdbOpenDbRequest", "IdbKeyRange", "IdbTransactionMode",
+    "IdbCursor", "IdbCursorWithValue", "IdbVersionChangeEvent", "DomStringList",
+    "Window", "WorkerGlobalScope",
+    # Web Worker
+    "Worker", "WorkerOptions", "DedicatedWorkerGlobalScope",
+    "MessageEvent", "MessagePort",
+    # Streaming
+    "ReadableStream", "ReadableStreamDefaultController",
+] }
+console_error_panic_hook = "0.1"
+serde-wasm-bindgen = "0.6"
+
+# Neither is called from OxiRAG. Both exist to turn on `getrandom`'s JavaScript
+# backend for the two majors that reach the wasm32 graph: 0.4 directly, and 0.3
+# transitively through `ahash <- dashmap <- lasso <- oxiz-core` (the `judge`
+# feature). Cargo features are additive and only a DIRECT dependent can turn one
+# on, which is the whole reason these lines exist — a transitive `getrandom`
+# cannot enable its own backend.
+#
+# `getrandom 0.3` needs a second piece of wiring on top: the
+# `--cfg getrandom_backend="wasm_js"` rustflag in `.cargo/config.toml`. Without
+# it the crate refuses to compile for wasm32; without the features here it
+# compiles and then fails at the point of use. Downstream consumers need that
+# rustflag in their own config — cargo never reads it from a dependency.
+getrandom = { version = "0.4", features = ["wasm_js"] }
+getrandom03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+
 # CUDA support - only available on x86_64 Linux and Windows (where CUDA toolkit exists)
 # cudarc is the underlying CUDA runtime - target-gated to prevent build failures on unsupported platforms
 [target.'cfg(all(target_arch = "x86_64", any(target_os = "linux", target_os = "windows")))'.dependencies]
@@ -98,20 +135,33 @@ cudarc = { version = "0.19", optional = true, features = ["cuda-12000"] }
 [build-dependencies]
 napi-build = "2"
 
+# Dev dependencies that build on every target. Everything else is split by
+# target below, because `cargo build --tests` resolves ALL dev-dependencies
+# regardless of which test uses them: `proptest` pulls `rusty-fork` pulls
+# `wait-timeout`, which does not compile for wasm32 at all. With them in this
+# table `wasm-pack test` cannot run a single test, which is why the wasm test
+# files that exist have only ever been skipped.
 [dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tokio-test = "0.4"
 criterion = { version = "0.8", features = ["async_tokio"] }
 tempfile = "3.27"
-wasm-bindgen-test = "0.3"
 proptest = "1.11"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 
 [features]
 default = ["native", "echo"]
 # Native target with full async runtime
 native = ["tokio", "tokio-stream", "futures"]
 # WASM target for browser/edge deployment
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys", "web-sys", "getrandom", "console_error_panic_hook", "serde-wasm-bindgen"]
+# Exposes the `#[wasm_bindgen]` surface in `src/wasm.rs` / `src/wasm_worker.rs`.
+# The crates it used to name are unconditional wasm32 target dependencies now —
+# see the `[target.'cfg(target_arch = "wasm32")'.dependencies]` section — so this
+# feature is about the JavaScript API, not about being buildable for wasm32.
+wasm = []
 # Layer features
 echo = []
 speculator = ["candle-core", "candle-nn", "candle-transformers", "hf-hub", "tokenizers"]
@@ -524,17 +574,30 @@ name = "oxirag-server"
 path = "src/bin/oxirag-server.rs"
 required-features = ["rest-server"]
 
+# Examples and benches are native-only. `native` is named explicitly in every
+# `required-features` so that a wasm32 build — where `native` is off by
+# definition — skips them instead of failing: `cargo build --tests` builds every
+# example target too, so one unbuildable example is enough to stop
+# `wasm-pack test` from running a single test.
 [[example]]
 name = "candle_slm_example"
-required-features = ["speculator"]
+required-features = ["native", "speculator"]
 
 [[example]]
 name = "lora_training_example"
-required-features = ["distillation"]
+required-features = ["native", "distillation"]
+
+[[example]]
+name = "multimodal_search"
+required-features = ["native", "multimodal"]
 
 [[example]]
 name = "otel_tracing"
-required-features = ["otel"]
+required-features = ["native", "otel"]
+
+[[example]]
+name = "rest_server"
+required-features = ["native", "rest-server"]
 
 [[test]]
 name = "trait_bounds_native"
@@ -543,3 +606,4 @@ required-features = ["prefix-cache"]
 [[bench]]
 name = "benchmarks"
 harness = false
+required-features = ["native"]

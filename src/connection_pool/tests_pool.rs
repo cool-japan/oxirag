@@ -1,6 +1,6 @@
 //! Pool lifecycle tests for connection pool (acquire, release, health, timeout, shutdown, resize, expiry, concurrent).
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::items_after_statements)]
 pub(super) mod pool_tests {
     use std::future::Future;

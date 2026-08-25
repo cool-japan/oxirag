@@ -1,6 +1,6 @@
 //! Cross-claim consistency detection within generated answers.
 pub mod checker;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use checker::ConsistencyChecker;

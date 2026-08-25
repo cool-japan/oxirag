@@ -18,7 +18,8 @@ use super::types::{ContextDoc, FlareError};
 /// Async trait for retrieval backends used by the FLARE engine.
 ///
 /// Implementors must be `Send + Sync`.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait FlareRetriever: Send + Sync {
     /// Retrieve the top-`top_k` documents most relevant to `query`.
     ///
@@ -89,7 +90,8 @@ impl MockFlareRetriever {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl FlareRetriever for MockFlareRetriever {
     async fn retrieve(&self, _query: &str, top_k: usize) -> Result<Vec<ContextDoc>, FlareError> {
         let guard = self
@@ -139,7 +141,8 @@ impl<R: FlareRetriever + std::fmt::Debug> std::fmt::Debug for QueryAugmentedRetr
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<R: FlareRetriever> FlareRetriever for QueryAugmentedRetriever<R> {
     async fn retrieve(&self, query: &str, top_k: usize) -> Result<Vec<ContextDoc>, FlareError> {
         let augmented = format!("{} {}", self.original_query.trim(), query.trim());

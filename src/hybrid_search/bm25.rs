@@ -7,9 +7,9 @@
 
 #![allow(clippy::cast_precision_loss)] // Intentional: usize to f32 for scoring
 
+use crate::sync::RwLock;
 use async_trait::async_trait;
 use std::collections::{HashMap, HashSet};
-use tokio::sync::RwLock;
 
 use crate::error::VectorStoreError;
 use crate::types::DocumentId;
@@ -253,7 +253,8 @@ impl Default for InMemorySparseStore {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl SparseVectorStore for InMemorySparseStore {
     async fn insert(
         &mut self,

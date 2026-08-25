@@ -1,8 +1,8 @@
 //! In-memory vector store implementation.
 
+use crate::sync::RwLock;
 use async_trait::async_trait;
 use std::collections::HashMap;
-use tokio::sync::RwLock;
 
 use crate::error::VectorStoreError;
 use crate::layer1_echo::filter::MetadataFilter;
@@ -56,7 +56,8 @@ impl InMemoryVectorStore {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl VectorStore for InMemoryVectorStore {
     async fn insert(&mut self, doc: IndexedDocument) -> Result<(), VectorStoreError> {
         if doc.embedding.len() != self.dimension {
@@ -260,7 +261,7 @@ impl VectorStore for InMemoryVectorStore {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::cast_precision_loss)]
 mod tests {
     use super::*;

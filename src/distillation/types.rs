@@ -258,12 +258,12 @@ pub struct DistillationStats {
 /// Get the current Unix timestamp in seconds.
 #[must_use]
 pub fn current_timestamp() -> u64 {
-    std::time::SystemTime::now()
+    crate::time::system_now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

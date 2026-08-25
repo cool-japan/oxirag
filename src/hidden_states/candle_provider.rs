@@ -632,7 +632,8 @@ impl Default for CandleHiddenStateProvider {
 // HiddenStateProvider trait impl
 // ────────────────────────────────────────────────────────────────────────────
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HiddenStateProvider for CandleHiddenStateProvider {
     /// Extract hidden states from `text` via a live BERT forward pass.
     ///
@@ -693,7 +694,7 @@ impl HiddenStateProvider for CandleHiddenStateProvider {
 // Tests
 // ────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 
@@ -789,7 +790,7 @@ mod tests {
 // Pooling unit tests (no model loading required)
 // ────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod pooling_tests {
     use super::*;
 

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(feature = "native")]
-use tokio::sync::RwLock;
+use crate::sync::RwLock;
 
 #[cfg(not(feature = "native"))]
 use std::sync::RwLock;
@@ -211,10 +211,10 @@ impl ModelSelector {
             let Ok(history) = self.usage_history.read() else {
                 return self.fallback_model.clone();
             };
-            if let Some(model_id) = history.front() {
-                if registry.get(model_id).is_some_and(|m| m.is_active) {
-                    return model_id.clone();
-                }
+            if let Some(model_id) = history.front()
+                && registry.get(model_id).is_some_and(|m| m.is_active)
+            {
+                return model_id.clone();
             }
             self.fallback_model.clone()
         }
@@ -285,23 +285,23 @@ impl ModelSelector {
     }
 
     /// Get the current selection statistics (non-async version for WASM).
+    ///
+    /// A poisoned lock yields zeroed counts rather than a panic: this target
+    /// builds with `panic = "abort"`, where a panic in a statistics getter is an
+    /// uncatchable trap that takes the whole instance with it.
     #[cfg(not(feature = "native"))]
     pub fn statistics(&self) -> SelectorStatistics {
-        let registry = self
-            .registry
-            .read()
-            .expect("registry lock should not be poisoned");
-        let history = self
-            .usage_history
-            .read()
-            .expect("usage_history lock should not be poisoned");
+        let counts = self.registry.read().map_or((0, 0), |registry| {
+            (registry.count(), registry.active_count())
+        });
+        let history_size = self.usage_history.read().map_or(0, |history| history.len());
 
         SelectorStatistics {
             strategy: self.selection_strategy,
             fallback_model: self.fallback_model.clone(),
-            total_models: registry.count(),
-            active_models: registry.active_count(),
-            history_size: history.len(),
+            total_models: counts.0,
+            active_models: counts.1,
+            history_size,
             round_robin_position: self.round_robin_counter.load(Ordering::Relaxed),
         }
     }
@@ -314,13 +314,14 @@ impl ModelSelector {
     }
 
     /// Clear the usage history (non-async version for WASM).
+    ///
+    /// A poisoned lock leaves the history untouched rather than panicking; see
+    /// [`Self::statistics`].
     #[cfg(not(feature = "native"))]
     pub fn clear_history(&self) {
-        let mut history = self
-            .usage_history
-            .write()
-            .expect("usage_history lock should not be poisoned");
-        history.clear();
+        if let Ok(mut history) = self.usage_history.write() {
+            history.clear();
+        }
     }
 
     /// Reset the round-robin counter.
@@ -336,13 +337,15 @@ impl ModelSelector {
     }
 
     /// Get a list of recently used model IDs (non-async version for WASM).
+    ///
+    /// A poisoned lock yields an empty list rather than panicking; see
+    /// [`Self::statistics`].
     #[cfg(not(feature = "native"))]
     pub fn recent_models(&self, limit: usize) -> Vec<String> {
-        let history = self
-            .usage_history
-            .read()
-            .expect("usage_history lock should not be poisoned");
-        history.iter().take(limit).cloned().collect()
+        self.usage_history.read().map_or_else(
+            |_| Vec::new(),
+            |history| history.iter().take(limit).cloned().collect(),
+        )
     }
 }
 
@@ -433,7 +436,7 @@ impl ModelSelectorBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::distillation::registry::ModelMetadata;

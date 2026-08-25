@@ -73,7 +73,8 @@ impl CompositeExpander {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl QueryExpander for CompositeExpander {
     async fn expand(&self, query: &Query) -> Vec<Query> {
         let mut all_expanded = Vec::new();

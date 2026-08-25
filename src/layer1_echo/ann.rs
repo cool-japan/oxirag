@@ -13,5 +13,5 @@ pub use hnsw::{HnswIndex, HnswNode};
 pub use stats::AnnStats;
 pub use store::AnnVectorStore;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

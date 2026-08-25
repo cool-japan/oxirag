@@ -460,7 +460,7 @@ fn logit(p: f32) -> f32 {
     (p / (1.0 - p)).ln()
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(
     clippy::float_cmp,
     clippy::manual_range_contains,

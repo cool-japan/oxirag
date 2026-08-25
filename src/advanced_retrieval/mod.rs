@@ -35,7 +35,7 @@ pub mod mmr;
 pub mod rag_fusion;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use hyde::{HydeConfig, HydeRetrieval};

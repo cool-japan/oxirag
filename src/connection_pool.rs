@@ -10,5 +10,5 @@ pub use mock::MockConnection;
 pub use pool::{ConnectionFactory, ConnectionPool};
 pub use types::{ConnectionError, PoolConfig, PoolError, PoolStats};
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

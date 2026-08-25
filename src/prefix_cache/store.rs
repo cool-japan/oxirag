@@ -236,7 +236,8 @@ impl Clone for InMemoryPrefixCache {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PrefixCacheStore for InMemoryPrefixCache {
     async fn get(&self, fingerprint: &ContextFingerprint) -> Option<KVCacheEntry> {
         let mut inner = self.inner.write().expect("lock poisoned");
@@ -414,7 +415,7 @@ impl PrefixCacheStore for InMemoryPrefixCache {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::cast_sign_loss, clippy::float_cmp)]
 mod tests {
     use super::*;

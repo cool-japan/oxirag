@@ -156,9 +156,9 @@ pub mod pbm;
 pub mod synthetic;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_counterfactual;
 
 pub use cascade::{CascadeClickModel, cascade_examined_depth};

@@ -32,7 +32,8 @@ impl MockRelationshipExtractor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl RelationshipExtractor for MockRelationshipExtractor {
     async fn extract_relationships(
         &self,
@@ -248,7 +249,8 @@ impl PatternRelationshipExtractor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl RelationshipExtractor for PatternRelationshipExtractor {
     async fn extract_relationships(
         &self,
@@ -312,7 +314,7 @@ impl RelationshipExtractor for PatternRelationshipExtractor {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::layer4_graph::types::EntityType;

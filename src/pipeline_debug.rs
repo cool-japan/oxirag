@@ -3,12 +3,12 @@
 //! This module provides comprehensive tracing, debugging, and visualization
 //! capabilities for `OxiRAG` pipeline execution.
 
+use crate::time::Instant;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Debug, Write};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
-use std::time::Instant;
 use uuid::Uuid;
 
 /// Unique identifier for a trace session.
@@ -758,7 +758,7 @@ fn sanitize_mermaid_id(s: &str) -> String {
         .collect()
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::time::Duration;

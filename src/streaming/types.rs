@@ -165,6 +165,7 @@ impl ChunkMetadata {
 }
 
 /// Helper function to truncate content for display.
+#[cfg(feature = "native")]
 pub(super) fn truncate_content(content: &str, max_len: usize) -> String {
     if content.len() <= max_len {
         content.to_string()

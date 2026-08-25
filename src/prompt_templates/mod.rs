@@ -1,7 +1,7 @@
 //! Prompt template registry — placeholder (agents fill in).
 pub mod engine;
 pub mod registry;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use engine::TemplateEngine;

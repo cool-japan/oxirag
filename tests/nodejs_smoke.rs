@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 /// Rust-side smoke tests for the logic that backs the Node.js napi-rs bridge.
 ///
 /// These tests exercise the underlying `Document`, `Query`, `Pipeline`, and

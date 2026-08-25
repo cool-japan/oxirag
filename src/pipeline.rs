@@ -1,8 +1,9 @@
 //! Unified RAG pipeline combining all three layers.
 
+use crate::time::Instant;
 use async_trait::async_trait;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::config::RetryConfig;
 use crate::error::{OxiRagError, PipelineError};
@@ -11,9 +12,9 @@ use crate::layer2_speculator::Speculator;
 use crate::layer3_judge::Judge;
 use crate::observability::{PipelineSpanContext, SpanObserver};
 use crate::retry::RetryPolicy;
-use crate::types::{
-    Document, Draft, PipelineOutput, Query, SpeculationDecision, VerificationResult,
-};
+#[cfg(feature = "native")]
+use crate::types::VerificationResult;
+use crate::types::{Document, Draft, PipelineOutput, Query, SpeculationDecision};
 
 /// Platform-agnostic sleep function.
 #[cfg(feature = "native")]
@@ -22,24 +23,29 @@ async fn sleep_duration(duration: Duration) {
 }
 
 /// Platform-agnostic sleep function for WASM.
-#[cfg(all(feature = "wasm", not(feature = "native")))]
+#[cfg(all(target_arch = "wasm32", not(feature = "native")))]
 async fn sleep_duration(duration: Duration) {
     use wasm_bindgen_futures::JsFuture;
 
+    // Neither `expect` here is survivable: under `panic = "abort"` a missing
+    // global or a refused `setTimeout` would abort the instance from inside a
+    // retry. A sleep that cannot be scheduled resolves immediately instead —
+    // the caller retries sooner than it asked to, which is a degraded backoff
+    // rather than a dead page.
+    let Some(scope) = crate::global_scope::GlobalScope::current() else {
+        return;
+    };
+    let millis = i32::try_from(duration.as_millis()).unwrap_or(i32::MAX);
     let promise = js_sys::Promise::new(&mut |resolve, _| {
-        let window = web_sys::window().expect("no window");
-        window
-            .set_timeout_with_callback_and_timeout_and_arguments_0(
-                &resolve,
-                duration.as_millis() as i32,
-            )
-            .expect("setTimeout failed");
+        if scope.set_timeout(&resolve, millis).is_err() {
+            let _ = resolve.call0(&wasm_bindgen::JsValue::UNDEFINED);
+        }
     });
     let _ = JsFuture::from(promise).await;
 }
 
 /// Fallback sleep for when neither native nor wasm features are enabled.
-#[cfg(all(not(feature = "native"), not(feature = "wasm")))]
+#[cfg(all(not(feature = "native"), not(target_arch = "wasm32")))]
 async fn sleep_duration(_duration: Duration) {
     std::hint::spin_loop();
 }
@@ -99,7 +105,8 @@ impl Default for PipelineConfig {
 /// Implementors drive a query through Echo → Speculator → Judge (and optionally
 /// Graph), returning a [`PipelineOutput`] that contains the final answer together
 /// with per-layer diagnostics.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait RagPipeline: Send + Sync {
     /// Run a query through all active pipeline layers and return the result.
     ///
@@ -238,6 +245,21 @@ where
     #[must_use]
     pub const fn retry_policy(&self) -> &RetryPolicy {
         &self.retry_policy
+    }
+
+    /// Get a mutable reference to the pipeline configuration.
+    ///
+    /// Everything in [`PipelineConfig`] except `retry_config` takes effect on
+    /// the next [`RagPipeline::process`] call, so a caller can turn the fast
+    /// path on and off between queries rather than rebuilding the pipeline
+    /// around a new config — which would mean rebuilding its layers, and with
+    /// them the index they hold.
+    ///
+    /// `retry_config` is the exception: [`RetryPolicy`] is compiled from it at
+    /// construction time, so changing that field here has no effect. Build a new
+    /// pipeline to change the retry policy.
+    pub const fn config_mut(&mut self) -> &mut PipelineConfig {
+        &mut self.config
     }
 
     /// Generate a draft answer from search results.
@@ -470,7 +492,8 @@ where
     tokio::join!(speculation_future, verification_future)
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<E, S, J> RagPipeline for Pipeline<E, S, J>
 where
     E: Echo + Send + Sync,
@@ -641,7 +664,7 @@ where
             join_all(futures).await
         }
 
-        #[cfg(all(feature = "wasm", not(feature = "native")))]
+        #[cfg(all(target_arch = "wasm32", not(feature = "native")))]
         {
             // WASM: process sequentially as join_all may not work reliably
             let mut results = Vec::with_capacity(queries.len());
@@ -651,7 +674,7 @@ where
             results
         }
 
-        #[cfg(all(not(feature = "native"), not(feature = "wasm")))]
+        #[cfg(all(not(feature = "native"), not(target_arch = "wasm32")))]
         {
             // Fallback: sequential processing
             let mut results = Vec::with_capacity(queries.len());
@@ -783,7 +806,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::layer1_echo::{EchoLayer, InMemoryVectorStore, MockEmbeddingProvider};

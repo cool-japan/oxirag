@@ -101,7 +101,7 @@ impl DistillationEvaluator {
         let mut false_negatives = 0;
 
         for example in test_data {
-            let start = std::time::Instant::now();
+            let start = crate::time::Instant::now();
             let output = model.generate(&example.input);
             let latency = start.elapsed().as_secs_f64() * 1000.0;
             total_latency_ms += latency;

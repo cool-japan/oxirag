@@ -1,6 +1,6 @@
 //! Core circuit breaker tests (state transitions, stats, reset).
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::io_other_error)]
 pub(super) mod core {
     use std::sync::Arc;

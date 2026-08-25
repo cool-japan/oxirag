@@ -1,6 +1,6 @@
 //! Reflexion — verbal self-reflection with episodic memory across retry attempts.
 pub mod engine;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use engine::ReflexionEngine;

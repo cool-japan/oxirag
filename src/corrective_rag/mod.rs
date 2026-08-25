@@ -32,7 +32,7 @@
 pub mod engine;
 pub mod grader;
 pub mod strip;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

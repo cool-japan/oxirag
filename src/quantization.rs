@@ -481,7 +481,8 @@ impl QuantizedDocument {
 }
 
 /// Trait for quantized vector storage with similarity search.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait QuantizedVectorStore: Send + Sync {
     /// Insert a quantized document.
     async fn insert(&mut self, doc: QuantizedDocument) -> Result<(), VectorStoreError>;
@@ -577,7 +578,8 @@ impl MockQuantizedVectorStore {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl QuantizedVectorStore for MockQuantizedVectorStore {
     async fn insert(&mut self, doc: QuantizedDocument) -> Result<(), VectorStoreError> {
         if doc.embedding.quantization_type != self.quantization_type {
@@ -691,7 +693,7 @@ pub fn compute_snr_db(original: &[f32], dequantized: &[f32]) -> f32 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::similar_names)]
 mod tests {
     use super::*;

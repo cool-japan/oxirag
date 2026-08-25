@@ -1,9 +1,10 @@
 //! Pipeline metrics and tracing support.
 
+use crate::time::Instant;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Metrics collected for pipeline operations.
 #[derive(Debug, Clone, Default)]
@@ -265,7 +266,7 @@ impl TimedOperation for MetricsCollector {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

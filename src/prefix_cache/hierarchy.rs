@@ -4,8 +4,9 @@
 //! stays in fast L1 cache, warm data moves to L2, and cold data can be
 //! stored in L3 (simulating disk-based storage).
 
+use crate::time::Instant;
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use async_trait::async_trait;
 
@@ -522,7 +523,8 @@ impl Clone for HierarchicalCache {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PrefixCacheStore for HierarchicalCache {
     async fn get(&self, fingerprint: &ContextFingerprint) -> Option<KVCacheEntry> {
         // Check L1 first
@@ -669,7 +671,7 @@ impl PrefixCacheStore for HierarchicalCache {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(
     clippy::float_cmp,
     clippy::cast_sign_loss,

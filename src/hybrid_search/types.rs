@@ -154,7 +154,8 @@ impl Default for SparseVector {
 }
 
 /// Trait for sparse vector storage with similarity search.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait SparseVectorStore: Send + Sync {
     /// Insert a document with its sparse vector representation.
     ///

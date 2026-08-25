@@ -67,7 +67,7 @@
 pub mod budget;
 pub mod compressor;
 pub mod ngram_model;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

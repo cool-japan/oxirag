@@ -1,6 +1,6 @@
 //! Tests for query expansion strategies.
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::similar_names)]
 mod inner {
     use std::collections::HashMap;

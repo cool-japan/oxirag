@@ -124,7 +124,7 @@ pub mod detector;
 pub mod generator;
 pub mod hasher;
 pub mod stats;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

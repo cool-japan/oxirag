@@ -12,7 +12,8 @@ use super::types::AgenticError;
 ///
 /// Implementations must be `Send + Sync` to work safely in the multi-threaded
 /// agentic engine.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Tool: Send + Sync {
     /// The unique name of this tool (used as the key in [`ToolRegistry`]).
     fn name(&self) -> &str;
@@ -103,7 +104,8 @@ impl Default for CalculatorTool {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Tool for CalculatorTool {
     fn name(&self) -> &'static str {
         "calculator"
@@ -159,7 +161,8 @@ impl LookupTool {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Tool for LookupTool {
     fn name(&self) -> &'static str {
         "lookup"
@@ -204,7 +207,8 @@ impl MockTool {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl Tool for MockTool {
     fn name(&self) -> &str {
         &self.tool_name

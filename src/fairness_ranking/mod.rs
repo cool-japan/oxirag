@@ -107,7 +107,7 @@ pub mod ranker;
 pub mod rng;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use amortized::{EquityOfAttention, ExposureReport};

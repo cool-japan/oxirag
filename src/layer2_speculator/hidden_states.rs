@@ -6,10 +6,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
-
-#[cfg(feature = "native")]
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use crate::error::SpeculatorError;
 
@@ -255,14 +252,8 @@ impl Default for HiddenStateCacheConfig {
 #[derive(Clone)]
 pub struct HiddenStateCache {
     config: HiddenStateCacheConfig,
-    #[cfg(feature = "native")]
     entries: Arc<RwLock<HashMap<String, CacheEntry>>>,
-    #[cfg(feature = "native")]
     access_order: Arc<RwLock<Vec<String>>>,
-    #[cfg(not(feature = "native"))]
-    entries: Arc<std::cell::RefCell<HashMap<String, CacheEntry>>>,
-    #[cfg(not(feature = "native"))]
-    access_order: Arc<std::cell::RefCell<Vec<String>>>,
 }
 
 #[derive(Clone)]
@@ -278,14 +269,8 @@ impl HiddenStateCache {
     pub fn new(config: HiddenStateCacheConfig) -> Self {
         Self {
             config,
-            #[cfg(feature = "native")]
             entries: Arc::new(RwLock::new(HashMap::new())),
-            #[cfg(feature = "native")]
             access_order: Arc::new(RwLock::new(Vec::new())),
-            #[cfg(not(feature = "native"))]
-            entries: Arc::new(std::cell::RefCell::new(HashMap::new())),
-            #[cfg(not(feature = "native"))]
-            access_order: Arc::new(std::cell::RefCell::new(Vec::new())),
         }
     }
 
@@ -314,7 +299,6 @@ impl HiddenStateCache {
     }
 
     /// Get hidden states from the cache.
-    #[cfg(feature = "native")]
     #[must_use]
     pub fn get(&self, key: &str) -> Option<ModelHiddenStates> {
         let entries = self.entries.read().ok()?;
@@ -333,27 +317,7 @@ impl HiddenStateCache {
         Some(entry.states.clone())
     }
 
-    /// Get hidden states from the cache (non-native version).
-    #[cfg(not(feature = "native"))]
-    #[must_use]
-    pub fn get(&self, key: &str) -> Option<ModelHiddenStates> {
-        let entries = self.entries.borrow();
-        let entry = entries.get(key)?;
-
-        // Update access order for LRU
-        if self.config.use_lru {
-            let mut order = self.access_order.borrow_mut();
-            if let Some(pos) = order.iter().position(|k| k == key) {
-                order.remove(pos);
-            }
-            order.push(key.to_string());
-        }
-
-        Some(entry.states.clone())
-    }
-
     /// Insert hidden states into the cache.
-    #[cfg(feature = "native")]
     pub fn insert(&self, key: String, states: ModelHiddenStates) {
         // Evict if at capacity
         self.evict_if_needed();
@@ -363,7 +327,7 @@ impl HiddenStateCache {
                 key.clone(),
                 CacheEntry {
                     states,
-                    created_at: std::time::SystemTime::now(),
+                    created_at: crate::time::system_now(),
                 },
             );
         }
@@ -375,29 +339,7 @@ impl HiddenStateCache {
         }
     }
 
-    /// Insert hidden states into the cache (non-native version).
-    #[cfg(not(feature = "native"))]
-    pub fn insert(&self, key: String, states: ModelHiddenStates) {
-        // Evict if at capacity
-        self.evict_if_needed();
-
-        let mut entries = self.entries.borrow_mut();
-        entries.insert(
-            key.clone(),
-            CacheEntry {
-                states,
-                created_at: std::time::SystemTime::now(),
-            },
-        );
-
-        if self.config.use_lru {
-            let mut order = self.access_order.borrow_mut();
-            order.push(key);
-        }
-    }
-
     /// Evict entries if cache is at capacity.
-    #[cfg(feature = "native")]
     fn evict_if_needed(&self) {
         let should_evict = self
             .entries
@@ -416,22 +358,7 @@ impl HiddenStateCache {
         }
     }
 
-    /// Evict entries if cache is at capacity (non-native version).
-    #[cfg(not(feature = "native"))]
-    fn evict_if_needed(&self) {
-        let entries_len = self.entries.borrow().len();
-        if entries_len >= self.config.max_entries && self.config.use_lru {
-            let mut entries = self.entries.borrow_mut();
-            let mut order = self.access_order.borrow_mut();
-            while entries.len() >= self.config.max_entries && !order.is_empty() {
-                let oldest = order.remove(0);
-                entries.remove(&oldest);
-            }
-        }
-    }
-
     /// Clear the cache.
-    #[cfg(feature = "native")]
     pub fn clear(&self) {
         if let Ok(mut entries) = self.entries.write() {
             entries.clear();
@@ -441,25 +368,10 @@ impl HiddenStateCache {
         }
     }
 
-    /// Clear the cache (non-native version).
-    #[cfg(not(feature = "native"))]
-    pub fn clear(&self) {
-        self.entries.borrow_mut().clear();
-        self.access_order.borrow_mut().clear();
-    }
-
     /// Get the number of entries in the cache.
-    #[cfg(feature = "native")]
     #[must_use]
     pub fn len(&self) -> usize {
         self.entries.read().map_or(0, |e| e.len())
-    }
-
-    /// Get the number of entries in the cache (non-native version).
-    #[cfg(not(feature = "native"))]
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.entries.borrow().len()
     }
 
     /// Check if the cache is empty.
@@ -476,7 +388,8 @@ impl Default for HiddenStateCache {
 }
 
 /// Trait for models that can provide hidden states.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait HiddenStateProvider: Send + Sync {
     /// Get hidden states for the given input text.
     async fn get_hidden_states(&self, text: &str) -> Result<ModelHiddenStates, SpeculatorError>;
@@ -607,7 +520,8 @@ impl MockHiddenStateProvider {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HiddenStateProvider for MockHiddenStateProvider {
     async fn get_hidden_states(&self, text: &str) -> Result<ModelHiddenStates, SpeculatorError> {
         // Mock tokenization: just use character bytes as tokens
@@ -645,7 +559,7 @@ impl HiddenStateProvider for MockHiddenStateProvider {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

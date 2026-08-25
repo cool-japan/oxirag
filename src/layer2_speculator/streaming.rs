@@ -4,6 +4,7 @@
 //! allowing consumers to receive partial results as they become available.
 
 use async_trait::async_trait;
+#[cfg(feature = "native")]
 use std::pin::Pin;
 
 use crate::error::SpeculatorError;
@@ -199,13 +200,19 @@ impl StreamingVerification {
     }
 
     /// Collect the result (immediately available in WASM).
+    ///
+    /// `async` with nothing to await is deliberate: this is the `wasm32` half of
+    /// an API whose native half awaits a channel, and callers are written once
+    /// against both.
+    #[allow(clippy::unused_async)]
     pub async fn collect(self) -> SpeculationResult {
         self.result
     }
 }
 
 /// Trait extension for streaming verification capabilities.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait StreamingSpeculator: Speculator {
     /// Verify a draft with streaming output.
     ///
@@ -259,7 +266,8 @@ impl<S: Speculator> StreamingSpeculatorWrapper<S> {
 }
 
 #[cfg(feature = "native")]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<S: Speculator + Send + Sync> StreamingSpeculator for StreamingSpeculatorWrapper<S> {
     async fn verify_draft_streaming(
         &self,
@@ -312,7 +320,8 @@ impl<S: Speculator + Send + Sync> StreamingSpeculator for StreamingSpeculatorWra
 }
 
 #[cfg(not(feature = "native"))]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<S: Speculator + Send + Sync> StreamingSpeculator for StreamingSpeculatorWrapper<S> {
     async fn verify_draft_streaming(
         &self,
@@ -324,7 +333,8 @@ impl<S: Speculator + Send + Sync> StreamingSpeculator for StreamingSpeculatorWra
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<S: Speculator + Send + Sync> Speculator for StreamingSpeculatorWrapper<S> {
     async fn verify_draft(
         &self,

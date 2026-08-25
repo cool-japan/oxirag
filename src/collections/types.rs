@@ -87,7 +87,7 @@ pub struct CollectionMetadata {
 
 impl Default for CollectionMetadata {
     fn default() -> Self {
-        let now = SystemTime::now();
+        let now = crate::time::system_now();
         Self {
             description: None,
             created_at: now,
@@ -101,7 +101,7 @@ impl CollectionMetadata {
     /// Create metadata with an optional description and tags.
     #[must_use]
     pub fn new(description: Option<String>, tags: Vec<String>) -> Self {
-        let now = SystemTime::now();
+        let now = crate::time::system_now();
         Self {
             description,
             created_at: now,

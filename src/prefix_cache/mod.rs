@@ -148,6 +148,8 @@ pub mod hierarchy;
 mod indexeddb_backend;
 pub mod invalidation;
 pub mod paging;
+// Filesystem-backed; `OxiRagError::Io` only wraps `std::io::Error` on `native`.
+#[cfg(feature = "native")]
 pub mod persistent;
 #[cfg(feature = "prefix-cache-redb")]
 pub mod redb_backend;
@@ -165,6 +167,7 @@ pub use invalidation::{
     InvalidationPolicy, InvalidationReason, InvalidationRuleBuilder,
 };
 pub use paging::{CachePage, PageTable, PagedCache, PagedKVEntry};
+#[cfg(feature = "native")]
 pub use persistent::{
     CacheIndex, CompactionStats, HybridPersistentCache, IndexEntry, PersistedEntry,
     PersistentCacheConfig, PersistentPrefixCache,
@@ -181,7 +184,7 @@ pub use redb_backend::{PersistedKVEntry, RedbPrefixCache, RedbPrefixCacheConfig}
 #[cfg(all(target_arch = "wasm32", feature = "wasm-prefix-indexeddb"))]
 pub use indexeddb_backend::IndexedDbPrefixCache;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

@@ -35,14 +35,14 @@ impl InMemoryGraphStore {
     }
 
     /// Get the internal entities map (for testing).
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     #[must_use]
     pub fn entities(&self) -> &HashMap<EntityId, GraphEntity> {
         &self.entities
     }
 
     /// Get the internal relationships map (for testing).
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     #[must_use]
     pub fn relationships_map(&self) -> &HashMap<String, GraphRelationship> {
         &self.relationships
@@ -61,7 +61,8 @@ impl InMemoryGraphStore {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl GraphStore for InMemoryGraphStore {
     async fn add_entity(&mut self, entity: GraphEntity) -> Result<EntityId, GraphError> {
         let id = entity.id.clone();
@@ -258,7 +259,7 @@ impl GraphStore for InMemoryGraphStore {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

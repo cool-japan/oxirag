@@ -125,7 +125,7 @@ impl RpTree {
     }
 
     /// Borrow the node arena (used for structural assertions in tests).
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn nodes(&self) -> &[RpTreeNode] {
         &self.nodes
     }
@@ -136,7 +136,7 @@ impl RpTree {
     }
 
     /// Total number of nodes (internal plus leaf).
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn node_count(&self) -> usize {
         self.nodes.len()
     }
@@ -149,7 +149,7 @@ impl RpTree {
     /// Deepest leaf depth actually realised in the tree (root leaf ⇒ `0`).
     ///
     /// Traverses with an explicit stack, so it never recurses.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn observed_depth(&self) -> usize {
         let mut stack: Vec<(usize, usize)> = vec![(self.root, 0)];
         let mut deepest = 0;
@@ -171,7 +171,7 @@ impl RpTree {
     }
 
     /// Collect the member counts of every leaf, in arena order.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn leaf_sizes(&self) -> Vec<usize> {
         self.nodes
             .iter()
@@ -183,7 +183,7 @@ impl RpTree {
     }
 
     /// Collect every internal point index reachable from the leaves, sorted.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn collect_all_ids(&self) -> Vec<usize> {
         let mut all = Vec::new();
         for node in &self.nodes {

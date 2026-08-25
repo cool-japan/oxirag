@@ -15,8 +15,8 @@
 
 use std::sync::Arc;
 
+use crate::sync::RwLock;
 use async_trait::async_trait;
-use tokio::sync::RwLock;
 
 use super::types::{ConversationHistory, TurnRole};
 
@@ -26,7 +26,8 @@ use super::types::{ConversationHistory, TurnRole};
 ///
 /// Implementations are free to be stateful (e.g., maintaining a rolling
 /// summary in a lock) which is why the method takes `&self` and is `async`.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait HistoryBuffer: Send + Sync {
     /// Build a plain-text context string from `history`.
     ///
@@ -80,7 +81,8 @@ fn format_turns(turns: &[super::types::Turn]) -> String {
 /// ```
 pub struct FullHistoryBuffer;
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HistoryBuffer for FullHistoryBuffer {
     async fn get_context(&self, history: &ConversationHistory) -> String {
         format_turns(history.as_slice())
@@ -134,7 +136,8 @@ impl Default for SlidingWindowBuffer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HistoryBuffer for SlidingWindowBuffer {
     async fn get_context(&self, history: &ConversationHistory) -> String {
         format_turns(history.recent_turns(self.window_size))
@@ -205,7 +208,8 @@ impl Default for SummaryBuffer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HistoryBuffer for SummaryBuffer {
     async fn get_context(&self, history: &ConversationHistory) -> String {
         let all_turns = history.as_slice();
@@ -321,7 +325,8 @@ impl Default for HybridBuffer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl HistoryBuffer for HybridBuffer {
     async fn get_context(&self, history: &ConversationHistory) -> String {
         let all_turns = history.as_slice();

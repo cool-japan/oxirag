@@ -1,6 +1,6 @@
 //! Helper and integration tests for circuit breaker (helpers, concurrent, full-cycle).
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::io_other_error)]
 pub(super) mod helpers {
     use std::sync::Arc;

@@ -715,7 +715,7 @@ impl FilteredVectorIndex {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 impl FilteredVectorIndex {
     /// The internal graph, for white-box tests of connectivity and degree.
     pub(crate) fn graph(&self) -> &FilteredGraph {

@@ -1,6 +1,6 @@
 //! Retrieval evaluation — IR ranking metrics: nDCG, MRR, MAP, Precision@k, Recall@k.
 pub mod metrics;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use metrics::{

@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::sync::RwLock;
 use async_trait::async_trait;
-use tokio::sync::RwLock;
 
 use super::types::{
     Collection, CollectionConfig, CollectionError, CollectionId, CollectionMetadata,
@@ -19,7 +19,8 @@ use super::types::{
 // ── CollectionStore trait ─────────────────────────────────────────────────────
 
 /// Persistent registry of collection definitions and statistics.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait CollectionStore: Send + Sync {
     /// Register a new collection.
     ///
@@ -122,7 +123,8 @@ impl Default for InMemoryCollectionStore {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl CollectionStore for InMemoryCollectionStore {
     async fn create(
         &self,

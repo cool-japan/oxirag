@@ -95,7 +95,8 @@ fn split_sentences(text: &str) -> Vec<String> {
 // ---------------------------------------------------------------------------
 
 /// Trait implemented by all RAGAS-style evaluation metrics.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait EvaluationMetric: Send + Sync {
     /// Human-readable name for this metric.
     fn name(&self) -> &'static str;
@@ -132,7 +133,8 @@ impl Default for AnswerRelevanceScorer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EvaluationMetric for AnswerRelevanceScorer {
     fn name(&self) -> &'static str {
         "answer_relevance"
@@ -185,7 +187,8 @@ impl Default for FaithfulnessScorer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EvaluationMetric for FaithfulnessScorer {
     fn name(&self) -> &'static str {
         "faithfulness"
@@ -245,7 +248,8 @@ impl Default for ContextPrecisionScorer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EvaluationMetric for ContextPrecisionScorer {
     fn name(&self) -> &'static str {
         "context_precision"
@@ -282,7 +286,8 @@ impl EvaluationMetric for ContextPrecisionScorer {
 /// `score = |gt_tokens ∩ context_tokens| / |gt_tokens|`
 pub struct ContextRecallScorer;
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EvaluationMetric for ContextRecallScorer {
     fn name(&self) -> &'static str {
         "context_recall"
@@ -351,7 +356,8 @@ impl Default for OverallScorer {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EvaluationMetric for OverallScorer {
     fn name(&self) -> &'static str {
         "overall"
@@ -389,7 +395,7 @@ impl EvaluationMetric for OverallScorer {
 // Unit tests for helpers
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod helper_tests {
     use super::*;
 

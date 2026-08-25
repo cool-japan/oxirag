@@ -11,6 +11,7 @@
 //!
 //! The tests here exercise only pure-Rust paths (struct construction, `__repr__`,
 //! and builder chaining) that do not require the Python GIL to be held.
+#![cfg(not(target_arch = "wasm32"))]
 #![cfg(feature = "python")]
 
 use oxirag::python::builder::PyPipelineBuilder;

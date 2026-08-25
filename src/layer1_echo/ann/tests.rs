@@ -678,7 +678,7 @@ fn test_search_performance_scales() {
     let query = normalize_vector(&create_random_vector(64, 999));
 
     // Measure search time (basic timing)
-    let start = std::time::Instant::now();
+    let start = crate::time::Instant::now();
     for _ in 0..100 {
         let _ = index.search(&query, 10);
     }

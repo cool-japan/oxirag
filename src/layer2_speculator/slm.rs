@@ -159,7 +159,8 @@ impl FinishReason {
 }
 
 /// Trait for small language models used in speculation.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait SmallLanguageModel: Send + Sync {
     /// Generate text from a prompt.
     ///
@@ -266,10 +267,12 @@ impl MockSlm {
         }
     }
 
+    /// No timer to sleep on off the native runtime, so this is a no-op — but it
+    /// keeps the same `async` shape as its native counterpart so the call site
+    /// needs no `cfg` of its own.
     #[cfg(not(feature = "native"))]
-    async fn simulate_delay(&self) {
-        // No delay simulation in WASM
-    }
+    #[allow(clippy::unused_async)]
+    async fn simulate_delay(&self) {}
 }
 
 impl Default for MockSlm {
@@ -278,7 +281,8 @@ impl Default for MockSlm {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl SmallLanguageModel for MockSlm {
     async fn generate(
         &self,
@@ -434,7 +438,7 @@ impl Default for SlmBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

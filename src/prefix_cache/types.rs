@@ -3,8 +3,9 @@
 //! This module provides the fundamental data structures for managing
 //! KV cache entries for context-aware prefix caching.
 
+use crate::time::Instant;
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Unique identifier for cached KV entries.
 pub type CacheKey = String;
@@ -310,7 +311,7 @@ impl CacheLookupResult {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

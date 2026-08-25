@@ -12,3 +12,28 @@ td = "test"
 [build]
 # Incremental builds for faster development
 incremental = true
+
+# ── wasm32 ───────────────────────────────────────────────────────────────────
+#
+# `getrandom 0.3` refuses to compile for `wasm32-unknown-unknown` unless it is
+# told which backend to use, and it reaches the graph through
+# `ahash <- dashmap <- lasso <- oxiz-core` — i.e. through the `judge` feature
+# (Layer 3). A rustflag is not a feature, so there is no way to express this in
+# Cargo.toml.
+#
+# It is one of two pieces of wiring, and neither works alone: the other is the
+# direct `getrandom` (0.4) and `getrandom03` (0.3) dependencies in the manifest,
+# each with `features = ["wasm_js"]`. Cargo features are additive and only a
+# direct dependent can turn one on, so a transitive `getrandom` cannot enable
+# its own backend.
+#
+# Downstream consumers building OxiRAG for wasm32 need the same flag in their
+# own `.cargo/config.toml`: cargo reads config from the invocation directory
+# upwards, never from a dependency's package directory.
+#
+# Config-file `rustflags` and the `RUSTFLAGS` environment variable REPLACE each
+# other rather than merging. A build step that sets `RUSTFLAGS` for wasm32
+# silently drops this line, and the failure then points at `getrandom` rather
+# than at the cause.
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']

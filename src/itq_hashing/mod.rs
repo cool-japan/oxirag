@@ -87,7 +87,7 @@
 pub mod hasher;
 pub mod index;
 pub mod linalg;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 

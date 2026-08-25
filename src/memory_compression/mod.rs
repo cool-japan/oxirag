@@ -1,7 +1,7 @@
 //! Hierarchical memory compression — recursive turn summarization.
 pub mod compressor;
 pub mod hierarchy;
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use hierarchy::HierarchicalMemory;

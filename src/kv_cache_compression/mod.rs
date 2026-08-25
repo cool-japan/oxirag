@@ -196,7 +196,7 @@ pub mod snapkv;
 pub mod streaming;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use attention::{KvAttentionOutput, KvAttentionStats, scaled_dot_product_attention};

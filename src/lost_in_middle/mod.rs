@@ -1,5 +1,5 @@
 //! Lost-in-the-Middle reordering — places highest-relevance docs at head and tail.
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 pub mod types;
 pub use types::{

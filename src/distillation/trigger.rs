@@ -395,7 +395,7 @@ pub struct TriggerStatistics {
     pub cooldown_secs: u64,
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::similar_names)]
 mod tests {
     use super::*;

@@ -1,6 +1,6 @@
 //! A single entry in the semantic cache.
 
-use std::time::Instant;
+use crate::time::Instant;
 
 use crate::types::PipelineOutput;
 

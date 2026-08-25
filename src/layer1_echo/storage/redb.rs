@@ -255,7 +255,8 @@ impl RedbVectorStore {
 // VectorStore implementation
 // ---------------------------------------------------------------------------
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl VectorStore for RedbVectorStore {
     /// Insert a new document into the store.
     ///
@@ -618,7 +619,7 @@ impl VectorStore for RedbVectorStore {
 // Unit tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::pedantic)]
 #[allow(clippy::cast_precision_loss)]
 mod tests {
@@ -964,7 +965,7 @@ mod tests {
 // Property-based tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::pedantic)]
 mod prop_tests {
     use proptest::prelude::*;

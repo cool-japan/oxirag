@@ -172,7 +172,8 @@ impl ExpansionConfig {
 }
 
 /// Trait for query expansion strategies.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait QueryExpander: Send + Sync + std::fmt::Debug {
     /// Generate expanded queries from the original query.
     ///

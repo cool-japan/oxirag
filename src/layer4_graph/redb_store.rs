@@ -389,7 +389,8 @@ impl RedbGraphStore {
 // GraphStore trait implementation
 // ---------------------------------------------------------------------------
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl GraphStore for RedbGraphStore {
     /// Add an entity to the graph.
     ///
@@ -800,7 +801,7 @@ impl GraphStore for RedbGraphStore {
 // Unit tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::layer4_graph::types::{

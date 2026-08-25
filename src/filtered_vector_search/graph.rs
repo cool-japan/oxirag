@@ -152,7 +152,7 @@ impl SplitMix64 {
     }
 
     /// A float in `[0, 1)`. Used by the test suite to synthesize corpora.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn next_f32(&mut self) -> f32 {
         #[allow(clippy::cast_precision_loss)]
         let unit = (self.next_u64() >> 40) as f32 / (1u64 << 24) as f32;
@@ -415,13 +415,13 @@ impl FilteredGraph {
     }
 
     /// The out-neighbors of `id`.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn neighbors_of(&self, id: u32) -> &[u32] {
         &self.neighbors[id as usize]
     }
 
     /// The graph's entry point (the medoid, after a rebuild).
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) fn medoid(&self) -> u32 {
         self.medoid
     }

@@ -22,7 +22,8 @@ use super::types::FlareError;
 ///
 /// Implementors must be `Send + Sync` so they can be shared across the
 /// async runtime without additional wrapping.
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait FlareGenerator: Send + Sync {
     /// Generate a complete response to `query`, using `context` as the
     /// retrieval-augmented background.
@@ -105,7 +106,8 @@ impl MockFlareGenerator {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl FlareGenerator for MockFlareGenerator {
     async fn generate(&self, _query: &str, _context: &str) -> Result<String, FlareError> {
         Ok(self.next_answer().to_string())
@@ -177,7 +179,8 @@ impl TemplateGenerator {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl FlareGenerator for TemplateGenerator {
     async fn generate(&self, query: &str, context: &str) -> Result<String, FlareError> {
         Ok(self.fill(query, context))

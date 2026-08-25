@@ -229,7 +229,8 @@ pub trait MultiModalEmbeddingProvider {
 /// On native targets, the impl requires `Send + Sync` to satisfy async executor constraints.
 /// On WASM, the `?Send` relaxation allows `JsValue`-carrying providers.
 #[cfg(not(target_arch = "wasm32"))]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl<T: MultiModalEmbeddingProvider + Send + Sync> EmbeddingProvider for T {
     async fn embed(&self, text: &str) -> Result<Vec<f32>, EmbeddingError> {
         self.embed_multi(EmbeddingInput::Text(text)).await
@@ -273,7 +274,7 @@ impl<T: MultiModalEmbeddingProvider> EmbeddingProvider for T {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

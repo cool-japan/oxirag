@@ -169,7 +169,7 @@ pub mod json_schema;
 pub mod regex_parser;
 pub mod types;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;
 
 pub use automaton::{Dfa, DfaState, Nfa, NfaState, ProductMode};
