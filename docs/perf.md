@@ -349,13 +349,25 @@ Overhead scales with `batch_size` inversely: larger batches amortize the export 
 
 ## 8. WASM Bundle Size
 
-### Expected Sizes After wasm-opt -Oz
+### Measured sizes
 
-| Feature Flags                | Unoptimized | After wasm-opt -Oz |
-|------------------------------|-------------|---------------------|
-| `wasm + echo`                | ~950 KB     | ~300 KB             |
-| `wasm + echo + wasm-indexeddb` | ~1.4 MB   | ~500 KB             |
-| `wasm + echo + graph`        | ~1.2 MB     | ~420 KB             |
+Measured on the 0.2.0 branch through `wasm-pack build --release --target web`, with
+`opt-level = "z"`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`, and
+`wasm-opt -Oz`. Both figures are the module a browser downloads; `gzip -9` is what a server
+actually sends.
+
+| Layers linked | raw | gzip -9 |
+|---|---|---|
+| Echo only (`echo`) | 114,062 | 52,031 |
+| Echo + Speculator + Judge + GraphRAG (`echo,judge,graphrag`) | 1,566,485 | 588,702 |
+
+The difference is almost entirely `OxiZ`: Layer 3's `OxizVerifier` links a complete SMT solver.
+A build that does not reach `OxizVerifier` does not pay for it — `lto = "fat"` removes it — so
+measuring "with `judge`" without calling into Layer 3 measures nothing (that mistake was worth
+518 bytes of apparent cost).
+
+The earlier figures in this section were estimates and were never measured; they are replaced
+rather than kept, because an estimate sitting in a table reads as a measurement.
 
 Build with optimized wasm:
 
