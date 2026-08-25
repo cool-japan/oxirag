@@ -20,11 +20,22 @@ pub use async_lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuar
 
 /// `Send + Sync` on every target that has threads, and no bound at all on `wasm32`.
 ///
-/// Traits whose supertrait list reads `Send + Sync` are unimplementable in the
-/// browser by anything holding a `JsValue` or a `RefCell`, which is what the
-/// single-threaded wasm implementations of these layers use. Naming this alias
-/// instead keeps one trait definition for both targets, the same way ADR-0005's
-/// `cfg_attr` pair does for `async_trait`.
+/// For a trait whose supertrait list must read `Send + Sync` on native and
+/// nothing on `wasm32`, because a `wasm32` implementation holds a `JsValue` or a
+/// `RefCell`. Naming this alias keeps one trait definition for both targets, the
+/// same way ADR-0005's `cfg_attr` pair does for `async_trait`.
+///
+/// **Nothing in the crate uses it today, deliberately.** It was written for
+/// `Speculator`, whose `Send + Sync` supertrait made it unimplementable on
+/// `wasm32` — and then the real cause turned out to be `HiddenStateCache`
+/// forking to `Arc<RefCell<…>>` under `cfg(not(feature = "native"))` for no
+/// reason (`std::sync::RwLock` works on `wasm32`). Deleting the fork fixed it
+/// without weakening a public bound, which is the better repair: relaxing a
+/// supertrait is a semantic change every downstream caller sees.
+///
+/// Kept because the next trait to hit this will hit it for a reason that cannot
+/// be deleted — an implementation that genuinely holds a `JsValue`. Reach for
+/// the deletion first; reach for this only when there is nothing to delete.
 #[cfg(not(target_arch = "wasm32"))]
 pub trait MaybeSendSync: Send + Sync {}
 

@@ -306,13 +306,36 @@ let examples = tracker.export_training_examples().await;
 
 ## WASM Usage
 
-Build for WASM:
+OxiRAG builds for `wasm32-unknown-unknown` and runs in a browser tab or a Web Worker — including
+Layer 3, whose SMT verification goes through `OxiZ`. See
+[ADR-0006](docs/adr/0006-wasm-portability-substrate.md) for what the target requires and how the
+crate keeps meeting it.
+
+Build:
 
 ```bash
 wasm-pack build --target web --features wasm
 ```
 
-Use in JavaScript:
+Two things a consumer has to know before the first build.
+
+**The `judge` feature needs a rustflag.** `getrandom 0.3` reaches the graph through
+`ahash <- dashmap <- lasso <- oxiz-core` and refuses to compile for wasm32 without a backend named.
+A rustflag cannot be expressed in a manifest, so put this in your own `.cargo/config.toml` — cargo
+reads config from the invocation directory upwards, never from a dependency:
+
+```toml
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
+```
+
+**`MockEmbeddingProvider` does not retrieve, and `WasmRagEngine` is built on it.** It hashes the
+*whole text* into one `u64`, so cosine similarity between any two distinct strings is noise —
+measured at 384 dimensions, a near-duplicate pair scores 0.0284 while an unrelated pair scores
+0.0762. It is deterministic and fine for tests; it is not a retrieval provider. Supply your own:
+`EmbeddingProvider` is a public trait and `EchoLayer::new` accepts any implementation.
+
+Use in JavaScript (the bundled engine, mock provider and all):
 
 ```javascript
 import init, { WasmRagEngine } from './pkg/oxirag.js';
@@ -320,8 +343,23 @@ import init, { WasmRagEngine } from './pkg/oxirag.js';
 await init();
 
 const engine = new WasmRagEngine(384);
-await engine.index("doc-1", "The capital of France is Paris.");
-const results = await engine.query("What is the capital of France?", 5);
+await engine.index("The capital of France is Paris.", "geography");
+const output = await engine.query("What is the capital of France?", 5);
+```
+
+For a worked example with a real embedding provider, all four layers wired, and the numbers
+measured in a browser, see the COOLJAPAN Playground `/rag` demo
+(`cool-japan/cooljapan-playground`, `crates/oxirag-wasm`).
+
+### Building for wasm32 without the JavaScript bindings
+
+The `wasm` feature means "expose `src/wasm.rs`", not "be buildable for wasm32" — the wasm
+dependencies are unconditional target dependencies. A downstream crate writing its own
+`#[wasm_bindgen]` boundary should leave the feature off, and will not inherit a second
+`#[wasm_bindgen(start)]` or an export surface it does not use:
+
+```bash
+cargo build --target wasm32-unknown-unknown --no-default-features --features echo,judge,graphrag
 ```
 
 ## Configuration

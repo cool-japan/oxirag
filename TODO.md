@@ -875,7 +875,27 @@ This project implements four innovative concepts:
 
 ### WASM
 
-- [ ] Test and optimize WASM bundle size
+- [x] **Make `wasm32-unknown-unknown` actually build** (0.2.0 branch) — it did not. 39 errors on the
+      target the manifest lists under `categories`, plus two classes of defect that BUILD and then
+      fail in a browser: `Instant::now()` / `SystemTime::now()` panic there (and `Pipeline::process`
+      called the first on every query — an uncatchable trap under `panic = "abort"`), and
+      `web_sys::window()` is `None` in the Web Worker a RAG pipeline belongs in. See ADR-0006 and
+      the CHANGELOG.
+- [x] **Get the wasm tests to run at all** — `tests/wasm_indexeddb.rs` and `tests/wasm_worker.rs`
+      had existed since 0.5.0 and had never executed: `cargo build --tests` resolves every
+      dev-dependency, and `proptest` → `rusty-fork` → `wait-timeout` does not compile for wasm32.
+      `wasm-pack test --node` works now; `tests/wasm_clock.rs` is the first suite to use it.
+- [x] Measure WASM bundle size — measured against the COOLJAPAN Playground release profile
+      (`opt-level = "z"`, `lto = "fat"`, `codegen-units = 1`, `-Oz`): **114,062 raw / 52,031 gzip**
+      for Layer 1 alone, **1,566,485 raw / 588,702 gzip** with all four layers. The difference is
+      Layers 3 and 4, and the bulk of it is OxiZ.
+- [ ] **Replace `MockEmbeddingProvider` in `src/wasm.rs`** — it hashes the whole text into one
+      `u64`, so `WasmRagEngine` retrieves at RANDOM (measured: near-duplicate pair 0.0284, unrelated
+      pair 0.0762). The crate's own advertised WASM API should not be built on it. A hashing-trick
+      provider over word tokens + character bigrams is ~120 lines and works on Japanese; see
+      `crates/oxirag-wasm/src/embedding.rs` in the Playground repo for one that is already tested.
+- [ ] Optimize WASM bundle size — nothing has been tried yet beyond `-Oz` + fat LTO. `twiggy` has
+      not been run.
 - [x] Add Web Worker support for background processing (v0.5.0)
 - [x] Implement IndexedDB backend for persistent storage (v0.5.0)
 - [x] Add streaming response support (v0.5.0 — ReadableStream via query_stream)

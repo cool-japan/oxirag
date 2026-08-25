@@ -5,6 +5,89 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — `wasm32-unknown-unknown`
+
+OxiRAG advertised WASM support it did not have. `categories` listed `"wasm"`, the crate shipped
+`src/wasm.rs`, `src/wasm_worker.rs`, two IndexedDB backends and an npm package — and
+`cargo check --target wasm32-unknown-unknown --no-default-features --features wasm` reported
+**34 errors** (39 with `echo`). This release makes the target real, and adds the gates that keep it
+that way. See [ADR-0006](docs/adr/0006-wasm-portability-substrate.md).
+
+### Fixed
+
+- **`async_trait`'s `Send` bound, 122 further sites.** ADR-0005 established the
+  `cfg_attr(target_arch = "wasm32", async_trait(?Send))` pair for six traits in 0.5.0; every
+  `#[async_trait]` written after it had not received it. The relaxation is viral, so the symptom
+  surfaced as "future is not `Send`" at callers (`reranker.rs`, `pipeline.rs`) rather than at the
+  impls at fault. All sites now carry the pair.
+- **Runtime traps: `Instant::now()` and `SystemTime::now()`.** Both **panic** on
+  `wasm32-unknown-unknown`, and `Pipeline::process` called the first on every query — under a
+  `panic = "abort"` release profile, an uncatchable trap that kills the page hosting the engine.
+  All 56 + 9 call sites now go through the new `crate::time`. Verified in a real wasm runtime by
+  `tests/wasm_clock.rs`. `chrono`'s `Utc::now()` was NOT affected (the `wasmbind` feature routes it
+  through `Date.now()`) and is unchanged.
+- **`web_sys::window()` in a Web Worker.** A RAG pipeline blocks its thread, so its correct host is a
+  worker, where `window()` is `None`. Two sites wrote `.expect("no window")` (a trap on the retry
+  path); two returned `"IndexedDB not available in this browser"`, which is false — IndexedDB is
+  available to workers through `WorkerGlobalScope`. All four now go through the new
+  `crate::global_scope`.
+- **IndexedDB backends had rotted against `web-sys` 0.3.104.** `IdbRequest::result()` returns
+  `Result<JsValue, JsValue>` now, not `Result<Option<JsValue>, _>`; the `IdbTransactionMode` feature
+  was never enabled; `IndexedDbVectorStore` was never re-exported from `layer1_echo`.
+- **`tokio::sync::RwLock` in twelve runtime-free modules** — BM25, the circuit breaker, the in-memory
+  vector store, collections, conversation, document-pipeline, distillation hot-swap, index
+  management. Now `crate::sync`.
+- **`HiddenStateCache` forked to `Arc<RefCell<…>>`** under `cfg(not(feature = "native"))`, which made
+  `Speculator` (`: Send + Sync`) unimplementable on `wasm32`. The fork bought nothing —
+  `std::sync::RwLock` works there — and is deleted. `Speculator`'s supertrait is unchanged.
+
+### Added
+
+- **`crate::time`** — `Instant` and `system_now()`, backed by `js_sys::Date::now()` on `wasm32` and
+  `std::time` elsewhere. Every subtraction saturates rather than panicking.
+- **`crate::sync`** — `RwLock` / `Mutex` from `tokio::sync` with the `native` feature and from
+  `async-lock` otherwise, plus `try_read` (the two backends disagree on `Result` vs `Option`) and
+  `MaybeSendSync`.
+- **`crate::global_scope`** — `Window`-or-`WorkerGlobalScope`, exposing `indexed_db()` and
+  `set_timeout()`.
+- **`clippy.toml`** — `disallowed-methods` for `Instant::now`, `SystemTime::now` and
+  `web_sys::window`, each naming its replacement. This is the load-bearing half of ADR-0006: the
+  previous decision decayed because it depended on everyone remembering it.
+- **`Pipeline::config_mut()`** — lets a caller turn the fast path on and off between queries without
+  rebuilding the pipeline, and with it the index its layers hold.
+- **`tests/wasm_clock.rs`** — five tests that execute under `wasm-pack test --node`. Making that
+  possible required moving native-only dev-dependencies (`proptest` → `rusty-fork` → `wait-timeout`,
+  which does not compile for wasm32) under a target table, gating 298 `#[cfg(test)]` modules to
+  non-wasm, and naming `native` in every example/bench `required-features`. `tests/wasm_indexeddb.rs`
+  and `tests/wasm_worker.rs` had existed since 0.5.0 and had never executed.
+
+### Changed
+
+- **BREAKING.** `Instant` in public struct fields (`prefix_cache::paging::CachePage`,
+  `prefix_cache::types`, `semantic_cache::entry`, `hidden_states::cache`) is now
+  `oxirag::time::Instant` rather than `std::time::Instant`. `From`/`Into` and `into_std()` convert.
+- **The `wasm` feature now means only "expose the `#[wasm_bindgen]` API".** The crates it used to
+  name are unconditional `[target.'cfg(target_arch = "wasm32")'.dependencies]`, because a wasm32
+  build without them is not a smaller build but a broken one. A downstream shim with its own
+  `#[wasm_bindgen]` boundary can now take OxiRAG *without* the feature and not inherit a second
+  `#[wasm_bindgen(start)]`. `pub mod wasm` is additionally gated to `target_arch = "wasm32"`.
+- `async-lock` is an unconditional dependency on every target, so that "OxiRAG without tokio" is a
+  configuration that compiles everywhere rather than one that compiles on wasm32 and nowhere else.
+- `prefix_cache::persistent` is gated to `feature = "native"` (it is filesystem-backed, and
+  `OxiRagError::Io` only wraps `std::io::Error` there).
+
+### Known limitation
+
+- **`WasmRagEngine` in `src/wasm.rs` is built on `MockEmbeddingProvider`, which cannot retrieve.**
+  That provider hashes the *whole text* into one `u64`, so cosine similarity between any two
+  distinct strings is noise: measured at 384 dimensions, `"the cat sat on the mat"` vs
+  `"the cat sat on a mat"` scores **0.0284** while `"the cat sat on a mat"` vs
+  `"quantum chromodynamics"` scores **0.0762** — the near-duplicate pair scores *lower* than an
+  unrelated one. It is documented as deterministic-for-testing and is fine for that; it is not a
+  retrieval provider, and the crate's own advertised WASM API should not be built on it. Callers
+  needing real retrieval must supply their own `EmbeddingProvider` (the trait is public and
+  `EchoLayer::new` accepts any implementation). Not fixed here because choosing a replacement is an
+  API decision, not a port.
 ## [0.24.0] - 2026-07-12
 
 Twelve cutting-edge RAG modules across four themes — Inference-Time Control, Test-Time Search & Process
